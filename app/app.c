@@ -380,6 +380,8 @@ Skip:
 
             if (gScanStateDir != SCAN_OFF)
             {
+
+                /*
                 switch (gEeprom.SCAN_RESUME_MODE)
                 {
                     case SCAN_RESUME_TO:
@@ -392,6 +394,23 @@ Skip:
 
                     case SCAN_RESUME_SE:
                         CHFRSCANNER_Stop();
+                        break;
+                }
+                */
+
+                switch (gEeprom.SCAN_RESUME_MODE)
+                {
+                    case 0:
+                        gScanPauseDelayIn_10ms = scan_pause_delay_in_6_10ms;
+                        gScheduleScanListen    = false;
+                        break;
+
+                    case 62:
+                        CHFRSCANNER_Stop();
+                        break;
+
+                    default:
+                        gScanPauseDelayIn_10ms = scan_pause_delay_in_1_10ms * gEeprom.SCAN_RESUME_MODE;
                         break;
                 }
             }

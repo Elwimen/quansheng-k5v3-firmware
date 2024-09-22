@@ -227,12 +227,14 @@ const char* const gSubMenu_RXMode[] =
     };
 #endif
 
+/*
 const char gSubMenu_SC_REV[][8] =
 {
     "TIMEOUT",
     "CARRIER",
     "STOP"
 };
+*/
 
 const char* const gSubMenu_MDF[] =
 {
@@ -826,7 +828,18 @@ void UI_DisplayMenu(void)
         #endif
 
         case MENU_SC_REV:
-            strcpy(String, gSubMenu_SC_REV[gSubMenuSelection]);
+            if(gSubMenuSelection == 0)
+            {
+                sprintf(String, "%s", "CARRIER");
+            }
+            else if(gSubMenuSelection < 61)
+            {
+                sprintf(String, "%02dm:%02ds", (((gSubMenuSelection) * 5) / 60), (((gSubMenuSelection) * 5) % 60));
+            }
+            else
+            {
+                sprintf(String, "%s", "STOP");
+            }
             break;
 
         case MENU_MDF:

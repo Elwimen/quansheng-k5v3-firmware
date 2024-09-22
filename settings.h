@@ -59,11 +59,13 @@ enum TxLockModes_t {
     F_LOCK_LEN
 };
 
+/*
 enum {
     SCAN_RESUME_TO = 0,
     SCAN_RESUME_CO,
     SCAN_RESUME_SE
 };
+*/
 
 enum {
     CROSS_BAND_OFF = 0,
