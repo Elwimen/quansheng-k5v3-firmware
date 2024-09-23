@@ -398,6 +398,18 @@ Skip:
                 }
                 */
 
+                if(gEeprom.SCAN_RESUME_MODE < 2)
+                {
+                    gScanPauseDelayIn_10ms = scan_pause_delay_in_6_10ms + (scan_pause_delay_in_6_10ms * 24 * gEeprom.SCAN_RESUME_MODE);
+                    gScheduleScanListen    = false;
+
+                }
+                else if(gEeprom.SCAN_RESUME_MODE == 2)
+                {
+                    CHFRSCANNER_Stop();
+                }
+
+                /*
                 switch (gEeprom.SCAN_RESUME_MODE)
                 {
                     case 0:
@@ -405,14 +417,20 @@ Skip:
                         gScheduleScanListen    = false;
                         break;
 
-                    case 62:
+                    case 1:
+                        gScanPauseDelayIn_10ms = scan_pause_delay_in_2_10ms * 5;
+                        gScheduleScanListen    = false;
+                        break;
+
+                    case 26:
                         CHFRSCANNER_Stop();
                         break;
 
-                    default:
-                        gScanPauseDelayIn_10ms = scan_pause_delay_in_1_10ms * gEeprom.SCAN_RESUME_MODE;
-                        break;
+                    //default:
+                    //    gScanPauseDelayIn_10ms = scan_pause_delay_in_5_10ms * (gEeprom.SCAN_RESUME_MODE - 1) * 5;
+                    //    break;
                 }
+                */
             }
 
             break;

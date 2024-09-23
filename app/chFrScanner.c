@@ -102,11 +102,24 @@ void CHFRSCANNER_ContinueScanning(void)
 
 void CHFRSCANNER_Found(void)
 {
-    if(gEeprom.SCAN_RESUME_MODE > 0 && gEeprom.SCAN_RESUME_MODE < 61)
+    if (gEeprom.SCAN_RESUME_MODE > 2) {
+        if (!gScanPauseMode) {
+            gScanPauseDelayIn_10ms = scan_pause_delay_in_5_10ms * (gEeprom.SCAN_RESUME_MODE - 2) * 5;
+            gScanPauseMode = true;
+        }
+    } else {
+        gScanPauseDelayIn_10ms = 0;
+    }
+
+    // gScheduleScanListen is always false...
+    gScheduleScanListen = false;
+
+    /*
+    if(gEeprom.SCAN_RESUME_MODE > 1 && gEeprom.SCAN_RESUME_MODE < 26)
     {
         if (!gScanPauseMode)
         {
-            gScanPauseDelayIn_10ms = scan_pause_delay_in_1_10ms * gEeprom.SCAN_RESUME_MODE;
+            gScanPauseDelayIn_10ms = scan_pause_delay_in_5_10ms * (gEeprom.SCAN_RESUME_MODE - 1) * 5;
             gScheduleScanListen    = false;
             gScanPauseMode         = true;
         }
@@ -116,6 +129,7 @@ void CHFRSCANNER_Found(void)
         gScanPauseDelayIn_10ms = 0;
         gScheduleScanListen    = false;
     }
+    */
 
     /*
     switch (gEeprom.SCAN_RESUME_MODE)
