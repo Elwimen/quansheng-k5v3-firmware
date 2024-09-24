@@ -77,6 +77,10 @@ static void BACKLIGHT_Sound(void)
 
 void BACKLIGHT_TurnOn(void)
 {
+    #ifdef ENABLE_FEAT_F4HWN_SLEEP
+        gSleepModeCountdown_500ms = gSetting_set_off * 120;
+    #endif
+
     #ifdef ENABLE_FEAT_F4HWN
         gBacklightBrightnessOld = BACKLIGHT_GetBrightness();
     #endif
@@ -121,10 +125,6 @@ void BACKLIGHT_TurnOn(void)
             gBacklightCountdown_500ms = 0;
             break;
     }
-
-    #ifdef ENABLE_FEAT_F4HWN_SLEEP
-        gSleepModeCountdown_500ms = gSetting_set_off * 120;
-    #endif
 }
 
 void BACKLIGHT_TurnOff()
