@@ -1570,7 +1570,6 @@ void APP_TimeSlice500ms(void)
 #ifdef ENABLE_FEAT_F4HWN_SLEEP
     if (gSleepModeCountdown_500ms == gSetting_set_off * 120 && gWakeUp) {
         ST7565_Init();
-        BK4819_ToggleGpioOut(BK4819_GPIO6_PIN2_GREEN, false);
         BK4819_ToggleGpioOut(BK4819_GPIO5_PIN1_RED, false);
         gWakeUp = false;
     }
@@ -1586,7 +1585,6 @@ void APP_TimeSlice500ms(void)
     if (gWakeUp) {
         static bool swap = true;
         swap = !swap;  // Alterne l'état à chaque exécution
-        BK4819_ToggleGpioOut(BK4819_GPIO6_PIN2_GREEN, swap);
         BK4819_ToggleGpioOut(BK4819_GPIO5_PIN1_RED, swap);
         FUNCTION_Select(FUNCTION_POWER_SAVE);
     }
