@@ -147,6 +147,9 @@ const t_menu_item MenuList[] =
     {"SetMet",      MENU_SET_MET       },
     {"SetGui",      MENU_SET_GUI       },
     {"SetTmr",      MENU_SET_TMR       },
+#ifdef ENABLE_FEAT_F4HWN_SLEEP
+    {"SetOff",       MENU_SET_OFF      },
+#endif
 #endif
     // hidden menu items from here on
     // enabled if pressing both the PTT and upper side button at power-on
@@ -977,6 +980,19 @@ void UI_DisplayMenu(void)
         case MENU_MLONG:
             strcpy(String, gSubMenu_SIDEFUNCTIONS[gSubMenuSelection].name);
             break;
+
+#ifdef ENABLE_FEAT_F4HWN_SLEEP
+        case MENU_SET_OFF:
+            if(gSubMenuSelection == 0)
+            {
+                sprintf(String, "%s", "OFF");
+            }
+            else if(gSubMenuSelection < 121)
+            {
+                sprintf(String, "%02dh:%02dm", (gSubMenuSelection / 60), (gSubMenuSelection % 60));
+            }
+            break;
+#endif
 
 #ifdef ENABLE_FEAT_F4HWN
         case MENU_SET_PWR:

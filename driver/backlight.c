@@ -31,6 +31,10 @@
 uint16_t gBacklightCountdown_500ms = 0;
 bool backlightOn;
 
+#ifdef ENABLE_FEAT_F4HWN_SLEEP
+    uint16_t gSleepModeCountdown_500ms = 0;
+#endif
+
 void BACKLIGHT_InitHardware()
 {
     // 48MHz / 94 / 1024 ~ 500Hz
@@ -117,6 +121,10 @@ void BACKLIGHT_TurnOn(void)
             gBacklightCountdown_500ms = 0;
             break;
     }
+
+    #ifdef ENABLE_FEAT_F4HWN_SLEEP
+        gSleepModeCountdown_500ms = gSetting_set_off * 120;
+    #endif
 }
 
 void BACKLIGHT_TurnOff()

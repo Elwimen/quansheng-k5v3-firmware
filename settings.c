@@ -346,7 +346,10 @@ void SETTINGS_InitEEPROM(void)
         int ctr_value = Data[5] & 0x0F;
         gSetting_set_ctr = (ctr_value > 0 && ctr_value < 16) ? ctr_value : 10;
 
-        gSetting_set_tmr = Data[4] & 1;
+        gSetting_set_tmr = Data[4] & 0x01;
+#ifdef ENABLE_FEAT_F4HWN_SLEEP 
+        gSetting_set_off = Data[4] >> 1;
+#endif
 
         // Warning
         // Be aware, Data[3] is use by Spectrum
@@ -740,7 +743,11 @@ void SETTINGS_SaveSettings(void)
         tmp = tmp | (1 << 3);
     */
 
+#ifdef ENABLE_FEAT_F4HWN_SLEEP 
+    State[4] = (gSetting_set_off << 1) | (gSetting_set_tmr & 0x01);
+#else
     State[4] = gSetting_set_tmr ? (1 << 0) : 0;
+#endif
 
     tmp =   (gSetting_set_inv << 0) |
             (gSetting_set_lck << 1) |

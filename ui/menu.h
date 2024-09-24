@@ -125,6 +125,9 @@ enum
 #ifdef ENABLE_F_CAL_MENU
     MENU_F_CALI,  // reference xtal calibration
 #endif
+#ifdef ENABLE_FEAT_F4HWN_SLEEP
+    MENU_SET_OFF,
+#endif
 #ifdef ENABLE_FEAT_F4HWN
     MENU_SET_PWR,
     MENU_SET_PTT,

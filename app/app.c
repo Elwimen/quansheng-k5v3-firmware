@@ -1567,6 +1567,31 @@ void APP_TimeSlice500ms(void)
         BACKLIGHT_TurnOff();
     }
 
+#ifdef ENABLE_FEAT_F4HWN_SLEEP
+    if (gSleepModeCountdown_500ms == gSetting_set_off * 120 && gWakeUp) {
+        ST7565_Init();
+        BK4819_ToggleGpioOut(BK4819_GPIO6_PIN2_GREEN, false);
+        BK4819_ToggleGpioOut(BK4819_GPIO5_PIN1_RED, false);
+        gWakeUp = false;
+    }
+
+    if (gSleepModeCountdown_500ms > 0 && --gSleepModeCountdown_500ms == 0) {
+        gBacklightCountdown_500ms = 0;
+        BACKLIGHT_TurnOff();
+        ST7565_ShutDown();
+        gWakeUp = true;
+        gPowerSaveCountdownExpired = true;
+    }
+
+    if (gWakeUp) {
+        static bool swap = true;
+        swap = !swap;  // Alterne l'état à chaque exécution
+        BK4819_ToggleGpioOut(BK4819_GPIO6_PIN2_GREEN, swap);
+        BK4819_ToggleGpioOut(BK4819_GPIO5_PIN1_RED, swap);
+        FUNCTION_Select(FUNCTION_POWER_SAVE);
+    }
+#endif
+
     if (gReducedService)
     {
         BOARD_ADC_GetBatteryInfo(&gBatteryCurrentVoltage, &gBatteryCurrent);

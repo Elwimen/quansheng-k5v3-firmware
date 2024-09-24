@@ -156,6 +156,11 @@ extern enum BacklightOnRxTx_t gSetting_backlight_on_tx_rx;
     extern bool              gSetting_AM_fix;
 #endif
 
+#ifdef ENABLE_FEAT_F4HWN_SLEEP 
+    extern uint8_t           gSetting_set_off;
+    extern bool              gWakeUp;
+#endif
+
 #ifdef ENABLE_FEAT_F4HWN
     extern uint8_t            gSetting_set_pwr;
     extern bool               gSetting_set_ptt;

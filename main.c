@@ -131,7 +131,11 @@ void Main(void)
             #ifndef ENABLE_VOX
                 gMenuCursor = 64; // move to hidden section, fix me if change... !!! Remove VOX and Mic Bar
             #else
-                gMenuCursor = 66; // move to hidden section, fix me if change... !!!
+                #ifdef ENABLE_FEAT_F4HWN_SLEEP
+                    gMenuCursor = 67; // move to hidden section, fix me if change... !!!
+                #else
+                    gMenuCursor = 66; // move to hidden section, fix me if change... !!!
+                #endif
             #endif
             gSubMenuSelection = gSetting_F_LOCK;
         #endif
