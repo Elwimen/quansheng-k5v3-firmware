@@ -154,9 +154,11 @@ const t_menu_item MenuList[] =
     // hidden menu items from here on
     // enabled if pressing both the PTT and upper side button at power-on
     {"F Lock",      MENU_F_LOCK        },
+#ifndef ENABLE_FEAT_F4HWN
     {"Tx 200",      MENU_200TX         }, // was "200TX"
     {"Tx 350",      MENU_350TX         }, // was "350TX"
     {"Tx 500",      MENU_500TX         }, // was "500TX"
+#endif
     {"350 En",      MENU_350EN         }, // was "350EN"
 #ifndef ENABLE_FEAT_F4HWN
     {"ScraEn",      MENU_SCREN         }, // was "SCREN"
@@ -735,9 +737,11 @@ void UI_DisplayMenu(void)
         #ifdef ENABLE_NOAA
             case MENU_NOAA_S:
         #endif
+#ifndef ENABLE_FEAT_F4HWN
         case MENU_350TX:
         case MENU_200TX:
         case MENU_500TX:
+#endif
         case MENU_350EN:
 #ifndef ENABLE_FEAT_F4HWN
         case MENU_SCREN:

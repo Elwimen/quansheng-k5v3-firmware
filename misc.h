@@ -140,12 +140,19 @@ extern const uint16_t        scan_pause_delay_in_7_10ms;
 
 extern const uint8_t         gMicGain_dB2[5];
 
+#ifndef ENABLE_FEAT_F4HWN
 extern bool                  gSetting_350TX;
+#endif
+
 #ifdef ENABLE_DTMF_CALLING
 extern bool                  gSetting_KILLED;
 #endif
+
+#ifndef ENABLE_FEAT_F4HWN
 extern bool                  gSetting_200TX;
 extern bool                  gSetting_500TX;
+#endif
+
 extern bool                  gSetting_350EN;
 extern uint8_t               gSetting_F_LOCK;
 extern bool                  gSetting_ScrambleEnable;

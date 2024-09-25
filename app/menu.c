@@ -248,9 +248,11 @@ int MENU_GetLimits(uint8_t menu_id, int32_t *pMin, int32_t *pMax)
         #ifdef ENABLE_NOAA
             case MENU_NOAA_S:
         #endif
+#ifndef ENABLE_FEAT_F4HWN
         case MENU_350TX:
         case MENU_200TX:
         case MENU_500TX:
+#endif
         case MENU_350EN:
 #ifndef ENABLE_FEAT_F4HWN
         case MENU_SCREN:
@@ -795,9 +797,11 @@ void MENU_AcceptSetting(void)
             SETTINGS_FactoryReset(gSubMenuSelection);
             return;
 
+#ifndef ENABLE_FEAT_F4HWN
         case MENU_350TX:
             gSetting_350TX = gSubMenuSelection;
             break;
+#endif
 
         case MENU_F_LOCK: {
             if(gSubMenuSelection == F_LOCK_NONE) { // select 10 times to enable
@@ -815,6 +819,7 @@ void MENU_AcceptSetting(void)
             gSetting_F_LOCK = gSubMenuSelection;
             break;
         }
+#ifndef ENABLE_FEAT_F4HWN
         case MENU_200TX:
             gSetting_200TX = gSubMenuSelection;
             break;
@@ -822,13 +827,12 @@ void MENU_AcceptSetting(void)
         case MENU_500TX:
             gSetting_500TX = gSubMenuSelection;
             break;
-
+#endif
         case MENU_350EN:
             gSetting_350EN       = gSubMenuSelection;
             gVfoConfigureMode    = VFO_CONFIGURE_RELOAD;
             gFlagResetVfos       = true;
             break;
-
 #ifndef ENABLE_FEAT_F4HWN
         case MENU_SCREN:
             gSetting_ScrambleEnable = gSubMenuSelection;
@@ -1242,14 +1246,17 @@ void MENU_ShowCurrentSetting(void)
             #endif
             break;
 
+#ifndef ENABLE_FEAT_F4HWN
         case MENU_350TX:
             gSubMenuSelection = gSetting_350TX;
             break;
+#endif
 
         case MENU_F_LOCK:
             gSubMenuSelection = gSetting_F_LOCK;
             break;
 
+#ifndef ENABLE_FEAT_F4HWN
         case MENU_200TX:
             gSubMenuSelection = gSetting_200TX;
             break;
@@ -1258,6 +1265,7 @@ void MENU_ShowCurrentSetting(void)
             gSubMenuSelection = gSetting_500TX;
             break;
 
+#endif
         case MENU_350EN:
             gSubMenuSelection = gSetting_350EN;
             break;
