@@ -1108,7 +1108,18 @@ void APP_Update(void)
         {   // dual watch mode off or scanning or rssi update request
             // go back to sleep
 
+#ifdef ENABLE_FEAT_F4HWN_SLEEP
+            if(gWakeUp)
+            {
+                gPowerSave_10ms = 1000; // Why ? Why not :) 10s
+            }
+            else
+            {
+                gPowerSave_10ms = gEeprom.BATTERY_SAVE * 10;
+            }
+#else
             gPowerSave_10ms = gEeprom.BATTERY_SAVE * 10;
+#endif
             gRxIdleMode     = true;
             goToSleep = false;
 
@@ -1571,6 +1582,7 @@ void APP_TimeSlice500ms(void)
     if (gSleepModeCountdown_500ms == gSetting_set_off * 120 && gWakeUp) {
         ST7565_Init();
         BK4819_ToggleGpioOut(BK4819_GPIO5_PIN1_RED, false);
+        gPowerSave_10ms = gEeprom.BATTERY_SAVE * 10;
         gWakeUp = false;
     }
 
@@ -1578,15 +1590,14 @@ void APP_TimeSlice500ms(void)
         gBacklightCountdown_500ms = 0;
         BACKLIGHT_TurnOff();
         ST7565_ShutDown();
+        gPowerSave_10ms = 1;
         gWakeUp = true;
-        gPowerSaveCountdownExpired = true;
     }
 
     if (gWakeUp) {
         static bool swap = true;
         swap = !swap;  // Alterne l'état à chaque exécution
         BK4819_ToggleGpioOut(BK4819_GPIO5_PIN1_RED, swap);
-        FUNCTION_Select(FUNCTION_POWER_SAVE);
     }
 #endif
 
