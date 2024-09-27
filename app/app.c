@@ -1590,10 +1590,10 @@ void APP_TimeSlice500ms(void)
     {
         if (gSleepModeCountdown_500ms > 0 && --gSleepModeCountdown_500ms == 0) {
             gBacklightCountdown_500ms = 0;
-            BACKLIGHT_TurnOff();
-            ST7565_ShutDown();
             gPowerSave_10ms = 1;
             gWakeUp = true;
+            BACKLIGHT_TurnOff();
+            ST7565_ShutDown();
         }
     }
     else

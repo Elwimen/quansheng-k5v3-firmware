@@ -139,7 +139,18 @@ void BACKLIGHT_TurnOff()
 
     BACKLIGHT_SetBrightness(tmp);
 #else
-    BACKLIGHT_SetBrightness(gEeprom.BACKLIGHT_MIN);
+    #ifdef ENABLE_FEAT_F4HWN_SLEEP
+        if(gWakeUp)
+        {
+            BACKLIGHT_SetBrightness(0);
+        }
+        else
+        {
+            BACKLIGHT_SetBrightness(gEeprom.BACKLIGHT_MIN);
+        }
+    #else
+        BACKLIGHT_SetBrightness(gEeprom.BACKLIGHT_MIN);
+    #endif
 #endif
     gBacklightCountdown_500ms = 0;
     backlightOn = false;
