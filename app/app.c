@@ -44,6 +44,9 @@
 #include "audio.h"
 #include "board.h"
 #include "bsp/dp32g030/gpio.h"
+#ifdef ENABLE_FEAT_F4HWN_SLEEP
+    #include "bsp/dp32g030/pwmplus.h"
+#endif
 #include "driver/backlight.h"
 #ifdef ENABLE_FMRADIO
     #include "driver/bk1080.h"
@@ -1592,7 +1595,7 @@ void APP_TimeSlice500ms(void)
             gBacklightCountdown_500ms = 0;
             gPowerSave_10ms = 1;
             gWakeUp = true;
-            BACKLIGHT_TurnOff();
+            PWM_PLUS0_CH0_COMP = 0;
             ST7565_ShutDown();
         }
     }
