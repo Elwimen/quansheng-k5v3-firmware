@@ -1606,7 +1606,7 @@ void APP_TimeSlice500ms(void)
             }
             else
             {
-                PWM_PLUS0_CH0_COMP = 1020; // Max brightness
+                PWM_PLUS0_CH0_COMP = value[gEeprom.BACKLIGHT_MAX] * 4; // Max brightness
             }
         }
     }

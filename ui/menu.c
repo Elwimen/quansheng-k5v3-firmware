@@ -692,8 +692,9 @@ void UI_DisplayMenu(void)
                 sprintf(String, "%s", "ON");    
             }
 
-            if(BACKLIGHT_GetBrightness() < 4)
-                BACKLIGHT_SetBrightness(4);
+            // Obsolete ???
+            //if(BACKLIGHT_GetBrightness() < 4)
+            //    BACKLIGHT_SetBrightness(4);
             break;
 
         case MENU_ABR_MIN:
@@ -701,8 +702,9 @@ void UI_DisplayMenu(void)
             sprintf(String, "%d", gSubMenuSelection);
             if(gIsInSubMenu)
                 BACKLIGHT_SetBrightness(gSubMenuSelection);
-            else if(BACKLIGHT_GetBrightness() < 4)
-                BACKLIGHT_SetBrightness(4);
+            // Obsolete ???
+            //else if(BACKLIGHT_GetBrightness() < 4)
+            //    BACKLIGHT_SetBrightness(4);
             break;
 
         case MENU_AM:
