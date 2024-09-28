@@ -1598,6 +1598,17 @@ void APP_TimeSlice500ms(void)
             PWM_PLUS0_CH0_COMP = 0;
             ST7565_ShutDown();
         }
+        else if(gSleepModeCountdown_500ms < 60 && gSetting_set_off != 0)
+        {
+            if(gSleepModeCountdown_500ms % 2 == 0)
+            {
+                PWM_PLUS0_CH0_COMP = 0;
+            }
+            else
+            {
+                PWM_PLUS0_CH0_COMP = 1020; // Max brightness
+            }
+        }
     }
     else
     {
