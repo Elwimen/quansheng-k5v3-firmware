@@ -44,6 +44,9 @@
 #include "audio.h"
 #include "board.h"
 #include "bsp/dp32g030/gpio.h"
+#ifdef ENABLE_FEAT_F4HWN_SLEEP
+    #include "bsp/dp32g030/pwmplus.h"
+#endif
 #include "driver/backlight.h"
 #ifdef ENABLE_FMRADIO
     #include "driver/bk1080.h"
@@ -380,6 +383,8 @@ Skip:
 
             if (gScanStateDir != SCAN_OFF)
             {
+
+                /*
                 switch (gEeprom.SCAN_RESUME_MODE)
                 {
                     case SCAN_RESUME_TO:
@@ -394,6 +399,41 @@ Skip:
                         CHFRSCANNER_Stop();
                         break;
                 }
+                */
+
+                if(gEeprom.SCAN_RESUME_MODE < 2)
+                {
+                    gScanPauseDelayIn_10ms = scan_pause_delay_in_6_10ms + (scan_pause_delay_in_6_10ms * 24 * gEeprom.SCAN_RESUME_MODE);
+                    gScheduleScanListen    = false;
+
+                }
+                else if(gEeprom.SCAN_RESUME_MODE == 2)
+                {
+                    CHFRSCANNER_Stop();
+                }
+
+                /*
+                switch (gEeprom.SCAN_RESUME_MODE)
+                {
+                    case 0:
+                        gScanPauseDelayIn_10ms = scan_pause_delay_in_6_10ms;
+                        gScheduleScanListen    = false;
+                        break;
+
+                    case 1:
+                        gScanPauseDelayIn_10ms = scan_pause_delay_in_2_10ms * 5;
+                        gScheduleScanListen    = false;
+                        break;
+
+                    case 26:
+                        CHFRSCANNER_Stop();
+                        break;
+
+                    //default:
+                    //    gScanPauseDelayIn_10ms = scan_pause_delay_in_5_10ms * (gEeprom.SCAN_RESUME_MODE - 1) * 5;
+                    //    break;
+                }
+                */
             }
 
             break;
@@ -1071,7 +1111,18 @@ void APP_Update(void)
         {   // dual watch mode off or scanning or rssi update request
             // go back to sleep
 
+#ifdef ENABLE_FEAT_F4HWN_SLEEP
+            if(gWakeUp)
+            {
+                gPowerSave_10ms = 1000; // Why ? Why not :) 10s
+            }
+            else
+            {
+                gPowerSave_10ms = gEeprom.BATTERY_SAVE * 10;
+            }
+#else
             gPowerSave_10ms = gEeprom.BATTERY_SAVE * 10;
+#endif
             gRxIdleMode     = true;
             goToSleep = false;
 
@@ -1529,6 +1580,47 @@ void APP_TimeSlice500ms(void)
     ) {
         BACKLIGHT_TurnOff();
     }
+
+#ifdef ENABLE_FEAT_F4HWN_SLEEP
+    if (gSleepModeCountdown_500ms == gSetting_set_off * 120 && gWakeUp) {
+        ST7565_Init();
+        BK4819_ToggleGpioOut(BK4819_GPIO5_PIN1_RED, false);
+        gPowerSave_10ms = gEeprom.BATTERY_SAVE * 10;
+        gWakeUp = false;
+    }
+
+    if(gCurrentFunction != FUNCTION_TRANSMIT && !FUNCTION_IsRx())
+    {
+        if (gSleepModeCountdown_500ms > 0 && --gSleepModeCountdown_500ms == 0) {
+            gBacklightCountdown_500ms = 0;
+            gPowerSave_10ms = 1;
+            gWakeUp = true;
+            PWM_PLUS0_CH0_COMP = 0;
+            ST7565_ShutDown();
+        }
+        else if(gSleepModeCountdown_500ms < 60 && gSetting_set_off != 0)
+        {
+            if(gSleepModeCountdown_500ms % 2 == 0)
+            {
+                PWM_PLUS0_CH0_COMP = 0;
+            }
+            else
+            {
+                PWM_PLUS0_CH0_COMP = value[gEeprom.BACKLIGHT_MAX] * 4; // Max brightness
+            }
+        }
+    }
+    else
+    {
+        gSleepModeCountdown_500ms = gSetting_set_off * 120;
+    }
+
+    if (gWakeUp) {
+        static bool swap = true;
+        swap = !swap;  // Alterne l'état à chaque exécution
+        BK4819_ToggleGpioOut(BK4819_GPIO5_PIN1_RED, swap);
+    }
+#endif
 
     if (gReducedService)
     {

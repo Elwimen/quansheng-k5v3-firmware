@@ -118,7 +118,18 @@ void FUNCTION_Foreground(const FUNCTION_Type_t PreviousFunction)
 }
 
 void FUNCTION_PowerSave() {
-    gPowerSave_10ms = gEeprom.BATTERY_SAVE * 10;
+    #ifdef ENABLE_FEAT_F4HWN_SLEEP
+        if(gWakeUp)
+        {
+            gPowerSave_10ms = 1000; // Why ? Why not :) 10s
+        }
+        else
+        {
+            gPowerSave_10ms = gEeprom.BATTERY_SAVE * 10;
+        }
+    #else
+        gPowerSave_10ms = gEeprom.BATTERY_SAVE * 10;
+    #endif
     gPowerSaveCountdownExpired = false;
 
     gRxIdleMode = true;

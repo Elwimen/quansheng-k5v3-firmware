@@ -147,13 +147,18 @@ const t_menu_item MenuList[] =
     {"SetMet",      MENU_SET_MET       },
     {"SetGui",      MENU_SET_GUI       },
     {"SetTmr",      MENU_SET_TMR       },
+#ifdef ENABLE_FEAT_F4HWN_SLEEP
+    {"SetOff",       MENU_SET_OFF      },
+#endif
 #endif
     // hidden menu items from here on
     // enabled if pressing both the PTT and upper side button at power-on
     {"F Lock",      MENU_F_LOCK        },
+#ifndef ENABLE_FEAT_F4HWN
     {"Tx 200",      MENU_200TX         }, // was "200TX"
     {"Tx 350",      MENU_350TX         }, // was "350TX"
     {"Tx 500",      MENU_500TX         }, // was "500TX"
+#endif
     {"350 En",      MENU_350EN         }, // was "350EN"
 #ifndef ENABLE_FEAT_F4HWN
     {"ScraEn",      MENU_SCREN         }, // was "SCREN"
@@ -227,10 +232,10 @@ const char* const gSubMenu_RXMode[] =
     };
 #endif
 
-const char gSubMenu_SC_REV[][8] =
+const char gSubMenu_SC_REV[][13] =
 {
-    "TIMEOUT",
-    "CARRIER",
+    "CARRIER\nFAST",
+    "CARRIER\nSLOW",
     "STOP"
 };
 
@@ -687,8 +692,9 @@ void UI_DisplayMenu(void)
                 sprintf(String, "%s", "ON");    
             }
 
-            if(BACKLIGHT_GetBrightness() < 4)
-                BACKLIGHT_SetBrightness(4);
+            // Obsolete ???
+            //if(BACKLIGHT_GetBrightness() < 4)
+            //    BACKLIGHT_SetBrightness(4);
             break;
 
         case MENU_ABR_MIN:
@@ -696,8 +702,9 @@ void UI_DisplayMenu(void)
             sprintf(String, "%d", gSubMenuSelection);
             if(gIsInSubMenu)
                 BACKLIGHT_SetBrightness(gSubMenuSelection);
-            else if(BACKLIGHT_GetBrightness() < 4)
-                BACKLIGHT_SetBrightness(4);
+            // Obsolete ???
+            //else if(BACKLIGHT_GetBrightness() < 4)
+            //    BACKLIGHT_SetBrightness(4);
             break;
 
         case MENU_AM:
@@ -732,9 +739,11 @@ void UI_DisplayMenu(void)
         #ifdef ENABLE_NOAA
             case MENU_NOAA_S:
         #endif
+#ifndef ENABLE_FEAT_F4HWN
         case MENU_350TX:
         case MENU_200TX:
         case MENU_500TX:
+#endif
         case MENU_350EN:
 #ifndef ENABLE_FEAT_F4HWN
         case MENU_SCREN:
@@ -826,7 +835,14 @@ void UI_DisplayMenu(void)
         #endif
 
         case MENU_SC_REV:
-            strcpy(String, gSubMenu_SC_REV[gSubMenuSelection]);
+            if(gSubMenuSelection < 3)
+            {
+                strcpy(String, gSubMenu_SC_REV[gSubMenuSelection]);
+            }
+            else
+            {
+                sprintf(String, "TIMEOUT\n%02dm:%02ds", (((gSubMenuSelection - 2) * 5) / 60), (((gSubMenuSelection - 2) * 5) % 60));
+            }
             break;
 
         case MENU_MDF:
@@ -970,6 +986,19 @@ void UI_DisplayMenu(void)
         case MENU_MLONG:
             strcpy(String, gSubMenu_SIDEFUNCTIONS[gSubMenuSelection].name);
             break;
+
+#ifdef ENABLE_FEAT_F4HWN_SLEEP
+        case MENU_SET_OFF:
+            if(gSubMenuSelection == 0)
+            {
+                sprintf(String, "%s", "OFF");
+            }
+            else if(gSubMenuSelection < 121)
+            {
+                sprintf(String, "%02dh:%02dm", (gSubMenuSelection / 60), (gSubMenuSelection % 60));
+            }
+            break;
+#endif
 
 #ifdef ENABLE_FEAT_F4HWN
         case MENU_SET_PWR:

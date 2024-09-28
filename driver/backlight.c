@@ -31,6 +31,14 @@
 uint16_t gBacklightCountdown_500ms = 0;
 bool backlightOn;
 
+#ifdef ENABLE_FEAT_F4HWN
+    const uint8_t value[] = {0, 3, 6, 9, 15, 24, 38, 62, 100, 159, 255};
+#endif
+
+#ifdef ENABLE_FEAT_F4HWN_SLEEP
+    uint16_t gSleepModeCountdown_500ms = 0;
+#endif
+
 void BACKLIGHT_InitHardware()
 {
     // 48MHz / 94 / 1024 ~ 500Hz
@@ -73,6 +81,10 @@ static void BACKLIGHT_Sound(void)
 
 void BACKLIGHT_TurnOn(void)
 {
+    #ifdef ENABLE_FEAT_F4HWN_SLEEP
+        gSleepModeCountdown_500ms = gSetting_set_off * 120;
+    #endif
+
     #ifdef ENABLE_FEAT_F4HWN
         gBacklightBrightnessOld = BACKLIGHT_GetBrightness();
     #endif
@@ -146,8 +158,6 @@ static uint8_t currentBrightness;
 
 void BACKLIGHT_SetBrightness(uint8_t brigtness)
 {
-    const uint8_t value[] = {0, 3, 6, 9, 15, 24, 38, 62, 100, 159, 255};
-
     currentBrightness = brigtness;
     PWM_PLUS0_CH0_COMP = value[brigtness] * 4;
     //PWM_PLUS0_CH0_COMP = (1 << brigtness) - 1;

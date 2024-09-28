@@ -176,7 +176,7 @@ int MENU_GetLimits(uint8_t menu_id, int32_t *pMin, int32_t *pMax)
 
         case MENU_SC_REV:
             //*pMin = 0;
-            *pMax = ARRAY_SIZE(gSubMenu_SC_REV) - 1;
+            *pMax = 26;
             break;
 
         case MENU_ROGER:
@@ -248,9 +248,11 @@ int MENU_GetLimits(uint8_t menu_id, int32_t *pMin, int32_t *pMax)
         #ifdef ENABLE_NOAA
             case MENU_NOAA_S:
         #endif
+#ifndef ENABLE_FEAT_F4HWN
         case MENU_350TX:
         case MENU_200TX:
         case MENU_500TX:
+#endif
         case MENU_350EN:
 #ifndef ENABLE_FEAT_F4HWN
         case MENU_SCREN:
@@ -375,6 +377,12 @@ int MENU_GetLimits(uint8_t menu_id, int32_t *pMin, int32_t *pMax)
             //*pMin = 0;
             *pMax = gSubMenu_SIDEFUNCTIONS_size-1;
             break;
+
+#ifdef ENABLE_FEAT_F4HWN_SLEEP
+        case MENU_SET_OFF:
+            *pMax = 120;
+            break;
+#endif
 
 #ifdef ENABLE_FEAT_F4HWN
         case MENU_SET_PWR:
@@ -789,9 +797,11 @@ void MENU_AcceptSetting(void)
             SETTINGS_FactoryReset(gSubMenuSelection);
             return;
 
+#ifndef ENABLE_FEAT_F4HWN
         case MENU_350TX:
             gSetting_350TX = gSubMenuSelection;
             break;
+#endif
 
         case MENU_F_LOCK: {
             if(gSubMenuSelection == F_LOCK_NONE) { // select 10 times to enable
@@ -809,6 +819,7 @@ void MENU_AcceptSetting(void)
             gSetting_F_LOCK = gSubMenuSelection;
             break;
         }
+#ifndef ENABLE_FEAT_F4HWN
         case MENU_200TX:
             gSetting_200TX = gSubMenuSelection;
             break;
@@ -816,13 +827,12 @@ void MENU_AcceptSetting(void)
         case MENU_500TX:
             gSetting_500TX = gSubMenuSelection;
             break;
-
+#endif
         case MENU_350EN:
             gSetting_350EN       = gSubMenuSelection;
             gVfoConfigureMode    = VFO_CONFIGURE_RELOAD;
             gFlagResetVfos       = true;
             break;
-
 #ifndef ENABLE_FEAT_F4HWN
         case MENU_SCREN:
             gSetting_ScrambleEnable = gSubMenuSelection;
@@ -867,6 +877,12 @@ void MENU_AcceptSetting(void)
                 *fun[UI_MENU_GetCurrentMenuId()-MENU_F1SHRT] = gSubMenu_SIDEFUNCTIONS[gSubMenuSelection].id;
             }
             break;
+
+#ifdef ENABLE_FEAT_F4HWN_SLEEP 
+        case MENU_SET_OFF:
+            gSetting_set_off = gSubMenuSelection;
+            break;
+#endif
 
 #ifdef ENABLE_FEAT_F4HWN
         case MENU_SET_PWR:
@@ -1230,14 +1246,17 @@ void MENU_ShowCurrentSetting(void)
             #endif
             break;
 
+#ifndef ENABLE_FEAT_F4HWN
         case MENU_350TX:
             gSubMenuSelection = gSetting_350TX;
             break;
+#endif
 
         case MENU_F_LOCK:
             gSubMenuSelection = gSetting_F_LOCK;
             break;
 
+#ifndef ENABLE_FEAT_F4HWN
         case MENU_200TX:
             gSubMenuSelection = gSetting_200TX;
             break;
@@ -1246,6 +1265,7 @@ void MENU_ShowCurrentSetting(void)
             gSubMenuSelection = gSetting_500TX;
             break;
 
+#endif
         case MENU_350EN:
             gSubMenuSelection = gSetting_350EN;
             break;
@@ -1293,6 +1313,12 @@ void MENU_ShowCurrentSetting(void)
             }
             break;
         }
+
+#ifdef ENABLE_FEAT_F4HWN_SLEEP 
+        case MENU_SET_OFF:
+            gSubMenuSelection = gSetting_set_off;
+            break;
+#endif
 
 #ifdef ENABLE_FEAT_F4HWN
         case MENU_SET_PWR:

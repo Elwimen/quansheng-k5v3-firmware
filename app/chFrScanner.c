@@ -102,6 +102,36 @@ void CHFRSCANNER_ContinueScanning(void)
 
 void CHFRSCANNER_Found(void)
 {
+    if (gEeprom.SCAN_RESUME_MODE > 2) {
+        if (!gScanPauseMode) {
+            gScanPauseDelayIn_10ms = scan_pause_delay_in_5_10ms * (gEeprom.SCAN_RESUME_MODE - 2) * 5;
+            gScanPauseMode = true;
+        }
+    } else {
+        gScanPauseDelayIn_10ms = 0;
+    }
+
+    // gScheduleScanListen is always false...
+    gScheduleScanListen = false;
+
+    /*
+    if(gEeprom.SCAN_RESUME_MODE > 1 && gEeprom.SCAN_RESUME_MODE < 26)
+    {
+        if (!gScanPauseMode)
+        {
+            gScanPauseDelayIn_10ms = scan_pause_delay_in_5_10ms * (gEeprom.SCAN_RESUME_MODE - 1) * 5;
+            gScheduleScanListen    = false;
+            gScanPauseMode         = true;
+        }
+    }
+    else
+    {
+        gScanPauseDelayIn_10ms = 0;
+        gScheduleScanListen    = false;
+    }
+    */
+
+    /*
     switch (gEeprom.SCAN_RESUME_MODE)
     {
         case SCAN_RESUME_TO:
@@ -119,6 +149,7 @@ void CHFRSCANNER_Found(void)
             gScheduleScanListen    = false;
             break;
     }
+    */
 
 #ifdef ENABLE_FEAT_F4HWN
     lastFoundFrqOrChanOld = lastFoundFrqOrChan;

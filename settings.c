@@ -119,7 +119,7 @@ void SETTINGS_InitEEPROM(void)
     gEeprom.KEY_1_LONG_PRESS_ACTION      = (Data[2] < ACTION_OPT_LEN) ? Data[2] : ACTION_OPT_NONE;
     gEeprom.KEY_2_SHORT_PRESS_ACTION     = (Data[3] < ACTION_OPT_LEN) ? Data[3] : ACTION_OPT_SCAN;
     gEeprom.KEY_2_LONG_PRESS_ACTION      = (Data[4] < ACTION_OPT_LEN) ? Data[4] : ACTION_OPT_NONE;
-    gEeprom.SCAN_RESUME_MODE             = (Data[5] < 3)              ? Data[5] : SCAN_RESUME_CO;
+    gEeprom.SCAN_RESUME_MODE             = (Data[5] < 27)             ? Data[5] : 1;
     gEeprom.AUTO_KEYPAD_LOCK             = (Data[6] < 2)              ? Data[6] : false;
 #ifdef ENABLE_FEAT_F4HWN
     gEeprom.POWER_ON_DISPLAY_MODE        = (Data[7] < 6)              ? Data[7] : POWER_ON_DISPLAY_MODE_VOLTAGE;
@@ -259,14 +259,17 @@ void SETTINGS_InitEEPROM(void)
     // 0F40..0F47
     EEPROM_ReadBuffer(0x0F40, Data, 8);
     gSetting_F_LOCK            = (Data[0] < F_LOCK_LEN) ? Data[0] : F_LOCK_DEF;
+#ifndef ENABLE_FEAT_F4HWN
     gSetting_350TX             = (Data[1] < 2) ? Data[1] : false;  // was true
+#endif
 #ifdef ENABLE_DTMF_CALLING
     gSetting_KILLED            = (Data[2] < 2) ? Data[2] : false;
 #endif
+#ifndef ENABLE_FEAT_F4HWN
     gSetting_200TX             = (Data[3] < 2) ? Data[3] : false;
     gSetting_500TX             = (Data[4] < 2) ? Data[4] : false;
+#endif
     gSetting_350EN             = (Data[5] < 2) ? Data[5] : true;
-
 #ifdef ENABLE_FEAT_F4HWN
     gSetting_ScrambleEnable    = false;
 #else
@@ -346,7 +349,10 @@ void SETTINGS_InitEEPROM(void)
         int ctr_value = Data[5] & 0x0F;
         gSetting_set_ctr = (ctr_value > 0 && ctr_value < 16) ? ctr_value : 10;
 
-        gSetting_set_tmr = Data[4] & 1;
+        gSetting_set_tmr = Data[4] & 0x01;
+#ifdef ENABLE_FEAT_F4HWN_SLEEP 
+        gSetting_set_off = Data[4] >> 1;
+#endif
 
         // Warning
         // Be aware, Data[3] is use by Spectrum
@@ -688,14 +694,17 @@ void SETTINGS_SaveSettings(void)
 
     memset(State, 0xFF, sizeof(State));
     State[0]  = gSetting_F_LOCK;
+#ifndef ENABLE_FEAT_F4HWN
     State[1]  = gSetting_350TX;
+#endif
 #ifdef ENABLE_DTMF_CALLING
     State[2]  = gSetting_KILLED;
 #endif
+#ifndef ENABLE_FEAT_F4HWN
     State[3]  = gSetting_200TX;
     State[4]  = gSetting_500TX;
+#endif
     State[5]  = gSetting_350EN;
-
 #ifdef ENABLE_FEAT_F4HWN
     State[6]  = false;
 #else
@@ -740,7 +749,11 @@ void SETTINGS_SaveSettings(void)
         tmp = tmp | (1 << 3);
     */
 
+#ifdef ENABLE_FEAT_F4HWN_SLEEP 
+    State[4] = (gSetting_set_off << 1) | (gSetting_set_tmr & 0x01);
+#else
     State[4] = gSetting_set_tmr ? (1 << 0) : 0;
+#endif
 
     tmp =   (gSetting_set_inv << 0) |
             (gSetting_set_lck << 1) |

@@ -115,15 +115,20 @@ enum
 #endif
     MENU_RESET,
     MENU_F_LOCK,
+#ifndef ENABLE_FEAT_F4HWN
     MENU_200TX,
     MENU_350TX,
     MENU_500TX,
+#endif
     MENU_350EN,
 #ifndef ENABLE_FEAT_F4HWN
     MENU_SCREN,
 #endif
 #ifdef ENABLE_F_CAL_MENU
     MENU_F_CALI,  // reference xtal calibration
+#endif
+#ifdef ENABLE_FEAT_F4HWN_SLEEP
+    MENU_SET_OFF,
 #endif
 #ifdef ENABLE_FEAT_F4HWN
     MENU_SET_PWR,
@@ -160,7 +165,7 @@ extern const char* const gSubMenu_RXMode[4];
 #ifdef ENABLE_VOICE
     extern const char    gSubMenu_VOICE[3][4];
 #endif
-extern const char        gSubMenu_SC_REV[3][8];
+extern const char gSubMenu_SC_REV[3][13];
 extern const char* const gSubMenu_MDF[4];
 #ifdef ENABLE_ALARM
     extern const char    gSubMenu_AL_MOD[2][5];
