@@ -401,6 +401,20 @@ Skip:
                 }
                 */
 
+                if(gEeprom.SCAN_RESUME_MODE < 81)
+                {
+                    if(gEeprom.SCAN_RESUME_MODE == 0)
+                    {
+                        CHFRSCANNER_Stop();
+                    }
+                    else
+                    {
+                        gScanPauseDelayIn_10ms = gEeprom.SCAN_RESUME_MODE * (250 / 10); // 250ms
+                        gScheduleScanListen    = false;
+                    }
+                }
+
+                /*
                 if(gEeprom.SCAN_RESUME_MODE < 2)
                 {
                     gScanPauseDelayIn_10ms = scan_pause_delay_in_6_10ms + (scan_pause_delay_in_6_10ms * 24 * gEeprom.SCAN_RESUME_MODE);
@@ -411,6 +425,7 @@ Skip:
                 {
                     CHFRSCANNER_Stop();
                 }
+                */
 
                 /*
                 switch (gEeprom.SCAN_RESUME_MODE)
@@ -1583,13 +1598,18 @@ void APP_TimeSlice500ms(void)
 
 #ifdef ENABLE_FEAT_F4HWN_SLEEP
     if (gSleepModeCountdown_500ms == gSetting_set_off * 120 && gWakeUp) {
-        ST7565_Init();
+        //ST7565_Init();
+        ST7565_FixInterfGlitch();
         BK4819_ToggleGpioOut(BK4819_GPIO5_PIN1_RED, false);
         gPowerSave_10ms = gEeprom.BATTERY_SAVE * 10;
         gWakeUp = false;
     }
 
+    #ifdef ENABLE_AIRCOPY
+    if(gCurrentFunction != FUNCTION_TRANSMIT && !FUNCTION_IsRx() && gScreenToDisplay != DISPLAY_AIRCOPY)
+    #else
     if(gCurrentFunction != FUNCTION_TRANSMIT && !FUNCTION_IsRx())
+    #endif
     {
         if (gSleepModeCountdown_500ms > 0 && --gSleepModeCountdown_500ms == 0) {
             gBacklightCountdown_500ms = 0;
@@ -1598,15 +1618,15 @@ void APP_TimeSlice500ms(void)
             PWM_PLUS0_CH0_COMP = 0;
             ST7565_ShutDown();
         }
-        else if(gSleepModeCountdown_500ms < 60 && gSetting_set_off != 0)
+        else if(gSleepModeCountdown_500ms != 0 && gSleepModeCountdown_500ms < 61 && gSetting_set_off != 0)
         {
-            if(gSleepModeCountdown_500ms % 2 == 0)
+            if(gSleepModeCountdown_500ms % 4 == 0)
             {
-                PWM_PLUS0_CH0_COMP = 0;
+                PWM_PLUS0_CH0_COMP = value[gEeprom.BACKLIGHT_MAX] * 4; // Max brightness
             }
             else
             {
-                PWM_PLUS0_CH0_COMP = value[gEeprom.BACKLIGHT_MAX] * 4; // Max brightness
+                PWM_PLUS0_CH0_COMP = 0;
             }
         }
     }
@@ -1616,9 +1636,9 @@ void APP_TimeSlice500ms(void)
     }
 
     if (gWakeUp) {
-        static bool swap = true;
-        swap = !swap;  // Alterne l'état à chaque exécution
-        BK4819_ToggleGpioOut(BK4819_GPIO5_PIN1_RED, swap);
+        static uint8_t counter = 0;
+        counter = (counter + 1) % 4;
+        BK4819_ToggleGpioOut(BK4819_GPIO5_PIN1_RED, (counter == 0));
     }
 #endif
 
@@ -1818,7 +1838,7 @@ static void ProcessKey(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
     gBatterySaveCountdown_10ms = battery_save_count_10ms;
 
     if (gEeprom.AUTO_KEYPAD_LOCK)
-        gKeyLockCountdown = 30;     // 15 seconds
+        gKeyLockCountdown = gEeprom.AUTO_KEYPAD_LOCK * 30;     // 15 seconds step
 
     if (!bKeyPressed) { // key released
         if (flagSaveVfo) {

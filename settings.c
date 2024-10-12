@@ -119,8 +119,8 @@ void SETTINGS_InitEEPROM(void)
     gEeprom.KEY_1_LONG_PRESS_ACTION      = (Data[2] < ACTION_OPT_LEN) ? Data[2] : ACTION_OPT_NONE;
     gEeprom.KEY_2_SHORT_PRESS_ACTION     = (Data[3] < ACTION_OPT_LEN) ? Data[3] : ACTION_OPT_SCAN;
     gEeprom.KEY_2_LONG_PRESS_ACTION      = (Data[4] < ACTION_OPT_LEN) ? Data[4] : ACTION_OPT_NONE;
-    gEeprom.SCAN_RESUME_MODE             = (Data[5] < 27)             ? Data[5] : 1;
-    gEeprom.AUTO_KEYPAD_LOCK             = (Data[6] < 2)              ? Data[6] : false;
+    gEeprom.SCAN_RESUME_MODE             = (Data[5] < 105)            ? Data[5] : 14;
+    gEeprom.AUTO_KEYPAD_LOCK             = (Data[6] < 41)             ? Data[6] : 0;
 #ifdef ENABLE_FEAT_F4HWN
     gEeprom.POWER_ON_DISPLAY_MODE        = (Data[7] < 6)              ? Data[7] : POWER_ON_DISPLAY_MODE_VOLTAGE;
 #else
@@ -350,8 +350,8 @@ void SETTINGS_InitEEPROM(void)
         gSetting_set_ctr = (ctr_value > 0 && ctr_value < 16) ? ctr_value : 10;
 
         gSetting_set_tmr = Data[4] & 0x01;
-#ifdef ENABLE_FEAT_F4HWN_SLEEP 
-        gSetting_set_off = Data[4] >> 1;
+#ifdef ENABLE_FEAT_F4HWN_SLEEP
+        gSetting_set_off = (Data[4] >> 1) > 120 ? 60 : (Data[4] >> 1); 
 #endif
 
         // Warning
@@ -727,7 +727,9 @@ void SETTINGS_SaveSettings(void)
     EEPROM_WriteBuffer(0x0F40, State);
 
 #ifdef ENABLE_FEAT_F4HWN
-    memset(State, 0xFF, sizeof(State));
+    EEPROM_ReadBuffer(0x1FF0, State, sizeof(State));
+
+    //memset(State, 0xFF, sizeof(State));
 
     /*
     tmp = 0;
@@ -904,13 +906,13 @@ void SETTINGS_UpdateChannel(uint8_t channel, const VFO_Info_t *pVFO, bool keep, 
 
 void SETTINGS_WriteBuildOptions(void)
 {
-    uint8_t buf[8] = {0};
+    uint8_t State[8];
 
 #ifdef ENABLE_FEAT_F4HWN
-    EEPROM_ReadBuffer(0x1FF0, buf, 8);
+    EEPROM_ReadBuffer(0x1FF0, State, sizeof(State));
 #endif
     
-buf[0] = 0
+State[0] = 0
 #ifdef ENABLE_FMRADIO
     | (1 << 0)
 #endif
@@ -937,7 +939,7 @@ buf[0] = 0
 #endif
 ;
 
-buf[1] = 0
+State[1] = 0
 #ifdef ENABLE_FLASHLIGHT
     | (1 << 0)
 #endif
@@ -957,5 +959,5 @@ buf[1] = 0
     | (1 << 5)
 #endif
 ;
-    EEPROM_WriteBuffer(0x1FF0, buf);
+    EEPROM_WriteBuffer(0x1FF0, State);
 }

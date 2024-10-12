@@ -232,13 +232,6 @@ const char* const gSubMenu_RXMode[] =
     };
 #endif
 
-const char gSubMenu_SC_REV[][13] =
-{
-    "CARRIER\nFAST",
-    "CARRIER\nSLOW",
-    "STOP"
-};
-
 const char* const gSubMenu_MDF[] =
 {
     "FREQ",
@@ -712,7 +705,10 @@ void UI_DisplayMenu(void)
             break;
 
         case MENU_AUTOLK:
-            strcpy(String, (gSubMenuSelection == 0) ? "OFF" : "AUTO");
+            if (gSubMenuSelection == 0)
+                strcpy(String, "OFF");
+            else
+                sprintf(String, "%02dm:%02ds", ((gSubMenuSelection * 15) / 60), ((gSubMenuSelection * 15) % 60));
             break;
 
         case MENU_COMPAND:
@@ -835,13 +831,17 @@ void UI_DisplayMenu(void)
         #endif
 
         case MENU_SC_REV:
-            if(gSubMenuSelection < 3)
+            if(gSubMenuSelection == 0)
             {
-                strcpy(String, gSubMenu_SC_REV[gSubMenuSelection]);
+                strcpy(String, "STOP");
+            }
+            else if(gSubMenuSelection < 81)
+            {
+                sprintf(String, "CARRIER\n%02ds:%03dms", ((gSubMenuSelection * 250) / 1000), ((gSubMenuSelection * 250) % 1000));
             }
             else
             {
-                sprintf(String, "TIMEOUT\n%02dm:%02ds", (((gSubMenuSelection - 2) * 5) / 60), (((gSubMenuSelection - 2) * 5) % 60));
+                sprintf(String, "TIMEOUT\n%02dm:%02ds", (((gSubMenuSelection - 80) * 5) / 60), (((gSubMenuSelection - 80) * 5) % 60));
             }
             break;
 
@@ -995,7 +995,7 @@ void UI_DisplayMenu(void)
             }
             else if(gSubMenuSelection < 121)
             {
-                sprintf(String, "%02dh:%02dm", (gSubMenuSelection / 60), (gSubMenuSelection % 60));
+                sprintf(String, "%dh:%02dm", (gSubMenuSelection / 60), (gSubMenuSelection % 60));
             }
             break;
 #endif
