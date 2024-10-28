@@ -69,7 +69,14 @@ void SETTINGS_InitEEPROM(void)
     gEeprom.DUAL_WATCH            = (Data[4] < 3) ? Data[4] : DUAL_WATCH_CHAN_A;
     gEeprom.BACKLIGHT_TIME        = (Data[5] < 62) ? Data[5] : 12;
     gEeprom.TAIL_TONE_ELIMINATION = (Data[6] < 2) ? Data[6] : false;
-    gEeprom.VFO_OPEN              = (Data[7] < 2) ? Data[7] : true;
+
+    #ifdef ENABLE_FEAT_F4HWN_RESTORE_SCAN
+        gEeprom.VFO_OPEN = Data[7] & 0x01;
+        gEeprom.CURRENT_STATE = (Data[7] >> 1) & 0x07;
+        gEeprom.CURRENT_LIST = (Data[7] >> 4) & 0x07;
+    #else
+        gEeprom.VFO_OPEN              = (Data[7] < 2) ? Data[7] : true;
+    #endif
 
     // 0E80..0E87
     EEPROM_ReadBuffer(0x0E80, Data, 8);
@@ -610,7 +617,12 @@ void SETTINGS_SaveSettings(void)
     #endif
 
     State[6] = gEeprom.TAIL_TONE_ELIMINATION;
-    State[7] = gEeprom.VFO_OPEN;
+
+    #ifdef ENABLE_FEAT_F4HWN_RESTORE_SCAN
+        State[7] = (gEeprom.VFO_OPEN & 0x01) | ((gEeprom.CURRENT_STATE & 0x07) << 1) | ((gEeprom.SCAN_LIST_DEFAULT & 0x07) << 4);
+    #else
+        State[7] = gEeprom.VFO_OPEN;
+    #endif
     EEPROM_WriteBuffer(0x0E78, State);
 
     State[0] = gEeprom.BEEP_CONTROL;
@@ -961,3 +973,14 @@ State[1] = 0
 ;
     EEPROM_WriteBuffer(0x1FF0, State);
 }
+
+#ifdef ENABLE_FEAT_F4HWN_RESTORE_SCAN
+    void SETTINGS_WriteCurrentState(void)
+    {
+        uint8_t State[8];
+        EEPROM_ReadBuffer(0x0E78, State, sizeof(State));
+        //State[3] = (gEeprom.CURRENT_STATE << 4) | (gEeprom.BATTERY_SAVE & 0x0F);
+        State[7] = (gEeprom.VFO_OPEN & 0x01) | ((gEeprom.CURRENT_STATE & 0x07) << 1) | ((gEeprom.SCAN_LIST_DEFAULT & 0x07) << 4);
+        EEPROM_WriteBuffer(0x0E78, State);
+    }
+#endif
