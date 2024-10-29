@@ -520,7 +520,7 @@ void ACTION_MainOnly(void)
 
 void ACTION_Ptt(void)
 {
-    gSetting_set_ptt_session = (gSetting_set_ptt_session == 0) ? 1: 0;
+    gSetting_set_ptt_session = !gSetting_set_ptt_session;
 }
 
 void ACTION_Wn(void)
