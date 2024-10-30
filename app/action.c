@@ -525,24 +525,56 @@ void ACTION_Ptt(void)
 
 void ACTION_Wn(void)
 {
-    if (FUNCTION_IsRx())
-    {
-        gRxVfo->CHANNEL_BANDWIDTH = (gRxVfo->CHANNEL_BANDWIDTH == 0) ? 1: 0;
-        #ifdef ENABLE_AM_FIX
-            BK4819_SetFilterBandwidth(gRxVfo->CHANNEL_BANDWIDTH, true);
-        #else
-            BK4819_SetFilterBandwidth(gRxVfo->CHANNEL_BANDWIDTH, false);
-        #endif
-    }
-    else
-    {
-        gTxVfo->CHANNEL_BANDWIDTH = (gTxVfo->CHANNEL_BANDWIDTH == 0) ? 1: 0;
-        #ifdef ENABLE_AM_FIX
-            BK4819_SetFilterBandwidth(gTxVfo->CHANNEL_BANDWIDTH, true);
-        #else
-            BK4819_SetFilterBandwidth(gTxVfo->CHANNEL_BANDWIDTH, false);
-        #endif
-    }
+    #ifdef ENABLE_FEAT_F4HWN_NARROWER
+        bool narrower = 0;
+        if (FUNCTION_IsRx())
+        {
+            gRxVfo->CHANNEL_BANDWIDTH = (gRxVfo->CHANNEL_BANDWIDTH == 0) ? 1: 0;
+            if(gRxVfo->CHANNEL_BANDWIDTH == BANDWIDTH_NARROW && gSetting_set_nfm == 1)
+            {
+                narrower = 1;
+            }
+
+            #ifdef ENABLE_AM_FIX
+                BK4819_SetFilterBandwidth(gRxVfo->CHANNEL_BANDWIDTH + narrower, true);
+            #else
+                BK4819_SetFilterBandwidth(gRxVfo->CHANNEL_BANDWIDTH + narrower, false);
+            #endif
+        }
+        else
+        {
+            gTxVfo->CHANNEL_BANDWIDTH = (gTxVfo->CHANNEL_BANDWIDTH == 0) ? 1: 0;
+            if(gTxVfo->CHANNEL_BANDWIDTH == BANDWIDTH_NARROW && gSetting_set_nfm == 1)
+            {
+                narrower = 1;
+            }
+
+            #ifdef ENABLE_AM_FIX
+                BK4819_SetFilterBandwidth(gTxVfo->CHANNEL_BANDWIDTH, true);
+            #else
+                BK4819_SetFilterBandwidth(gTxVfo->CHANNEL_BANDWIDTH, false);
+            #endif
+        }
+    #else
+        if (FUNCTION_IsRx())
+        {
+            gRxVfo->CHANNEL_BANDWIDTH = (gRxVfo->CHANNEL_BANDWIDTH == 0) ? 1: 0;
+            #ifdef ENABLE_AM_FIX
+                BK4819_SetFilterBandwidth(gRxVfo->CHANNEL_BANDWIDTH, true);
+            #else
+                BK4819_SetFilterBandwidth(gRxVfo->CHANNEL_BANDWIDTH, false);
+            #endif
+        }
+        else
+        {
+            gTxVfo->CHANNEL_BANDWIDTH = (gTxVfo->CHANNEL_BANDWIDTH == 0) ? 1: 0;
+            #ifdef ENABLE_AM_FIX
+                BK4819_SetFilterBandwidth(gTxVfo->CHANNEL_BANDWIDTH, true);
+            #else
+                BK4819_SetFilterBandwidth(gTxVfo->CHANNEL_BANDWIDTH, false);
+            #endif
+        }
+    #endif
 }
 
 void ACTION_BackLight(void)

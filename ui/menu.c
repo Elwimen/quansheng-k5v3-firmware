@@ -138,18 +138,21 @@ const t_menu_item MenuList[] =
     {"Sql",         MENU_SQL           },
 #ifdef ENABLE_FEAT_F4HWN
     {"SetPwr",      MENU_SET_PWR       },
-    {"SetPtt",      MENU_SET_PTT       },
-    {"SetTot",      MENU_SET_TOT       },
-    {"SetEot",      MENU_SET_EOT       },
+    {"SetPTT",      MENU_SET_PTT       },
+    {"SetTOT",      MENU_SET_TOT       },
+    {"SetEOT",      MENU_SET_EOT       },
     {"SetCtr",      MENU_SET_CTR       },
     {"SetInv",      MENU_SET_INV       },
     {"SetLck",      MENU_SET_LCK       },
     {"SetMet",      MENU_SET_MET       },
-    {"SetGui",      MENU_SET_GUI       },
+    {"SetGUI",      MENU_SET_GUI       },
     {"SetTmr",      MENU_SET_TMR       },
 #ifdef ENABLE_FEAT_F4HWN_SLEEP
     {"SetOff",       MENU_SET_OFF      },
 #endif
+    #ifdef ENABLE_FEAT_F4HWN_NARROWER
+        {"SetNFM",      MENU_SET_NFM       },
+    #endif
 #endif
     // hidden menu items from here on
     // enabled if pressing both the PTT and upper side button at power-on
@@ -390,6 +393,14 @@ const char gSubMenu_SCRAMBLER[][7] =
         "TINY",
         "CLASSIC"
     };
+
+    #ifdef ENABLE_FEAT_F4HWN_NARROWER
+        const char gSubMenu_SET_NFM[][8] =
+        {
+            "12.5kHz",
+            "6.25kHz"
+        };
+    #endif
 #endif
 
 const t_sidefunction gSubMenu_SIDEFUNCTIONS[] =
@@ -1045,6 +1056,11 @@ void UI_DisplayMenu(void)
             strcpy(String, gSubMenu_SET_MET[gSubMenuSelection]); // Same as SET_MET
             break;
 
+        #ifdef ENABLE_FEAT_F4HWN_NARROWER
+            case MENU_SET_NFM:
+                strcpy(String, gSubMenu_SET_NFM[gSubMenuSelection]);
+                break;
+        #endif
 #endif
 
     }
