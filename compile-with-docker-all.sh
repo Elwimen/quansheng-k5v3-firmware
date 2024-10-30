@@ -35,9 +35,9 @@ voxless() {
         ENABLE_AIRCOPY=0 \
         ENABLE_AUDIO_BAR=0 \
         ENABLE_FEAT_F4HWN_SPECTRUM=0 \
-        ENABLE_FEAT_F4HWN_SLEEP=1 \
         ENABLE_NOAA=0 \
         ENABLE_FEAT_F4HWN_RESTORE_SCAN=0 \
+        ENABLE_FEAT_F4HWN_CHARGING_C=0 \
         TARGET=f4hwn.voxless \
         && cp f4hwn.voxless* compiled-firmware/"
 }
