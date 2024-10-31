@@ -209,16 +209,6 @@ const char gSubMenu_OFF_ON[][4] =
     "ON"
 };
 
-const char gSubMenu_SAVE[][4] =
-{
-    "OFF",
-    "1:1",
-    "1:2",
-    "1:3",
-    "1:4",
-    "1:5"
-};
-
 const char* const gSubMenu_RXMode[] =
 {
     "MAIN\nONLY",       // TX and RX on main only
@@ -676,10 +666,7 @@ void UI_DisplayMenu(void)
 
         #ifdef ENABLE_VOX
             case MENU_VOX:
-                if (gSubMenuSelection == 0)
-                    strcpy(String, "OFF");
-                else
-                    sprintf(String, "%d", gSubMenuSelection);
+                sprintf(String, gSubMenuSelection == 0 ? "OFF" : "%u", gSubMenuSelection);
                 break;
         #endif
 
@@ -825,7 +812,7 @@ void UI_DisplayMenu(void)
         }
 
         case MENU_SAVE:
-            strcpy(String, gSubMenu_SAVE[gSubMenuSelection]);
+            sprintf(String, gSubMenuSelection == 0 ? "OFF" : "1:%u", gSubMenuSelection);
             break;
 
         case MENU_TDR:
@@ -862,10 +849,7 @@ void UI_DisplayMenu(void)
             break;
 
         case MENU_RP_STE:
-            if (gSubMenuSelection == 0)
-                strcpy(String, "OFF");
-            else
-                sprintf(String, "%d*100ms", gSubMenuSelection);
+            sprintf(String, gSubMenuSelection == 0 ? "OFF" : "%u*100ms", gSubMenuSelection);
             break;
 
         case MENU_S_LIST:
