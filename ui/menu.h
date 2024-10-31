@@ -144,6 +144,9 @@ enum
     #ifdef ENABLE_FEAT_F4HWN_NARROWER
         MENU_SET_NFM,
     #endif
+    #ifdef ENABLE_FEAT_F4HWN_VOL
+        MENU_SET_VOL,
+    #endif
 #endif
     MENU_BATCAL,  // battery voltage calibration
     MENU_F1SHRT,

@@ -150,9 +150,12 @@ const t_menu_item MenuList[] =
 #ifdef ENABLE_FEAT_F4HWN_SLEEP
     {"SetOff",       MENU_SET_OFF      },
 #endif
-    #ifdef ENABLE_FEAT_F4HWN_NARROWER
-        {"SetNFM",      MENU_SET_NFM       },
-    #endif
+#ifdef ENABLE_FEAT_F4HWN_NARROWER
+    {"SetNFM",      MENU_SET_NFM       },
+#endif
+#ifdef ENABLE_FEAT_F4HWN_VOL
+    {"SetVol",      MENU_SET_VOL       },
+#endif
 #endif
     // hidden menu items from here on
     // enabled if pressing both the PTT and upper side button at power-on
@@ -1044,6 +1047,18 @@ void UI_DisplayMenu(void)
         #ifdef ENABLE_FEAT_F4HWN_NARROWER
             case MENU_SET_NFM:
                 strcpy(String, gSubMenu_SET_NFM[gSubMenuSelection]);
+                break;
+        #endif
+
+        #ifdef ENABLE_FEAT_F4HWN_VOL
+            case MENU_SET_VOL:
+                sprintf(String, gSubMenuSelection == 0 ? "OFF" : "%02u", gSubMenuSelection);
+                gEeprom.VOLUME_GAIN = gSubMenuSelection;
+                BK4819_WriteRegister(BK4819_REG_48,
+                    (11u << 12)                |     // ??? .. 0 ~ 15, doesn't seem to make any difference
+                    ( 0u << 10)                |     // AF Rx Gain-1
+                    (gEeprom.VOLUME_GAIN << 4) |     // AF Rx Gain-2
+                    (gEeprom.DAC_GAIN    << 0));     // AF DAC Gain (after Gain-1 and Gain-2)
                 break;
         #endif
 #endif
