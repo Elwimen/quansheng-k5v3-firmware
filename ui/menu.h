@@ -185,7 +185,7 @@ extern const char        gSubMenu_D_RSP[4][11];
     extern const char    gSubMenu_SET_LCK[2][9];
     extern const char    gSubMenu_SET_MET[2][8];
     #ifdef ENABLE_FEAT_F4HWN_NARROWER
-        extern const char    gSubMenu_SET_NFM[2][8];
+        extern const char    gSubMenu_SET_NFM[2][9];
     #endif
 #endif
 

@@ -389,10 +389,10 @@ const char gSubMenu_SCRAMBLER[][7] =
     };
 
     #ifdef ENABLE_FEAT_F4HWN_NARROWER
-        const char gSubMenu_SET_NFM[][8] =
+        const char gSubMenu_SET_NFM[][9] =
         {
-            "12.5kHz",
-            "6.25kHz"
+            "NARROW",
+            "NARROWER"
         };
     #endif
 #endif
