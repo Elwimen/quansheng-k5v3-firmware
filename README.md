@@ -68,6 +68,7 @@ Special thanks to Jean-Cyrille F6IWW, Fabrice 14RC123, David F4BPP, Olivier 14RC
     * rename BackLt to BLTime,
     * rename BltTRX to BLTxRx,
     * improve memory channel input,
+    * improve keyboard frequency input,
     * add percent and gauge to Air Copy,
     * improve audio bar,
     * and more...
@@ -111,6 +112,7 @@ Special thanks to Jean-Cyrille F6IWW, Fabrice 14RC123, David F4BPP, Olivier 14RC
         * scan lists [1, 2, 3],
         * scan all (all channels with ou without list),
     * add scan list shortcuts,
+    * add scan resume mode on startup,
 * new actions:
     * RX MODE,
     * MAIN ONLY,
