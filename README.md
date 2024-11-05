@@ -26,7 +26,7 @@ Anyway, have fun.
 
 # Donations
 
-Special thanks to Jean-Cyrille F6IWW, Fabrice 14RC123, David F4BPP, Olivier 14RC206, Frédéric F4ESO, Stéphane F5LGW, Jorge Ornelas, Laurent F4AXK, Christophe Morel, Clayton W0LED, Pierre Antoine F6FWB, Jean-Claude 14FRS3306, Thierry F4GVO, Eric F1NOU, PricelessToolkit, Ady M6NYJ, Tom McGovern, Joseph Roth, Pierre-Yves Colin, Frank DJ7FG, Marcel Testaz, Brian Frobisher, Yannick F4JFO, Paolo Bussola, Dirk DL8DF, Levente Szőke (2 times), Bernard-Michel Herrera, Jérôme Saintespes, Paul Davies, RS and Johan F4WAT for their [donations](https://www.paypal.com/paypalme/F4HWN). That’s so kind of them. Thanks so much 🙏🏻
+Special thanks to Jean-Cyrille F6IWW, Fabrice 14RC123, David F4BPP, Olivier 14RC206, Frédéric F4ESO, Stéphane F5LGW, Jorge Ornelas, Laurent F4AXK, Christophe Morel, Clayton W0LED, Pierre Antoine F6FWB, Jean-Claude 14FRS3306, Thierry F4GVO, Eric F1NOU, PricelessToolkit, Ady M6NYJ, Tom McGovern, Joseph Roth, Pierre-Yves Colin, Frank DJ7FG, Marcel Testaz, Brian Frobisher, Yannick F4JFO, Paolo Bussola, Dirk DL8DF, Levente Szőke (2 times), Bernard-Michel Herrera, Jérôme Saintespes, Paul Davies, RS, Johan F4WAT and Robert Wörle for their [donations](https://www.paypal.com/paypalme/F4HWN). That’s so kind of them. Thanks so much 🙏🏻
 
 ## Table of Contents
 
@@ -41,7 +41,7 @@ Special thanks to Jean-Cyrille F6IWW, Fabrice 14RC123, David F4BPP, Olivier 14RC
 * [License](#license)
 * [Example changes/updates](#example-changesupdates)
 
-## Main features:
+## Main features and improvements from F4HWN:
 
 * improve default power settings level: 
     * Low1 to Low5 (<~20mW, ~125mW, ~250mW, ~500mW, ~1W), 
@@ -68,27 +68,30 @@ Special thanks to Jean-Cyrille F6IWW, Fabrice 14RC123, David F4BPP, Olivier 14RC
     * rename BackLt to BLTime,
     * rename BltTRX to BLTxRx,
     * improve memory channel input,
+    * improve keyboard frequency input,
     * add percent and gauge to Air Copy,
     * improve audio bar,
     * and more...
 * new menu entries and changes:
     * add SetPwr menu to set User power (<20mW, 125mW, 250mW, 500mW, 1W, 2W or 5W),
-    * add SetPtt menu to set PTT mode (Classic or OnePush),
-    * add SetTot menu to set TOT alert (Off, Sound, Visual, All),
+    * add SetPTT menu to set PTT mode (Classic or OnePush),
+    * add SetTOT menu to set TOT alert (Off, Sound, Visual, All),
     * add SetCtr menu to set contrast (0 to 15),
     * add SetInv menu to set screen in invert mode (Off or On),
-    * add SetEot menu to set EOT (End Of Transmission) alert (Off, Sound, Visual, All),
+    * add SetEOT menu to set EOT (End Of Transmission) alert (Off, Sound, Visual, All),
     * add SetMet menu to set s-meter style (Classic or Tiny),
     * add SetLck menu to set what is locked (Keys or Keys + PTT),
-    * add SetGui menu to set font size on the VFO baseline (Classic or Tiny),
+    * add SetGUI menu to set font size on the VFO baseline (Classic or Tiny),
     * add TXLock menu to open TX on channel,
     * add SetTmr menu to set RX and TX timers (Off or On),
     * add SetOff menu to set the delay before the transceiver goes into deep sleep (Off or 1 minute to 2 hours),
+    * add SetNFM menu to set Narrow width (12.5kHz or 6.25kHz),
     * rename BatVol menu (52/63) to SysInf, which displays the firmware version in addition to the battery status,
     * improve PonMsg menu,
     * improve BackLt menu,
     * improve TxTOut menu,
-    * improve ScnRev menu (CARRIER FAST, CARRIER SLOW, STOP, TIMEOUT from 5 secondes to 2 minutes)
+    * improve ScnRev menu (CARRIER from 250ms to 20s, STOP, TIMEOUT from 5s to 2m)
+    * improve KeyLck menu (OFF, delay from 15s to 10m)
     * add HAM CA F Lock band (for Canadian zone),
     * remove blink and SOS functionality, 
     * remove AM Fix menu (AM Fix is ENABLED by default),
@@ -109,6 +112,7 @@ Special thanks to Jean-Cyrille F6IWW, Fabrice 14RC123, David F4BPP, Olivier 14RC
         * scan lists [1, 2, 3],
         * scan all (all channels with ou without list),
     * add scan list shortcuts,
+    * add scan resume mode on startup,
 * new actions:
     * RX MODE,
     * MAIN ONLY,
