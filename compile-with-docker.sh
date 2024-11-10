@@ -4,6 +4,13 @@ IMAGE_NAME="uvk5"
 rm "${PWD}/compiled-firmware/*"
 docker build -t $IMAGE_NAME .
 
+custom() {
+    echo "Custom compilation..."
+    docker run --rm -v "${PWD}/compiled-firmware/:/app/compiled-firmware" $IMAGE_NAME /bin/bash -c "rm ./compiled-firmware/*; cd /app && make -s \
+        TARGET=f4hwn.custom \
+        && cp f4hwn.custom* compiled-firmware/"
+}
+
 bandscope() {
     echo "Bandscope compilation..."
     docker run --rm -v "${PWD}/compiled-firmware/:/app/compiled-firmware" $IMAGE_NAME /bin/bash -c "rm ./compiled-firmware/*; cd /app && make -s \
@@ -44,6 +51,9 @@ voxless() {
 }
 
 case "$1" in
+    custom)
+        custom
+        ;;
     bandscope)
         bandscope
         ;;
@@ -59,7 +69,7 @@ case "$1" in
         voxless
         ;;
     *)
-        echo "Usage: $0 {bandscope|broadcast|voxless|all}"
+        echo "Usage: $0 {custom|bandscope|broadcast|voxless|all}"
         exit 1
         ;;
 esac
