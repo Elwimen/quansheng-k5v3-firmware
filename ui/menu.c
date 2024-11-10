@@ -141,7 +141,9 @@ const t_menu_item MenuList[] =
     {"SetPTT",      MENU_SET_PTT       },
     {"SetTOT",      MENU_SET_TOT       },
     {"SetEOT",      MENU_SET_EOT       },
+#ifdef ENABLE_FEAT_F4HWN_CONTRAST
     {"SetCtr",      MENU_SET_CTR       },
+#endif
     {"SetInv",      MENU_SET_INV       },
     {"SetLck",      MENU_SET_LCK       },
     {"SetMet",      MENU_SET_MET       },
@@ -1013,11 +1015,13 @@ void UI_DisplayMenu(void)
             strcpy(String, gSubMenu_SET_TOT[gSubMenuSelection]); // Same as SET_TOT
             break;
 
+#ifdef ENABLE_FEAT_F4HWN_CONTRAST
         case MENU_SET_CTR:
             sprintf(String, "%d", gSubMenuSelection);
             gSetting_set_ctr = gSubMenuSelection;
             ST7565_ContrastAndInv();
             break;
+#endif
 
         case MENU_SET_INV:
             strcpy(String, gSubMenu_OFF_ON[gSubMenuSelection]);
