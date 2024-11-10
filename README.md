@@ -219,7 +219,7 @@ This is the least demanding option as you don't have to install enything on your
 5. Open `Makefile`
 1. Edit build options, save `Makefile` changes
 1. Run in terminal window
-    - `./compile-with-docker.sh bandscope` to compile bandescope version
+    - `./compile-with-docker.sh bandscope` to compile bandscope version
     - `./compile-with-docker.sh broadcast` to compile broadcast version
     - `./compile-with-docker.sh voxless` to compile voxless version
     - `./compile-with-docker.sh all` to compile all versions 
