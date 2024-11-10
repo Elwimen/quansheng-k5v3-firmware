@@ -218,7 +218,11 @@ This is the least demanding option as you don't have to install enything on your
 
 5. Open `Makefile`
 1. Edit build options, save `Makefile` changes
-1. Run `./compile-with-docker.sh` in terminal window
+1. Run in terminal window
+    1. `./compile-with-docker.sh bandscope` to compile bandescope version
+    2. `./compile-with-docker.sh broadcast` to compile broadcast version
+    3. `./compile-with-docker.sh voxless` to compile voxless version
+    4. `./compile-with-docker.sh all` to compile all versions 
 1. Open folder `compiled-firmware`
 1. Right click `firmware.packed.bin`
 1. Click `Download`, now you should have a firmware on your computer that you can proceed to flash on your radio. You can use [online flasher](https://egzumer.github.io/uvtools)
