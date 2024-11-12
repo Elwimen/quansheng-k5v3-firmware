@@ -50,6 +50,17 @@ voxless() {
         && cp f4hwn.voxless* compiled-firmware/"
 }
 
+light() {
+    echo "Light compilation..."
+    docker run --rm -v "${PWD}/compiled-firmware:/app/compiled-firmware" $IMAGE_NAME /bin/bash -c "cd /app && make -s \
+        ENABLE_SPECTRUM=0 \
+        ENABLE_FMRADIO=0 \
+        ENABLE_AIRCOPY=0 \
+        ENABLE_NOAA=1 \
+        TARGET=f4hwn.light \
+        && cp f4hwn.light* compiled-firmware/"
+}
+
 case "$1" in
     custom)
         custom
@@ -63,10 +74,14 @@ case "$1" in
     voxless)
         voxless
         ;;
+    light)
+        light
+        ;;
     all)
         bandscope
         broadcast
         voxless
+        light
         ;;
     *)
         echo "Usage: $0 {custom|bandscope|broadcast|voxless|all}"
