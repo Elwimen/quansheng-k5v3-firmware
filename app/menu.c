@@ -432,6 +432,12 @@ int MENU_GetLimits(uint8_t menu_id, int32_t *pMin, int32_t *pMax)
                 *pMax = 63;
                 break;
         #endif
+        #ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
+            case MENU_SET_KEY:
+                //*pMin = 0;
+                *pMax = 4;
+                break;
+        #endif
 #endif
 
         default:
@@ -945,6 +951,11 @@ void MENU_AcceptSetting(void)
                 gEeprom.VOLUME_GAIN = gSubMenuSelection;
                 break;
         #endif
+        #ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
+            case MENU_SET_KEY:
+                gEeprom.SET_KEY = gSubMenuSelection;
+                break;
+        #endif
         case MENU_SET_TMR:
             gSetting_set_tmr = gSubMenuSelection;
             break;
@@ -1389,6 +1400,11 @@ void MENU_ShowCurrentSetting(void)
         #ifdef ENABLE_FEAT_F4HWN_VOL
             case MENU_SET_VOL:
                 gSubMenuSelection = gEeprom.VOLUME_GAIN;
+                break;
+        #endif
+        #ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
+            case MENU_SET_KEY:
+                gSubMenuSelection = gEeprom.SET_KEY;
                 break;
         #endif
         case MENU_SET_TMR:

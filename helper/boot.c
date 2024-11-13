@@ -45,9 +45,9 @@ BOOT_Mode_t BOOT_GetMode(void)
     }
 
     #ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
-    if (Keys[0] == KEY_MENU)
+    if (Keys[0] == (10 + gEeprom.SET_KEY))
     {
-        return BOOT_MODE_MENU_LOCK;  // Menu pressed
+        return BOOT_MODE_MENU_LOCK;  // Secret KEY pressed
     }
     #endif
 

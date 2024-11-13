@@ -158,6 +158,9 @@ const t_menu_item MenuList[] =
 #ifdef ENABLE_FEAT_F4HWN_VOL
     {"SetVol",      MENU_SET_VOL       },
 #endif
+#ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
+    {"SetKey",      MENU_SET_KEY       },
+#endif
 #endif
     // hidden menu items from here on
     // enabled if pressing both the PTT and upper side button at power-on
@@ -395,6 +398,17 @@ const char gSubMenu_SCRAMBLER[][7] =
         {
             "NARROW",
             "NARROWER"
+        };
+    #endif
+
+    #ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
+        const char gSubMenu_SET_KEY[][9] =
+        {
+            "KEY_MENU",
+            "KEY_UP",
+            "KEY_DOWN",
+            "KEY_EXIT",
+            "KEY_STAR"
         };
     #endif
 #endif
@@ -1064,6 +1078,12 @@ void UI_DisplayMenu(void)
                     (gEeprom.VOLUME_GAIN << 4) |     // AF Rx Gain-2
                     (gEeprom.DAC_GAIN    << 0));     // AF DAC Gain (after Gain-1 and Gain-2)
                 break;
+        #endif
+
+        #ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
+            case MENU_SET_KEY:
+                strcpy(String, gSubMenu_SET_KEY[gSubMenuSelection]);
+                break;                
         #endif
 #endif
 
