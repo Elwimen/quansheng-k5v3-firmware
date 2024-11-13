@@ -44,6 +44,13 @@ BOOT_Mode_t BOOT_GetMode(void)
         SYSTEM_DelayMs(20);
     }
 
+    #ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
+    if (Keys[0] == KEY_MENU)
+    {
+        return BOOT_MODE_MENU_LOCK;  // Menu pressed
+    }
+    #endif
+
     if (Keys[0] == Keys[1])
     {
         gKeyReading0 = Keys[0];

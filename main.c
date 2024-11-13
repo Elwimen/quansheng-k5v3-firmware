@@ -129,7 +129,30 @@ void Main(void)
     AM_fix_init();
 #endif
 
-    const BOOT_Mode_t  BootMode = BOOT_GetMode();
+    BOOT_Mode_t  BootMode = BOOT_GetMode();
+
+#ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
+    if (BootMode == BOOT_MODE_MENU_LOCK)
+    {
+        gEeprom.MENU_LOCK = !gEeprom.MENU_LOCK;
+        SETTINGS_SaveSettings();
+    }
+
+    if(gEeprom.MENU_LOCK == true) // Force Main Only
+    {
+        gEeprom.DUAL_WATCH = 0;
+        gEeprom.CROSS_BAND_RX_TX = 0;
+        //gFlagReconfigureVfos = true;
+        //gUpdateStatus        = true;
+    }
+#endif
+
+#ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
+    if (BootMode == BOOT_MODE_F_LOCK && gEeprom.MENU_LOCK == true)
+    {
+        BootMode = BOOT_MODE_NORMAL;
+    }
+#endif
 
     if (BootMode == BOOT_MODE_F_LOCK)
     {

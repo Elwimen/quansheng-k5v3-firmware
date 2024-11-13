@@ -51,7 +51,12 @@ void SETTINGS_InitEEPROM(void)
     #ifdef ENABLE_NOAA
         gEeprom.NOAA_AUTO_SCAN   = (Data[3] <  2) ? Data[3] : false;
     #endif
-    gEeprom.KEY_LOCK             = (Data[4] <  2) ? Data[4] : false;
+    #ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
+        gEeprom.KEY_LOCK = (Data[4] & 0x01) != 0;
+        gEeprom.MENU_LOCK = (Data[4] & 0x02) != 0;
+    #else
+        gEeprom.KEY_LOCK             = (Data[4] <  2) ? Data[4] : false;
+    #endif
     #ifdef ENABLE_VOX
         gEeprom.VOX_SWITCH       = (Data[5] <  2) ? Data[5] : false;
         gEeprom.VOX_LEVEL        = (Data[6] < 10) ? Data[6] : 1;
@@ -590,7 +595,13 @@ void SETTINGS_SaveSettings(void)
     #else
         State[3] = false;
     #endif
-    State[4] = gEeprom.KEY_LOCK;
+
+    #ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
+        State[4] = (gEeprom.KEY_LOCK ? 0x01 : 0) | (gEeprom.MENU_LOCK ? 0x02 :0);
+    #else
+        State[4] = gEeprom.KEY_LOCK;
+    #endif
+
     #ifdef ENABLE_VOX
         State[5] = gEeprom.VOX_SWITCH;
         State[6] = gEeprom.VOX_LEVEL;
