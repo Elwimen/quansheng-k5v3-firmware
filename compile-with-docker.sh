@@ -76,7 +76,7 @@ rescueops() {
         ENABLE_FMRADIO=0 \
         ENABLE_AIRCOPY=1 \
         ENABLE_NOAA=1 \
-        ENABLE_FEAT_F4HWN_MENU_LOCK=2 \
+        ENABLE_FEAT_F4HWN_MENU_LOCK=1 \
         EDITION_STRING=RescueOps \
         TARGET=f4hwn.rescueops \
         && cp f4hwn.rescueops* compiled-firmware/"
