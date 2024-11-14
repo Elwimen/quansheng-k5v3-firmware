@@ -48,6 +48,7 @@ void UI_DisplayWelcome(void)
     char WelcomeString0[16];
     char WelcomeString1[16];
     char WelcomeString2[16];
+    char WelcomeString3[20];
 
     memset(gStatusLine,  0, sizeof(gStatusLine));
 
@@ -129,6 +130,10 @@ void UI_DisplayWelcome(void)
         }
 
 
+        sprintf(WelcomeString3, "%s Edition", Edition);
+        UI_PrintStringSmallNormal(WelcomeString3, 0, 127, 6);
+
+        /*
         #ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
             #if ENABLE_FEAT_F4HWN_MENU_LOCK > 1
                 UI_PrintStringSmallNormal(Edition, 18, 0, 6);
@@ -158,6 +163,7 @@ void UI_DisplayWelcome(void)
             UI_PrintStringSmallNormal(Edition, 18, 0, 6);
             memcpy(gFrameBuffer[6] + 103, BITMAP_Ready, sizeof(BITMAP_Ready));                    
         #endif
+        */
 
         /*
         #ifdef ENABLE_SPECTRUM

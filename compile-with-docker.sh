@@ -12,6 +12,18 @@ custom() {
         && cp f4hwn.custom* compiled-firmware/"
 }
 
+standard() {
+    echo "Standard compilation..."
+    docker run --rm -v "${PWD}/compiled-firmware:/app/compiled-firmware" $IMAGE_NAME /bin/bash -c "rm ./compiled-firmware/*; cd /app && make -s \
+        ENABLE_SPECTRUM=0 \
+        ENABLE_FMRADIO=0 \
+        ENABLE_AIRCOPY=0 \
+        ENABLE_NOAA=0 \
+        EDITION_STRING=Standard \
+        TARGET=f4hwn.standard \
+        && cp f4hwn.standard* compiled-firmware/"
+}
+
 bandscope() {
     echo "Bandscope compilation..."
     docker run --rm -v "${PWD}/compiled-firmware/:/app/compiled-firmware" $IMAGE_NAME /bin/bash -c "rm ./compiled-firmware/*; cd /app && make -s \
@@ -57,18 +69,6 @@ voxless() {
         && cp f4hwn.voxless* compiled-firmware/"
 }
 
-standard() {
-    echo "Standard compilation..."
-    docker run --rm -v "${PWD}/compiled-firmware:/app/compiled-firmware" $IMAGE_NAME /bin/bash -c "cd /app && make -s \
-        ENABLE_SPECTRUM=0 \
-        ENABLE_FMRADIO=0 \
-        ENABLE_AIRCOPY=0 \
-        ENABLE_NOAA=0 \
-        EDITION_STRING=Standard \
-        TARGET=f4hwn.standard \
-        && cp f4hwn.standard* compiled-firmware/"
-}
-
 rescueops() {
     echo "RescueOps compilation..."
     docker run --rm -v "${PWD}/compiled-firmware:/app/compiled-firmware" $IMAGE_NAME /bin/bash -c "cd /app && make -s \
@@ -86,6 +86,9 @@ case "$1" in
     custom)
         custom
         ;;
+    standard)
+        standard
+        ;;
     bandscope)
         bandscope
         ;;
@@ -95,9 +98,6 @@ case "$1" in
     voxless)
         voxless
         ;;
-    standard)
-        standard
-        ;;
     rescueops)
         rescueops
         ;;
@@ -105,7 +105,6 @@ case "$1" in
         bandscope
         broadcast
         voxless
-        standard
         rescueops
         ;;
     *)
