@@ -216,9 +216,14 @@ This is the least demanding option as you don't have to install enything on your
 
 <img src="images/Code_Space_1.png" width=700 />
 
-5. Open `Makefile`
-1. Edit build options, save `Makefile` changes
-1. Run `./compile-with-docker.sh` in terminal window
+5. Open `Makefile`, edit build options and save changes
+1. If necessary, open `compile-with-docker.sh`, edit build versions and save changes
+1. Run in terminal window
+    - `./compile-with-docker.sh bandscope` to compile bandscope version
+    - `./compile-with-docker.sh broadcast` to compile broadcast version
+    - `./compile-with-docker.sh voxless` to compile voxless version
+    - `./compile-with-docker.sh all` to compile all versions 
+    - `./compile-with-docker.sh custom` to compile only with Makefile build options   
 1. Open folder `compiled-firmware`
 1. Right click `firmware.packed.bin`
 1. Click `Download`, now you should have a firmware on your computer that you can proceed to flash on your radio. You can use [online flasher](https://egzumer.github.io/uvtools)

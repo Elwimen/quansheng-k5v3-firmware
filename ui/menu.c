@@ -141,7 +141,9 @@ const t_menu_item MenuList[] =
     {"SetPTT",      MENU_SET_PTT       },
     {"SetTOT",      MENU_SET_TOT       },
     {"SetEOT",      MENU_SET_EOT       },
+#ifdef ENABLE_FEAT_F4HWN_CONTRAST
     {"SetCtr",      MENU_SET_CTR       },
+#endif
     {"SetInv",      MENU_SET_INV       },
     {"SetLck",      MENU_SET_LCK       },
     {"SetMet",      MENU_SET_MET       },
@@ -155,6 +157,9 @@ const t_menu_item MenuList[] =
 #endif
 #ifdef ENABLE_FEAT_F4HWN_VOL
     {"SetVol",      MENU_SET_VOL       },
+#endif
+#ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
+    {"SetKey",      MENU_SET_KEY       },
 #endif
 #endif
     // hidden menu items from here on
@@ -393,6 +398,17 @@ const char gSubMenu_SCRAMBLER[][7] =
         {
             "NARROW",
             "NARROWER"
+        };
+    #endif
+
+    #ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
+        const char gSubMenu_SET_KEY[][9] =
+        {
+            "KEY_MENU",
+            "KEY_UP",
+            "KEY_DOWN",
+            "KEY_EXIT",
+            "KEY_STAR"
         };
     #endif
 #endif
@@ -1013,11 +1029,13 @@ void UI_DisplayMenu(void)
             strcpy(String, gSubMenu_SET_TOT[gSubMenuSelection]); // Same as SET_TOT
             break;
 
+#ifdef ENABLE_FEAT_F4HWN_CONTRAST
         case MENU_SET_CTR:
             sprintf(String, "%d", gSubMenuSelection);
             gSetting_set_ctr = gSubMenuSelection;
             ST7565_ContrastAndInv();
             break;
+#endif
 
         case MENU_SET_INV:
             strcpy(String, gSubMenu_OFF_ON[gSubMenuSelection]);
@@ -1060,6 +1078,12 @@ void UI_DisplayMenu(void)
                     (gEeprom.VOLUME_GAIN << 4) |     // AF Rx Gain-2
                     (gEeprom.DAC_GAIN    << 0));     // AF DAC Gain (after Gain-1 and Gain-2)
                 break;
+        #endif
+
+        #ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
+            case MENU_SET_KEY:
+                strcpy(String, gSubMenu_SET_KEY[gSubMenuSelection]);
+                break;                
         #endif
 #endif
 
