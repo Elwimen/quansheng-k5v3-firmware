@@ -54,7 +54,7 @@ void SETTINGS_InitEEPROM(void)
     #ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
         gEeprom.KEY_LOCK = (Data[4] & 0x01) != 0;
         gEeprom.MENU_LOCK = (Data[4] & 0x02) != 0;
-        gEeprom.SET_KEY = (Data[4] >> 2) & 0x0F;
+        gEeprom.SET_KEY = ((Data[4] >> 2) & 0x0F) > 4 ? 0 : (Data[4] >> 2) & 0x0F;
     #else
         gEeprom.KEY_LOCK             = (Data[4] <  2) ? Data[4] : false;
     #endif
