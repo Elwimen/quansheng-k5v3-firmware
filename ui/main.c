@@ -899,6 +899,9 @@ void UI_DisplayMain(void)
             if (IS_MR_CHANNEL(gEeprom.ScreenChannel[vfo_num]))
             {   // it's a channel
 
+                #ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
+                    if(gEeprom.MENU_LOCK == false) {
+                #endif
                 uint8_t countList = 0;
                 uint8_t shiftList = 0;
 
@@ -938,14 +941,11 @@ void UI_DisplayMain(void)
                     memcpy(p_line0 + 127 - (1 * 6), BITMAP_ScanListE, sizeof(BITMAP_ScanListE));
                 }
 
-                /*
-                if (att.scanlist1)
-                    memcpy(p_line0 + 107, BITMAP_ScanList1, sizeof(BITMAP_ScanList1));
-                if (att.scanlist2)
-                    memcpy(p_line0 + 114, BITMAP_ScanList2, sizeof(BITMAP_ScanList2));
-                if (att.scanlist3)
-                    memcpy(p_line0 + 121, BITMAP_ScanList3, sizeof(BITMAP_ScanList3));
-                */
+                #ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
+                {
+                    }
+                }
+                #endif
 
                 // compander symbol
 #ifndef ENABLE_BIG_FREQ
