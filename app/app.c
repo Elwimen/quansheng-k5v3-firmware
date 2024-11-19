@@ -1832,7 +1832,7 @@ static void ProcessKey(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
         {
             BACKLIGHT_TurnOn();
 
-            if(Key == KEY_SIDE1 || Key == KEY_SIDE2)
+            if(Key != KEY_PTT)
             {
                 Key = KEY_INVALID;
             }
