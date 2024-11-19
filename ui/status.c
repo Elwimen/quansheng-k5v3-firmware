@@ -213,15 +213,13 @@ void UI_DisplayStatus()
         memcpy(line + x + 1, gFontKeyLock, sizeof(gFontKeyLock));
     }
     else if (gWasFKeyPressed) {
-        memcpy(line + x + 1, gFontF, sizeof(gFontF));
-        /*
-        UI_PrintStringSmallBufferNormal("F", line + x + 1);
-        
-        for (uint8_t i = 71; i < 79; i++)
-        {
-            gStatusLine[i] ^= 0x7F;
-        }
-        */
+        #ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
+            if(gEeprom.MENU_LOCK == false) {
+                memcpy(line + x + 1, gFontF, sizeof(gFontF));
+            }
+        #else
+            memcpy(line + x + 1, gFontF, sizeof(gFontF));
+        #endif
     }
     else if (gBackLight)
     {

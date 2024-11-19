@@ -948,13 +948,7 @@ void MAIN_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
             MAIN_Key_STAR(bKeyPressed, bKeyHeld);
             break;
         case KEY_F:
-            #ifndef ENABLE_FEAT_F4HWN_MENU_LOCK
-                GENERIC_Key_F(bKeyPressed, bKeyHeld);
-            #else
-                if(gEeprom.MENU_LOCK == false) {
-                    GENERIC_Key_F(bKeyPressed, bKeyHeld);
-                }
-            #endif
+            GENERIC_Key_F(bKeyPressed, bKeyHeld);
             break;
         case KEY_PTT:
             GENERIC_Key_PTT(bKeyPressed);
