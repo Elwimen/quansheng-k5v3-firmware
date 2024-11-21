@@ -111,6 +111,10 @@ void BOOT_ProcessMode(BOOT_Mode_t Mode)
             gEeprom.BACKLIGHT_TIME = 61;
             gEeprom.KEY_LOCK = 0;
 
+            #ifdef ENABLE_FEAT_F4HWN
+                gEeprom.CURRENT_STATE = 0; // Don't scan if scan resume is active...
+            #endif 
+
             GUI_SelectNextDisplay(DISPLAY_AIRCOPY);
         }
     #endif
