@@ -190,7 +190,7 @@ extern enum BacklightOnRxTx_t gSetting_backlight_on_tx_rx;
     extern uint8_t            crc[15];
     extern uint8_t            lErrorsDuringAirCopy;
     extern uint8_t            gAircopyStep;
-    #ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
+    #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
         extern bool               gResetPower;
         extern uint8_t            gInitialPower;
     #endif

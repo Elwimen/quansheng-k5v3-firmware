@@ -892,7 +892,7 @@ void UI_DisplayMain(void)
             if (IS_MR_CHANNEL(gEeprom.ScreenChannel[vfo_num]))
             {   // it's a channel
 
-                #ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
+                #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
                     if(gEeprom.MENU_LOCK == false) {
                 #endif
                 uint8_t countList = 0;
@@ -934,7 +934,7 @@ void UI_DisplayMain(void)
                     memcpy(p_line0 + 127 - (1 * 6), BITMAP_ScanListE, sizeof(BITMAP_ScanListE));
                 }
 
-                #ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
+                #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
                 {
                     }
                 }
@@ -1457,7 +1457,7 @@ void UI_DisplayMain(void)
     }
 
 #ifdef ENABLE_FEAT_F4HWN
-    #ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
+    #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
     if(gEeprom.MENU_LOCK == false)
     {
     #endif
@@ -1470,7 +1470,7 @@ void UI_DisplayMain(void)
             gFrameBuffer[6][i] ^= 0x7F;
         }
     }
-    #ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
+    #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
     }
     #endif
 #endif

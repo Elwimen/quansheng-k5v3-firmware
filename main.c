@@ -131,7 +131,7 @@ void Main(void)
 
     BOOT_Mode_t  BootMode = BOOT_GetMode();
 
-#ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
+#ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
     if (BootMode == BOOT_MODE_MENU_LOCK)
     {
         gEeprom.MENU_LOCK = !gEeprom.MENU_LOCK;
@@ -147,7 +147,7 @@ void Main(void)
     }
 #endif
 
-#ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
+#ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
     if (BootMode == BOOT_MODE_F_LOCK && gEeprom.MENU_LOCK == true)
     {
         BootMode = BOOT_MODE_NORMAL;
@@ -170,7 +170,7 @@ void Main(void)
             #ifdef ENABLE_NOAA
                 gMenuCursor += 1; // move to hidden section, fix me if change... !!!
             #endif
-            #ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
+            #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
                 gMenuCursor += 1; // move to hidden section, fix me if change... !!!
             #endif
             gSubMenuSelection = gSetting_F_LOCK;

@@ -110,7 +110,7 @@ void (*action_opt_table[])(void) = {
     [ACTION_OPT_MAINONLY] = &ACTION_MainOnly,
     [ACTION_OPT_PTT] = &ACTION_Ptt,
     [ACTION_OPT_WN] = &ACTION_Wn,
-    #ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
+    #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
         [ACTION_OPT_POWER_HIGH] = &ACTION_Power_High,
     #endif
     [ACTION_OPT_BACKLIGHT] = &ACTION_BackLight,
@@ -617,7 +617,7 @@ void ACTION_BackLightOnDemand(void)
     BACKLIGHT_TurnOn();
 }
 
-    #ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
+    #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
     void ACTION_Power_High(void)
     {
         if(gEeprom.MENU_LOCK == true) // RO is active

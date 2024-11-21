@@ -154,7 +154,7 @@ void UI_DisplayStatus()
             else
         #endif
             {
-                #ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
+                #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
                 if(gEeprom.MENU_LOCK == true) {
                     memcpy(line + x + 2, gFontRO, sizeof(gFontRO));
                 }
@@ -175,7 +175,7 @@ void UI_DisplayStatus()
                     {
                         memcpy(line + x + 2, gFontMO, sizeof(gFontMO));
                     }
-                #ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
+                #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
                 }
                 #endif
             }
@@ -213,7 +213,7 @@ void UI_DisplayStatus()
         memcpy(line + x + 1, gFontKeyLock, sizeof(gFontKeyLock));
     }
     else if (gWasFKeyPressed) {
-        #ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
+        #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
             if(gEeprom.MENU_LOCK == false) {
                 memcpy(line + x + 1, gFontF, sizeof(gFontF));
             }

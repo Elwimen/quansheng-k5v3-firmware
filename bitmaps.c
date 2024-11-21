@@ -78,7 +78,7 @@ const uint8_t gFontDWR[3][6] =
     {0x00, 0x7f, 0x9, 0x19, 0x29, 0x46},
 };
 
-#ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
+#ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
     const uint8_t gFontRO[2][6] =
     {   // "RO"
         {0x00, 0x7f, 0x9, 0x19, 0x29, 0x46},

@@ -117,7 +117,7 @@ enum ACTION_OPT_t {
     ACTION_OPT_PTT,
     ACTION_OPT_WN,
     ACTION_OPT_BACKLIGHT,
-    #ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
+    #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
         ACTION_OPT_POWER_HIGH,
     #endif
 #endif
@@ -189,7 +189,7 @@ typedef struct {
 #ifdef ENABLE_FEAT_F4HWN
     bool                  KEY_LOCK_PTT;
 #endif
-#ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
+#ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
     bool                  MENU_LOCK;
     uint8_t               SET_KEY;
 #endif

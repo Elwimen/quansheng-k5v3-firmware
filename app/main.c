@@ -84,7 +84,7 @@ static void processFKeyFunction(const KEY_Code_t Key, const bool beep)
 {
     uint8_t Vfo = gEeprom.TX_VFO;
 
-#ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
+#ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
     if(gEeprom.MENU_LOCK == true) {
         return; // prevent F function if MENU LOCK is true
     }
@@ -686,7 +686,7 @@ static void MAIN_Key_MENU(bool bKeyPressed, bool bKeyHeld)
                 return;
             }
 
-            #ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
+            #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
             if(gEeprom.MENU_LOCK == false) {
             #endif
 
@@ -696,7 +696,7 @@ static void MAIN_Key_MENU(bool bKeyPressed, bool bKeyHeld)
                 gAnotherVoiceID   = VOICE_ID_MENU;
             #endif
 
-            #ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
+            #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
             }
             #endif
         }
@@ -709,7 +709,7 @@ static void MAIN_Key_MENU(bool bKeyPressed, bool bKeyHeld)
 static void MAIN_Key_STAR(bool bKeyPressed, bool bKeyHeld)
 {
 
-#ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
+#ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
     if(gEeprom.MENU_LOCK == true) {
         return; // prevent F function if MENU LOCK is true
     }

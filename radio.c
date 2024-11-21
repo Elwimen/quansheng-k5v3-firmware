@@ -160,7 +160,7 @@ void RADIO_InitInfo(VFO_Info_t *pInfo, const uint8_t ChannelSave, const uint32_t
 void RADIO_ConfigureChannel(const unsigned int VFO, const unsigned int configure)
 {
 
-    #ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
+    #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
         if(configure == VFO_CONFIGURE_RELOAD)
         {
             gResetPower = true;
@@ -437,7 +437,7 @@ void RADIO_ConfigureChannel(const unsigned int VFO, const unsigned int configure
 
     RADIO_ConfigureSquelchAndOutputPower(pVfo);
 
-    #ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
+    #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
         if(gEeprom.MENU_LOCK && gResetPower) // RO is active
         {
             gInitialPower = pVfo->OUTPUT_POWER;
