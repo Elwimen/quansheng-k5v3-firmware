@@ -117,6 +117,9 @@ enum ACTION_OPT_t {
     ACTION_OPT_PTT,
     ACTION_OPT_WN,
     ACTION_OPT_BACKLIGHT,
+    #ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
+        ACTION_OPT_POWER_HIGH,
+    #endif
 #endif
     ACTION_OPT_LEN
 };

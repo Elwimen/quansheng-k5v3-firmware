@@ -42,6 +42,9 @@ void ACTION_SwitchDemodul(void);
     void ACTION_Wn(void);
     void ACTION_BackLightOnDemand(void);
     void ACTION_BackLight(void);
+    #ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
+        void ACTION_Power_High(void);
+    #endif
 #endif
 
 void ACTION_Handle(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld);

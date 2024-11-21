@@ -137,6 +137,10 @@ enum BacklightOnRxTx_t gSetting_backlight_on_tx_rx;
     uint8_t       crc[15] = { 0 };
     uint8_t       lErrorsDuringAirCopy = 0;
     uint8_t       gAircopyStep = 0;
+    #ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
+        bool          gResetPower = false;
+        uint8_t       gInitialPower = 0;
+    #endif
 #endif
 
 #ifdef ENABLE_AUDIO_BAR

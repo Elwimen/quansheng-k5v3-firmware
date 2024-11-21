@@ -110,6 +110,9 @@ void (*action_opt_table[])(void) = {
     [ACTION_OPT_MAINONLY] = &ACTION_MainOnly,
     [ACTION_OPT_PTT] = &ACTION_Ptt,
     [ACTION_OPT_WN] = &ACTION_Wn,
+    #ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
+        [ACTION_OPT_POWER_HIGH] = &ACTION_Power_High,
+    #endif
     [ACTION_OPT_BACKLIGHT] = &ACTION_BackLight,
 #else
     [ACTION_OPT_RXMODE] = &FUNCTION_NOP,
@@ -613,4 +616,22 @@ void ACTION_BackLightOnDemand(void)
     
     BACKLIGHT_TurnOn();
 }
+
+    #ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
+    void ACTION_Power_High(void)
+    {
+        if(gEeprom.MENU_LOCK == true) // RO is active
+        {
+            if (gTxVfo->OUTPUT_POWER == gInitialPower)
+                gTxVfo->OUTPUT_POWER = OUTPUT_POWER_HIGH;
+            else if(gTxVfo->OUTPUT_POWER == OUTPUT_POWER_HIGH)
+                gTxVfo->OUTPUT_POWER = gInitialPower;
+        }
+        else
+        {
+            if (++gTxVfo->OUTPUT_POWER > OUTPUT_POWER_HIGH)
+                gTxVfo->OUTPUT_POWER = OUTPUT_POWER_LOW1;
+        }
+    }
+    #endif
 #endif

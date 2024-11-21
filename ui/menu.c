@@ -446,6 +446,9 @@ const t_sidefunction gSubMenu_SIDEFUNCTIONS[] =
     {"MAIN ONLY",       ACTION_OPT_MAINONLY},
     {"PTT",             ACTION_OPT_PTT},
     {"WIDE\nNARROW",    ACTION_OPT_WN},
+    #ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
+        {"POWER\nHIGH",    ACTION_OPT_POWER_HIGH},
+    #endif
 #endif
 };
 
