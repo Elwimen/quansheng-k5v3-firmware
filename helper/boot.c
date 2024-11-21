@@ -47,7 +47,7 @@ BOOT_Mode_t BOOT_GetMode(void)
     #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
     if (Keys[0] == (10 + gEeprom.SET_KEY))
     {
-        return BOOT_MODE_MENU_LOCK;  // Secret KEY pressed
+        return BOOT_MODE_RESCUE_OPS;  // Secret KEY pressed
     }
     #endif
 

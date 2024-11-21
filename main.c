@@ -132,7 +132,7 @@ void Main(void)
     BOOT_Mode_t  BootMode = BOOT_GetMode();
 
 #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
-    if (BootMode == BOOT_MODE_MENU_LOCK)
+    if (BootMode == BOOT_MODE_RESCUE_OPS)
     {
         gEeprom.MENU_LOCK = !gEeprom.MENU_LOCK;
         SETTINGS_SaveSettings();
