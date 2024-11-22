@@ -620,18 +620,10 @@ void ACTION_BackLightOnDemand(void)
     #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
     void ACTION_Power_High(void)
     {
-        if(gEeprom.MENU_LOCK == true) // RO is active
-        {
-            if (gTxVfo->OUTPUT_POWER == gInitialPower)
-                gTxVfo->OUTPUT_POWER = OUTPUT_POWER_HIGH;
-            else if(gTxVfo->OUTPUT_POWER == OUTPUT_POWER_HIGH)
-                gTxVfo->OUTPUT_POWER = gInitialPower;
-        }
-        else
-        {
-            if (++gTxVfo->OUTPUT_POWER > OUTPUT_POWER_HIGH)
-                gTxVfo->OUTPUT_POWER = OUTPUT_POWER_LOW1;
-        }
+        if (gTxVfo->OUTPUT_POWER == gInitialPower)
+            gTxVfo->OUTPUT_POWER = OUTPUT_POWER_HIGH;
+        else if(gTxVfo->OUTPUT_POWER == OUTPUT_POWER_HIGH)
+            gTxVfo->OUTPUT_POWER = gInitialPower;
     }
     #endif
 #endif

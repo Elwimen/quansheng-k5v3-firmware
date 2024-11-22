@@ -436,14 +436,6 @@ void RADIO_ConfigureChannel(const unsigned int VFO, const unsigned int configure
     pVfo->Compander = att.compander;
 
     RADIO_ConfigureSquelchAndOutputPower(pVfo);
-
-    #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
-        if(gEeprom.MENU_LOCK && gResetPower) // RO is active
-        {
-            gInitialPower = pVfo->OUTPUT_POWER;
-            gResetPower = false;
-        }
-    #endif
 }
 
 void RADIO_ConfigureSquelchAndOutputPower(VFO_Info_t *pInfo)
