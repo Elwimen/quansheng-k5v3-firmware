@@ -448,6 +448,7 @@ const t_sidefunction gSubMenu_SIDEFUNCTIONS[] =
     {"WIDE\nNARROW",    ACTION_OPT_WN},
     #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
         {"POWER\nHIGH",    ACTION_OPT_POWER_HIGH},
+        {"REMOVE\nSHIFT",  ACTION_OPT_REMOVE_SHIFT},
     #endif
 #endif
 };

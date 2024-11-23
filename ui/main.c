@@ -1243,8 +1243,19 @@ void UI_DisplayMain(void)
 
         if (vfoInfo->freq_config_RX.Frequency != vfoInfo->freq_config_TX.Frequency)
         {   // show the TX offset symbol
-            const char dir_list[][2] = {"", "+", "-"};
             int i = vfoInfo->TX_OFFSET_FREQUENCY_DIRECTION % 3;
+
+            #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
+                const char dir_list[][2] = {"", "+", "-", "D"};
+
+                if(gTxVfo->TX_OFFSET_FREQUENCY_DIRECTION != 0 && gTxVfo->pTX == &gTxVfo->freq_config_RX && !vfoInfo->FrequencyReverse)
+                {
+                    i = 3;
+                }
+            #else
+                const char dir_list[][2] = {"", "+", "-"};
+            #endif
+
 #if ENABLE_FEAT_F4HWN
         if (gSetting_set_gui)
         {
@@ -1252,7 +1263,18 @@ void UI_DisplayMain(void)
         }
         else
         {
-            UI_PrintStringSmallNormal(dir_list[i], LCD_WIDTH + 41, 0, line + 1);    
+            #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
+            if(i == 3)
+            {
+                GUI_DisplaySmallest(dir_list[i], 43, line == 0 ? 17 : 49, false, true);
+            }
+            else
+            {
+            #endif
+            UI_PrintStringSmallNormal(dir_list[i], LCD_WIDTH + 41, 0, line + 1);
+            #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
+            }
+            #endif
         }
 #else
             UI_PrintStringSmallNormal(dir_list[i], LCD_WIDTH + 54, 0, line + 1);

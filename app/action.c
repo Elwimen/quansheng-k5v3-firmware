@@ -112,6 +112,7 @@ void (*action_opt_table[])(void) = {
     [ACTION_OPT_WN] = &ACTION_Wn,
     #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
         [ACTION_OPT_POWER_HIGH] = &ACTION_Power_High,
+        [ACTION_OPT_REMOVE_SHIFT] = &ACTION_Remove_Shift,
     #endif
     [ACTION_OPT_BACKLIGHT] = &ACTION_BackLight,
 #else
@@ -624,6 +625,21 @@ void ACTION_BackLightOnDemand(void)
             gTxVfo->OUTPUT_POWER = OUTPUT_POWER_HIGH;
         else if(gTxVfo->OUTPUT_POWER == OUTPUT_POWER_HIGH)
             gTxVfo->OUTPUT_POWER = gInitialPower;
+    }
+
+    void ACTION_Remove_Shift(void)
+    {
+        if(gTxVfo->TX_OFFSET_FREQUENCY_DIRECTION != 0)
+        {
+            if(gTxVfo->pTX == &gTxVfo->freq_config_TX)
+            {
+                gTxVfo->pTX = &gTxVfo->freq_config_RX;
+            }
+            else
+            {
+                gTxVfo->pTX = &gTxVfo->freq_config_TX;
+            }
+        }
     }
     #endif
 #endif
