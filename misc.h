@@ -191,8 +191,8 @@ extern enum BacklightOnRxTx_t gSetting_backlight_on_tx_rx;
     extern uint8_t            lErrorsDuringAirCopy;
     extern uint8_t            gAircopyStep;
     #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
-        extern bool               gResetPower;
-        extern uint8_t            gInitialPower;
+        extern bool               gPowerHigh;
+        extern bool               gRemoveShift;
     #endif
 #endif
 

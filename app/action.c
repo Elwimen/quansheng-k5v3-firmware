@@ -621,25 +621,14 @@ void ACTION_BackLightOnDemand(void)
     #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
     void ACTION_Power_High(void)
     {
-        if (gTxVfo->OUTPUT_POWER == gInitialPower)
-            gTxVfo->OUTPUT_POWER = OUTPUT_POWER_HIGH;
-        else if(gTxVfo->OUTPUT_POWER == OUTPUT_POWER_HIGH)
-            gTxVfo->OUTPUT_POWER = gInitialPower;
+        gPowerHigh = !gPowerHigh;
+        gVfoConfigureMode = VFO_CONFIGURE_RELOAD;
     }
 
     void ACTION_Remove_Shift(void)
     {
-        if(gTxVfo->TX_OFFSET_FREQUENCY_DIRECTION != 0)
-        {
-            if(gTxVfo->pTX == &gTxVfo->freq_config_TX)
-            {
-                gTxVfo->pTX = &gTxVfo->freq_config_RX;
-            }
-            else
-            {
-                gTxVfo->pTX = &gTxVfo->freq_config_TX;
-            }
-        }
+        gRemoveShift = !gRemoveShift;
+        gVfoConfigureMode = VFO_CONFIGURE_RELOAD;
     }
     #endif
 #endif

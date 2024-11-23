@@ -1202,14 +1202,6 @@ void UI_DisplayMain(void)
             uint8_t arrowPos = 19;
             bool userPower = false;
 
-            #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
-                if(gResetPower) // RO is active
-                {
-                    gInitialPower = currentPower;
-                    gResetPower = false;
-                }
-            #endif
-
             if(currentPower == OUTPUT_POWER_USER)
             {
                 currentPower = gSetting_set_pwr;
