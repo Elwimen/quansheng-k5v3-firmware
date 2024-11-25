@@ -139,7 +139,7 @@ enum BacklightOnRxTx_t gSetting_backlight_on_tx_rx;
     uint8_t       gAircopyStep = 0;
     #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
         bool          gPowerHigh = false;
-        bool          gRemoveShift = false;
+        bool          gRemoveOffset = false;
     #endif
 #endif
 

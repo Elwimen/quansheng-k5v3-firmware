@@ -112,7 +112,7 @@ void (*action_opt_table[])(void) = {
     [ACTION_OPT_WN] = &ACTION_Wn,
     #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
         [ACTION_OPT_POWER_HIGH] = &ACTION_Power_High,
-        [ACTION_OPT_REMOVE_SHIFT] = &ACTION_Remove_Shift,
+        [ACTION_OPT_REMOVE_OFFSET] = &ACTION_Remove_Offset,
     #endif
     [ACTION_OPT_BACKLIGHT] = &ACTION_BackLight,
 #else
@@ -625,9 +625,9 @@ void ACTION_BackLightOnDemand(void)
         gVfoConfigureMode = VFO_CONFIGURE_RELOAD;
     }
 
-    void ACTION_Remove_Shift(void)
+    void ACTION_Remove_Offset(void)
     {
-        gRemoveShift = !gRemoveShift;
+        gRemoveOffset = !gRemoveOffset;
         gVfoConfigureMode = VFO_CONFIGURE_RELOAD;
     }
     #endif

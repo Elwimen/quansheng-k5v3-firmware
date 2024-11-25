@@ -430,7 +430,7 @@ void RADIO_ConfigureChannel(const unsigned int VFO, const unsigned int configure
     RADIO_ConfigureSquelchAndOutputPower(pVfo);
 
     #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
-    if(gRemoveShift)
+    if(gRemoveOffset)
     {
         pVfo->pTX = &pVfo->freq_config_RX;
         gRequestSaveChannel = 1;
