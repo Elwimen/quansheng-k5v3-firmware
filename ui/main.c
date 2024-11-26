@@ -1479,10 +1479,10 @@ void UI_DisplayMain(void)
     }
 
 #ifdef ENABLE_FEAT_F4HWN
-    #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
-    if(gEeprom.MENU_LOCK == false)
-    {
-    #endif
+    //#ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
+    //if(gEeprom.MENU_LOCK == false)
+    //{
+    //#endif
     if (isMainOnly() && !gDTMF_InputMode)
     {
         sprintf(String, "VFO %s", activeTxVFO ? "B" : "A");
@@ -1492,9 +1492,9 @@ void UI_DisplayMain(void)
             gFrameBuffer[6][i] ^= 0x7F;
         }
     }
-    #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
-    }
-    #endif
+    //#ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
+    //}
+    //#endif
 #endif
 
     ST7565_BlitFullScreen();

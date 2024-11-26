@@ -86,6 +86,13 @@ static void processFKeyFunction(const KEY_Code_t Key, const bool beep)
 
 #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
     if(gEeprom.MENU_LOCK == true) {
+        if(Key == 2) { // Enable A/B only
+            gVfoConfigureMode     = VFO_CONFIGURE;
+            COMMON_SwitchVFOs();
+            if (beep)
+                gBeepToPlay = BEEP_1KHZ_60MS_OPTIONAL;
+        }
+
         return; // prevent F function if MENU LOCK is true
     }
 #endif
