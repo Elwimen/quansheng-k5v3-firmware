@@ -104,7 +104,6 @@ case "$1" in
     all)
         bandscope
         broadcast
-        voxless
         rescueops
         ;;
     *)
