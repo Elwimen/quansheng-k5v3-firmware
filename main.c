@@ -138,6 +138,7 @@ void Main(void)
         SETTINGS_SaveSettings();
     }
 
+    /*
     if(gEeprom.MENU_LOCK == true) // Force Main Only
     {
         gEeprom.DUAL_WATCH = 0;
@@ -145,6 +146,7 @@ void Main(void)
         //gFlagReconfigureVfos = true;
         //gUpdateStatus        = true;
     }
+    */
 #endif
 
 #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
