@@ -158,7 +158,7 @@ const t_menu_item MenuList[] =
 #ifdef ENABLE_FEAT_F4HWN_VOL
     {"SetVol",      MENU_SET_VOL       },
 #endif
-#ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
+#ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
     {"SetKey",      MENU_SET_KEY       },
 #endif
 #endif
@@ -401,7 +401,7 @@ const char gSubMenu_SCRAMBLER[][7] =
         };
     #endif
 
-    #ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
+    #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
         const char gSubMenu_SET_KEY[][9] =
         {
             "KEY_MENU",
@@ -446,6 +446,10 @@ const t_sidefunction gSubMenu_SIDEFUNCTIONS[] =
     {"MAIN ONLY",       ACTION_OPT_MAINONLY},
     {"PTT",             ACTION_OPT_PTT},
     {"WIDE\nNARROW",    ACTION_OPT_WN},
+    #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
+        {"POWER\nHIGH",    ACTION_OPT_POWER_HIGH},
+        {"REMOVE\nOFFSET",  ACTION_OPT_REMOVE_OFFSET},
+    #endif
 #endif
 };
 
@@ -1080,7 +1084,7 @@ void UI_DisplayMenu(void)
                 break;
         #endif
 
-        #ifdef ENABLE_FEAT_F4HWN_MENU_LOCK
+        #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
             case MENU_SET_KEY:
                 strcpy(String, gSubMenu_SET_KEY[gSubMenuSelection]);
                 break;                
@@ -1132,12 +1136,14 @@ void UI_DisplayMenu(void)
 
                 UI_PrintStringSmallNormal(edit, 54, 127, 1);
 
-                #ifdef ENABLE_SPECTRUM
-                    #ifndef ENABLE_FMRADIO
-                        UI_PrintStringSmallNormal("Bandscope", 54, 127, 6);
-                    #endif
-                #else
+                #if defined(ENABLE_SPECTRUM) && defined(ENABLE_FMRADIO)
+                    UI_PrintStringSmallNormal("Voxless", 54, 127, 6);
+                #elif defined(ENABLE_SPECTRUM)
+                    UI_PrintStringSmallNormal("Bandscope", 54, 127, 6);
+                #elif defined(ENABLE_FMRADIO)
                     UI_PrintStringSmallNormal("Broadcast", 54, 127, 6);
+                #elif defined(ENABLE_FEAT_F4HWN_RESCUE_OPS)
+                    UI_PrintStringSmallNormal("RescueOps", 54, 127, 6);
                 #endif
 
                 y = 2;
