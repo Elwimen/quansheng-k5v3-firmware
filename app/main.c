@@ -735,6 +735,7 @@ static void MAIN_Key_STAR(bool bKeyPressed, bool bKeyHeld)
         if (!bKeyPressed) // released
             return; 
 
+        /*
         #ifdef ENABLE_FEAT_F4HWN_RESTORE_SCAN
         if(gScanRangeStart == 0) // No ScanRange
         {
@@ -746,6 +747,7 @@ static void MAIN_Key_STAR(bool bKeyPressed, bool bKeyHeld)
         }
         SETTINGS_WriteCurrentState();
         #endif
+        */
         ACTION_Scan(false);// toggle scanning
 
         gBeepToPlay = BEEP_1KHZ_60MS_OPTIONAL;
