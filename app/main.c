@@ -349,6 +349,11 @@ void channelMove(uint16_t Channel)
     //gRequestSaveVFO            = true;
     gVfoConfigureMode          = VFO_CONFIGURE_RELOAD;
 
+#ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
+    gRemoveOffset = false;
+    gPowerHigh = false;
+#endif
+
     RADIO_ConfigureChannel(gEeprom.TX_VFO, gVfoConfigureMode);
     
     return;
@@ -821,6 +826,11 @@ static void MAIN_Key_UP_DOWN(bool bKeyPressed, bool bKeyHeld, int8_t Direction)
         }
         return;
     }
+#endif
+
+#ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
+    gRemoveOffset = false;
+    gPowerHigh = false;
 #endif
 
     uint8_t Channel = gEeprom.ScreenChannel[gEeprom.TX_VFO];
