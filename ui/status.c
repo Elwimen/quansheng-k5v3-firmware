@@ -237,28 +237,33 @@ void UI_DisplayStatus()
 
     UI_DrawBattery(line + x2, gBatteryDisplayLevel, gLowBatteryBlink);
 
+    bool BatTxt = true;
+
     switch (gSetting_battery_text) {
         default:
         case 0:
+            BatTxt = false;
             break;
 
-        case 1: {   // voltage
+        case 1:    // voltage
             const uint16_t voltage = (gBatteryVoltageAverage <= 999) ? gBatteryVoltageAverage : 999; // limit to 9.99V
-#ifdef ENABLE_FEAT_F4HWN
-            sprintf(str, "%u.%02u", voltage / 100, voltage % 100);
-#else
             sprintf(str, "%u.%02uV", voltage / 100, voltage % 100);
-#endif
             break;
-        }
 
         case 2:     // percentage
-            sprintf(str, "%u%%", BATTERY_VoltsToPercent(gBatteryVoltageAverage));
+            //gBatteryVoltageAverage = 999;
+            sprintf(str, "%02u %%", BATTERY_VoltsToPercent(gBatteryVoltageAverage));
             break;
     }
 
-    x2 -= (7 * strlen(str));
-    UI_PrintStringSmallBufferNormal(str, line + x2);
+    if (BatTxt) {
+        uint8_t shift = (strlen(str) < 5) ? 92 : 88;
+        GUI_DisplaySmallest(str, shift, 1, true, true);
+
+        for (uint8_t i = shift - 2; i < 110; i++) {
+            gStatusLine[i] ^= 0x7F; // invert
+        }
+    }
 
     // **************
 
