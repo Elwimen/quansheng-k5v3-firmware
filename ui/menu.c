@@ -70,8 +70,10 @@ const t_menu_item MenuList[] =
     {"SList2",      MENU_SLIST2        },
     {"SList3",      MENU_SLIST3        },
     {"ScnRev",      MENU_SC_REV        },
-#ifdef ENABLE_NOAA
-    {"NOAA-S",      MENU_NOAA_S        },
+#ifndef ENABLE_FEAT_F4HWN
+    #ifdef ENABLE_NOAA
+        {"NOAA-S",      MENU_NOAA_S    },
+    #endif
 #endif
     {"F1Shrt",      MENU_F1SHRT        },
     {"F1Long",      MENU_F1LONG        },
@@ -160,6 +162,9 @@ const t_menu_item MenuList[] =
 #endif
 #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
     {"SetKey",      MENU_SET_KEY       },
+#endif
+#ifdef ENABLE_NOAA
+    {"SetNWR",      MENU_NOAA_S    },
 #endif
 #endif
     // hidden menu items from here on
