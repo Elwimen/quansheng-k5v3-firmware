@@ -61,22 +61,26 @@ void UI_DisplayStatus()
 
     uint8_t     *line = gStatusLine;
     unsigned int x    = 0;
-    // **************
 
-    // POWER-SAVE indicator
+#ifdef ENABLE_NOAA
+    // NOAA indicator
+    if (!(gScanStateDir != SCAN_OFF || SCANNER_IsScanning()) && gIsNoaaMode) { // NOASS SCAN indicator
+        memcpy(line + x, BITMAP_NOAA, sizeof(BITMAP_NOAA));
+    }
+    // Power Save indicator
+    else if (gCurrentFunction == FUNCTION_POWER_SAVE) {
+        memcpy(line + x, gFontPowerSave, sizeof(gFontPowerSave));
+    }
+    x += 8;
+#else
+    // Power Save indicator
     if (gCurrentFunction == FUNCTION_POWER_SAVE) {
         memcpy(line + x, gFontPowerSave, sizeof(gFontPowerSave));
     }
     x += 8;
-    unsigned int x1 = x;
-
-#ifdef ENABLE_NOAA
-    if (gIsNoaaMode) { // NOASS SCAN indicator
-        memcpy(line + x, BITMAP_NOAA, sizeof(BITMAP_NOAA));
-        x1 = x + sizeof(BITMAP_NOAA);
-    }
-    x += sizeof(BITMAP_NOAA);
 #endif
+
+    unsigned int x1 = x;
 
 #ifdef ENABLE_DTMF_CALLING
     if (gSetting_KILLED) {
