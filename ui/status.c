@@ -210,7 +210,7 @@ void UI_DisplayStatus()
     x += sizeof(gFontPttClassic) + 3;
 #endif
 
-    x = MAX(x1, 70u);
+    x = MAX(x1, 69u);
 
     // KEY-LOCK indicator
     if (gEeprom.KEY_LOCK) {
@@ -251,22 +251,26 @@ void UI_DisplayStatus()
 
         case 1:    // voltage
             const uint16_t voltage = (gBatteryVoltageAverage <= 999) ? gBatteryVoltageAverage : 999; // limit to 9.99V
-            sprintf(str, "%u.%02uV", voltage / 100, voltage % 100);
+            sprintf(str, "%u.%02u", voltage / 100, voltage % 100);
             break;
 
         case 2:     // percentage
-            //gBatteryVoltageAverage = 999;
-            sprintf(str, "%02u %%", BATTERY_VoltsToPercent(gBatteryVoltageAverage));
+            gBatteryVoltageAverage = 999;
+            sprintf(str, "%02u%%", BATTERY_VoltsToPercent(gBatteryVoltageAverage));
             break;
     }
 
     if (BatTxt) {
+        x2 -= (7 * strlen(str));
+        UI_PrintStringSmallBufferNormal(str, line + x2);
+        /*
         uint8_t shift = (strlen(str) < 5) ? 92 : 88;
         GUI_DisplaySmallest(str, shift, 1, true, true);
 
         for (uint8_t i = shift - 2; i < 110; i++) {
             gStatusLine[i] ^= 0x7F; // invert
         }
+        */
     }
 
     // **************
