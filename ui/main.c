@@ -53,10 +53,6 @@ center_line_t center_line = CENTER_LINE_NONE;
 
     bool isMainOnlyInputDTMF = false;
 
-    static int16_t map(int16_t x, int16_t in_min, int16_t in_max, int16_t out_min, int16_t out_max) {
-        return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
-    }
-
     static bool isMainOnly()
     {
         return (gEeprom.DUAL_WATCH == DUAL_WATCH_OFF) && (gEeprom.CROSS_BAND_RX_TX == CROSS_BAND_OFF);

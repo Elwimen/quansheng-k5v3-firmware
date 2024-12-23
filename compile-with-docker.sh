@@ -32,6 +32,7 @@ bandscope() {
         ENABLE_AIRCOPY=1 \
         ENABLE_NOAA=0 \
         ENABLE_FEAT_F4HWN_RESCUE_OPS=0 \
+        ENABLE_FEAT_F4HWN_CHARGING_C=0 \
         EDITION_STRING=Bandscope \
         TARGET=f4hwn.bandscope \
         && cp f4hwn.bandscope* compiled-firmware/"
