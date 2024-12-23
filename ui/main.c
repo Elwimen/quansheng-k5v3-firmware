@@ -59,10 +59,7 @@ center_line_t center_line = CENTER_LINE_NONE;
 
     static bool isMainOnly()
     {
-        if((gEeprom.DUAL_WATCH != DUAL_WATCH_OFF) + (gEeprom.CROSS_BAND_RX_TX != CROSS_BAND_OFF) * 2 == 0)
-            return true;
-        else
-            return false;
+        return (gEeprom.DUAL_WATCH == DUAL_WATCH_OFF) && (gEeprom.CROSS_BAND_RX_TX == CROSS_BAND_OFF);
     }
 #endif
 
