@@ -278,22 +278,15 @@ void DisplayRSSIBar(const bool now)
 
     if(RxLine >= 0 && center_line != CENTER_LINE_IN_USE)
     {
-        switch(RxBlink)
-        {
-            case 0:
-                UI_PrintStringSmallBold("RX", 8, 0, RxLine);
-                break;
-            case 1:
-                UI_PrintStringSmallBold("RX", 8, 0, RxLine);
-                RxBlink = 2;
-                break;
-            case 2:
-                for (uint8_t i = 8; i < 24; i++)
-                {
-                    gFrameBuffer[RxLine][i] = 0x00;
-                }
-                RxBlink = 1;
-                break;
+        if (RxBlink == 0 || RxBlink == 1) {
+            UI_PrintStringSmallBold("RX", 8, 0, RxLine);
+            if (RxBlink == 1) RxBlink = 2;
+        } else {
+            for (uint8_t i = 8; i < 24; i++)
+            {
+                gFrameBuffer[RxLine][i] = 0x00;
+            }
+            RxBlink = 1;
         }
         ST7565_BlitLine(RxLine);
     }
