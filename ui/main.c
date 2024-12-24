@@ -1056,10 +1056,11 @@ void UI_DisplayMain(void)
         // ************
 
         {   // show the TX/RX level
-            uint8_t Level = 0;
+            int8_t Level = -1;
 
             if (mode == VFO_MODE_TX)
             {   // TX power level
+                /*
                 switch (gRxVfo->OUTPUT_POWER)
                 {
                     case OUTPUT_POWER_LOW1:     Level = 2; break;
@@ -1070,6 +1071,16 @@ void UI_DisplayMain(void)
                     case OUTPUT_POWER_MID:      Level = 4; break;
                     case OUTPUT_POWER_HIGH:     Level = 6; break;
                 }
+
+                if (gRxVfo->OUTPUT_POWER == OUTPUT_POWER_MID) {
+                    Level = 4;
+                } else if (gRxVfo->OUTPUT_POWER == OUTPUT_POWER_HIGH) {
+                    Level = 6;
+                } else {
+                    Level = 2;
+                }
+                */
+                Level = gRxVfo->OUTPUT_POWER - 1;
             }
             else
             if (mode == VFO_MODE_RX)
@@ -1080,7 +1091,7 @@ void UI_DisplayMain(void)
                         Level = gVFO_RSSI_bar_level[vfo_num];
                 #endif
             }
-            if(Level)
+            if(Level >= 0)
                 DrawSmallAntennaAndBars(p_line1 + LCD_WIDTH, Level);
         }
 
@@ -1325,6 +1336,7 @@ void UI_DisplayMain(void)
 #endif
 
 #ifdef ENABLE_FEAT_F4HWN
+        /*
         if(isMainVFO)   
         {
             if(gMonitor)
@@ -1348,6 +1360,20 @@ void UI_DisplayMain(void)
                 }
                 GUI_DisplaySmallest(String, 110, line == 0 ? 17 : 49, false, true);
             }
+        }
+        */
+        if (isMainVFO) {
+           if (gMonitor) {
+               sprintf(String, "MONI");
+           } else {
+               sprintf(String, "SQL%d", gEeprom.SQUELCH_LEVEL);
+           }
+
+           if (gSetting_set_gui) {
+               UI_PrintStringSmallNormal(String, LCD_WIDTH + 98, 0, line + 1);
+           } else {
+               GUI_DisplaySmallest(String, 110, line == 0 ? 17 : 49, false, true);
+           }
         }
 #endif
     }
