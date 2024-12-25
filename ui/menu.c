@@ -853,7 +853,7 @@ void UI_DisplayMenu(void)
 
         case MENU_TOT:
             sprintf(String, "%02dm:%02ds", (((gSubMenuSelection + 1) * 5) / 60), (((gSubMenuSelection + 1) * 5) % 60));
-            ST7565_Gauge(4, 5, 180, gSubMenuSelection);
+            ST7565_Gauge(4, 5, 179, gSubMenuSelection);
             break;
 
         #ifdef ENABLE_VOICE
