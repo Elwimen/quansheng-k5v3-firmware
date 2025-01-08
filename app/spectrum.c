@@ -871,15 +871,15 @@ uint8_t Rssi2Y(uint16_t rssi)
     static void DrawSpectrum()
     {
         uint16_t steps = GetStepsCount();
-        uint16_t scale = (steps > 128) ? 128 : steps;
-        uint16_t shift = 64 / steps + 1;
+        uint16_t bars = (steps > 128) ? 128 : steps;
+        uint16_t shift_graph = 64 / steps + 1; // to center bar on freq marker
         uint8_t ox = 0;
         for (uint8_t i = 0; i < 128; ++i)
         {
             uint16_t rssi = rssiHistory[i >> settings.stepsCount];
             if (rssi != RSSI_MAX_VALUE)
             {
-                uint8_t x = i * 128 / scale + shift;
+                uint8_t x = i * 128 / bars + shift_graph;
                 for (uint8_t xx = ox; xx < x; xx++)
                 {
                     DrawVLine(Rssi2Y(rssi), DrawingEndY, xx, true);
