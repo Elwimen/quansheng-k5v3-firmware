@@ -871,9 +871,9 @@ uint8_t Rssi2Y(uint16_t rssi)
     static void DrawSpectrum()
     {
         uint16_t steps = GetStepsCount();
-        // for larger numbers of samples, max at 128 to correctly draw
+        // max bars at 128 to correctly draw larger numbers of samples
         uint8_t bars = (steps > 128) ? 128 : steps;
-        // to center bar on freq marker
+        // shift to center bar on freq marker
         uint8_t shift_graph = 64 / steps + 1;
 
         uint8_t ox = 0;
