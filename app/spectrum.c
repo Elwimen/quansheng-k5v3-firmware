@@ -870,13 +870,14 @@ uint8_t Rssi2Y(uint16_t rssi)
 #ifdef ENABLE_FEAT_F4HWN_SPECTRUM
     static void DrawSpectrum()
     {
+        uint16_t steps = GetStepsCount();
         uint8_t ox = 0;
         for (uint8_t i = 0; i < 128; ++i)
         {
             uint16_t rssi = rssiHistory[i >> settings.stepsCount];
             if (rssi != RSSI_MAX_VALUE)
             {
-                uint8_t x = i * 128 / GetStepsCount();
+                uint8_t x = i * 128 / ((steps > 128) ? 128 : steps) + 1;
                 for (uint8_t xx = ox; xx < x; xx++)
                 {
                     DrawVLine(Rssi2Y(rssi), DrawingEndY, xx, true);
