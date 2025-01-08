@@ -871,8 +871,8 @@ uint8_t Rssi2Y(uint16_t rssi)
     static void DrawSpectrum()
     {
         uint16_t steps = GetStepsCount();
-        uint16_t bars = (steps > 128) ? 128 : steps;
-        uint16_t shift_graph = 64 / steps + 1; // to center bar on freq marker
+        uint8_t bars = (steps > 128) ? 128 : steps;
+        uint8_t shift_graph = 64 / steps + 1; // to center bar on freq marker
         uint8_t ox = 0;
         for (uint8_t i = 0; i < 128; ++i)
         {
