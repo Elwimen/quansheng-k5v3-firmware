@@ -879,7 +879,7 @@ uint8_t Rssi2Y(uint16_t rssi)
             uint16_t rssi = rssiHistory[i >> settings.stepsCount];
             if (rssi != RSSI_MAX_VALUE)
             {
-              uint8_t x = i * 128 / scale + shift;
+                uint8_t x = i * 128 / scale + shift;
                 for (uint8_t xx = ox; xx < x; xx++)
                 {
                     DrawVLine(Rssi2Y(rssi), DrawingEndY, xx, true);
