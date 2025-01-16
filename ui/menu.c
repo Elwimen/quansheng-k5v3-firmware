@@ -1087,7 +1087,15 @@ void UI_DisplayMenu(void)
 
         #ifdef ENABLE_FEAT_F4HWN_VOL
             case MENU_SET_VOL:
-                sprintf(String, gSubMenuSelection == 0 ? "OFF" : "%02u", gSubMenuSelection);
+                if(gSubMenuSelection == 0)
+                {
+                    sprintf(String, "%s", "OFF");
+                }
+                else if(gSubMenuSelection < 64)
+                {
+                    sprintf(String, "%02u", gSubMenuSelection);
+                    ST7565_Gauge(4, 1, 63, gSubMenuSelection);
+                }
                 gEeprom.VOLUME_GAIN = gSubMenuSelection;
                 BK4819_WriteRegister(BK4819_REG_48,
                     (11u << 12)                |     // ??? .. 0 ~ 15, doesn't seem to make any difference
