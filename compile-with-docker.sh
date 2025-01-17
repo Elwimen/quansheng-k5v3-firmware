@@ -1,8 +1,14 @@
 #!/bin/sh
 #export DOCKER_DEFAULT_PLATFORM=linux/amd64
+#export DOCKER_NETWORK="--network=host"
 IMAGE_NAME="uvk5"
 rm "${PWD}/compiled-firmware/*"
-docker build -t $IMAGE_NAME .
+echo "Building docker image $IMAGE_NAME"
+if ! docker build -t $DOCKER_NETWORK $IMAGE_NAME .
+then
+    echo "Failed to build docker image"
+    exit 1
+fi
 
 custom() {
     echo "Custom compilation..."
