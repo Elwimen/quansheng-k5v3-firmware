@@ -451,6 +451,7 @@ const t_sidefunction gSubMenu_SIDEFUNCTIONS[] =
     {"MAIN ONLY",       ACTION_OPT_MAINONLY},
     {"PTT",             ACTION_OPT_PTT},
     {"WIDE\nNARROW",    ACTION_OPT_WN},
+    {"MUTE",            ACTION_OPT_MUTE},
     #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
         {"POWER\nHIGH",    ACTION_OPT_POWER_HIGH},
         {"REMOVE\nOFFSET",  ACTION_OPT_REMOVE_OFFSET},

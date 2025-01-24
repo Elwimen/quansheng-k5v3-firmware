@@ -117,6 +117,7 @@ enum ACTION_OPT_t {
     ACTION_OPT_PTT,
     ACTION_OPT_WN,
     ACTION_OPT_BACKLIGHT,
+    ACTION_OPT_MUTE,
     #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
         ACTION_OPT_POWER_HIGH,
         ACTION_OPT_REMOVE_OFFSET,
@@ -272,6 +273,9 @@ typedef struct {
     bool              NOAA_AUTO_SCAN;
 #endif
     uint8_t               VOLUME_GAIN;
+    #ifdef ENABLE_FEAT_F4HWN
+        uint8_t           VOLUME_GAIN_BACKUP;
+    #endif
     uint8_t               DAC_GAIN;
 
     VFO_Info_t            VfoInfo[2];

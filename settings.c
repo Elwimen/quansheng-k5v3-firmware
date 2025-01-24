@@ -434,6 +434,10 @@ void SETTINGS_LoadCalibration(void)
         gEeprom.VOLUME_GAIN          = (Misc.VOLUME_GAIN < 64) ? Misc.VOLUME_GAIN : 58;
         gEeprom.DAC_GAIN             = (Misc.DAC_GAIN    < 16) ? Misc.DAC_GAIN    : 8;
 
+        #ifdef ENABLE_FEAT_F4HWN
+            gEeprom.VOLUME_GAIN_BACKUP   = gEeprom.VOLUME_GAIN;
+        #endif
+
         BK4819_WriteRegister(BK4819_REG_3B, 22656 + gEeprom.BK4819_XTAL_FREQ_LOW);
 //      BK4819_WriteRegister(BK4819_REG_3C, gEeprom.BK4819_XTAL_FREQ_HIGH);
     }

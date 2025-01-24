@@ -212,30 +212,47 @@ void UI_DisplayStatus()
 
     x = MAX(x1, 69u);
 
-    // KEY-LOCK indicator
+    const void *src = NULL;   // Pointer to the font/bitmap to copy
+    size_t size = 0;          // Size of the font/bitmap
+
+    // Determine the source and size based on conditions
     if (gEeprom.KEY_LOCK) {
-        memcpy(line + x + 1, gFontKeyLock, sizeof(gFontKeyLock));
+        src = gFontKeyLock;
+        size = sizeof(gFontKeyLock);
     }
     else if (gWasFKeyPressed) {
         #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
-            if(gEeprom.MENU_LOCK == false) {
-                memcpy(line + x + 1, gFontF, sizeof(gFontF));
-            }
+        if (!gEeprom.MENU_LOCK) {
+            src = gFontF;
+            size = sizeof(gFontF);
+        }
         #else
-            memcpy(line + x + 1, gFontF, sizeof(gFontF));
+        src = gFontF;
+        size = sizeof(gFontF);
         #endif
     }
-    else if (gBackLight)
-    {
-        memcpy(line + x + 1, gFontLight, sizeof(gFontLight));
+    #ifdef ENABLE_FEAT_F4HWN
+        else if (gMute) {
+            src = gFontSound;
+            size = sizeof(gFontSound);
+        }
+    #endif
+    else if (gBackLight) {
+        src = gFontLight;
+        size = sizeof(gFontLight);
     }
     #ifdef ENABLE_FEAT_F4HWN_CHARGING_C
-    else if (gChargingWithTypeC)
-    {
-        memcpy(line + x + 1, BITMAP_USB_C, sizeof(BITMAP_USB_C));
+    else if (gChargingWithTypeC) {
+        src = BITMAP_USB_C;
+        size = sizeof(BITMAP_USB_C);
     }
     #endif
-    
+
+    // Perform the memcpy if a source was selected
+    if (src) {
+        memcpy(line + x + 1, src, size);
+    }
+
     // Battery
     unsigned int x2 = LCD_WIDTH - sizeof(BITMAP_BatteryLevel1) - 0;
 
