@@ -256,7 +256,7 @@ const uint8_t BITMAP_ScanListE[7] =
 
 const uint8_t BITMAP_ScanList123[19] =
 {
-    // 'All' symbol
+    // '123' symbol
     0b01111111,
     0b01111111,
     0b01111011,
