@@ -233,8 +233,8 @@ void UI_DisplayStatus()
     }
     #ifdef ENABLE_FEAT_F4HWN
         else if (gMute) {
-            src = gFontSound;
-            size = sizeof(gFontSound);
+            src = gFontMute;
+            size = sizeof(gFontMute);
         }
     #endif
     else if (gBackLight) {

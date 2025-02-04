@@ -57,7 +57,7 @@ const uint8_t gFontLight[9] =
     0b00001100,
 };
 
-const uint8_t gFontSound[12] =
+const uint8_t gFontMute[12] =
 {
     0b00011100,
     0b00011100,
