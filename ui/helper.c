@@ -230,7 +230,6 @@ void UI_DrawPixelBuffer(uint8_t (*buffer)[128], uint8_t x, uint8_t y, bool black
         buffer[y/8][x] &= ~pattern;
 }
 
-/*
 static void sort(int16_t *a, int16_t *b)
 {
     if(*a > *b) {
@@ -239,7 +238,6 @@ static void sort(int16_t *a, int16_t *b)
         *b = t;
     }
 }
-*/
 
 #ifdef ENABLE_FEAT_F4HWN
     /*
@@ -299,17 +297,8 @@ static void sort(int16_t *a, int16_t *b)
     
 void UI_DrawLineBuffer(uint8_t (*buffer)[128], int16_t x1, int16_t y1, int16_t x2, int16_t y2, bool black)
 {
-    // Swap x1 and x2 if x1 > x2
-    if (x1 > x2) {
-        int16_t tmp = x1; x1 = x2; x2 = tmp;
-        int16_t tmpY = y1; y1 = y2; y2 = tmpY; // Swap corresponding y-values as well
-    }
-
-    if(x1==x2) {
-        // Ensure y1 <= y2
-        if (y1 > y2) {
-            int16_t tmp = y1; y1 = y2; y2 = tmp;
-        }
+    if(x2==x1) {
+        sort(&y1, &y2);
         for(int16_t i = y1; i <= y2; i++) {
             UI_DrawPixelBuffer(buffer, x1, i, black);
         }
@@ -318,6 +307,7 @@ void UI_DrawLineBuffer(uint8_t (*buffer)[128], int16_t x1, int16_t y1, int16_t x
         int a = (y2-y1)*multipl / (x2-x1);
         int b = y1 - a * x1 / multipl;
 
+        sort(&x1, &x2);
         for(int i = x1; i<= x2; i++)
         {
             UI_DrawPixelBuffer(buffer, i, i*a/multipl +b, black);
