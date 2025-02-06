@@ -145,6 +145,7 @@ void UI_PrintStringSmallBufferBold(const char *pString, uint8_t * buffer)
     UI_PrintStringBuffer(pString, buffer, char_width, font);
 }
 
+/*
 void UI_DisplayFrequency(const char *string, uint8_t X, uint8_t Y, bool center)
 {
     const unsigned int char_width  = 13;
@@ -179,6 +180,46 @@ void UI_DisplayFrequency(const char *string, uint8_t X, uint8_t Y, bool center)
         pFb1 += char_width;
     }
 }
+*/
+
+void UI_DisplayFrequency(const char *string, uint8_t X, uint8_t Y, bool center)
+{
+    const unsigned int char_width  = 13;
+    uint8_t           *pFb0        = gFrameBuffer[Y] + X;
+    uint8_t           *pFb1        = pFb0 + 128;
+    bool               bCanDisplay = false;
+
+    if (center) {
+        uint8_t len = 0;
+        for (const char *ptr = string; *ptr; ptr++)
+            if (*ptr != ' ') len++; // Ignore les espaces pour le centrage
+
+        X -= (len * char_width) / 2; // Ajustement pour le centrage
+        pFb0 = gFrameBuffer[Y] + X;
+        pFb1 = pFb0 + 128;
+    }
+
+    for (; *string; string++) {
+        char c = *string;
+        if (c == '-') c = '9' + 1; // Remap du symbole '-'
+
+        if (bCanDisplay || c != ' ') {
+            bCanDisplay = true;
+            if (c >= '0' && c <= '9' + 1) {
+                memcpy(pFb0 + 2, gFontBigDigits[c - '0'], char_width - 3);
+                memcpy(pFb1 + 2, gFontBigDigits[c - '0'] + char_width - 3, char_width - 3);
+            } else if (c == '.') {
+                memset(pFb1, 0x60, 3); // Remplace les trois affectations
+                pFb0 += 3;
+                pFb1 += 3;
+                continue;
+            }
+        }
+        pFb0 += char_width;
+        pFb1 += char_width;
+    }
+}
+
 
 void UI_DrawPixelBuffer(uint8_t (*buffer)[128], uint8_t x, uint8_t y, bool black)
 {
