@@ -363,6 +363,7 @@ void channelMoveSwitch(void) {
     if (IS_MR_CHANNEL(gTxVfo->CHANNEL_SAVE)) { // user is entering channel number
         uint16_t Channel = 0;
 
+        /*
         switch (gInputBoxIndex)
         {
             case 1:
@@ -374,6 +375,11 @@ void channelMoveSwitch(void) {
             case 3:
                 Channel = (gInputBox[0] * 100) + (gInputBox[1] * 10) + gInputBox[2];
                 break;
+        }
+        */
+
+        for (uint8_t i = 0; i < gInputBoxIndex; i++) {
+            Channel = (Channel * 10) + gInputBox[i];
         }
 
         if ((Channel == 0) && (gInputBoxIndex != 3)) {
