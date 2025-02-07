@@ -1215,6 +1215,7 @@ void UI_DisplayMenu(void)
         if (gSubMenuSelection < 0 || !gEeprom.SCAN_LIST_ENABLED[i]) {
             UI_PrintString(pPrintStr, menu_item_x1, menu_item_x2, 2, 8);
         } else {
+            /*
             UI_PrintStringSmallNormal(pPrintStr, menu_item_x1, menu_item_x2, 2);
 
             if (IS_MR_CHANNEL(gEeprom.SCANLIST_PRIORITY_CH1[i])) {
@@ -1226,6 +1227,19 @@ void UI_DisplayMenu(void)
                 sprintf(String, "PRI%d:%u", 2, gEeprom.SCANLIST_PRIORITY_CH2[i] + 1);
                 UI_PrintString(String, menu_item_x1, menu_item_x2, 5, 8);
             }
+            */
+
+            UI_PrintStringSmallNormal(pPrintStr, menu_item_x1, menu_item_x2, 2);
+
+            for (uint8_t pri = 1; pri <= 2; pri++) {
+                uint8_t channel = (pri == 1) ? gEeprom.SCANLIST_PRIORITY_CH1[i] : gEeprom.SCANLIST_PRIORITY_CH2[i];
+
+                if (IS_MR_CHANNEL(channel)) {
+                    snprintf(String, sizeof(String), "PRI%d:%u", pri, channel + 1);
+                    UI_PrintString(String, menu_item_x1, menu_item_x2, pri * 2 + 1, 8);
+                }
+            }
+
         }
     }
 
