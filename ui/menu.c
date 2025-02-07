@@ -1239,7 +1239,7 @@ void UI_DisplayMenu(void)
                 uint8_t channel = (pri == 1) ? gEeprom.SCANLIST_PRIORITY_CH1[i] : gEeprom.SCANLIST_PRIORITY_CH2[i];
 
                 if (IS_MR_CHANNEL(channel)) {
-                    snprintf(String, sizeof(String), "PRI%d:%u", pri, channel + 1);
+                    sprintf(String, "PRI%d:%u", pri, channel + 1);
                     UI_PrintString(String, menu_item_x1, menu_item_x2, pri * 2 + 1, 8);
                 }
             }
