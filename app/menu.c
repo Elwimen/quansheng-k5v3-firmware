@@ -1943,8 +1943,8 @@ static void MENU_Key_UP_DOWN(bool bKeyPressed, bool bKeyHeld, int8_t Direction)
             VFO = 2;
             break;
         case MENU_SLIST1:
-            VFO = 1;
             bCheckScanList = true;
+            VFO = 1;
             break;
 
         default:
