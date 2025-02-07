@@ -55,6 +55,7 @@ ENABLE_FEAT_F4HWN_RESET_CHANNEL ?= 0
 ENABLE_FEAT_F4HWN_PMR           ?= 0
 ENABLE_FEAT_F4HWN_GMRS_FRS_MURS	?= 0
 ENABLE_FEAT_F4HWN_CA         	?= 1
+ENABLE_REGA	                	?= 1
 
 # ---- DEBUGGING ----
 ENABLE_AM_FIX_SHOW_DATA       	?= 0
@@ -135,6 +136,9 @@ OBJS += app/app.o
 OBJS += app/chFrScanner.o
 OBJS += app/common.o
 OBJS += app/dtmf.o
+ifeq ($(ENABLE_REGA),1)
+	OBJS += app/rega.o
+endif
 ifeq ($(ENABLE_FLASHLIGHT),1)
 	OBJS += app/flashlight.o
 endif
@@ -398,6 +402,9 @@ ifeq ($(ENABLE_SCAN_RANGES),1)
 endif
 ifeq ($(ENABLE_DTMF_CALLING),1)
 	CFLAGS  += -DENABLE_DTMF_CALLING
+endif
+ifeq ($(ENABLE_REGA),1)
+	CFLAGS  += -DENABLE_REGA
 endif
 ifeq ($(ENABLE_AGC_SHOW_DATA),1)
 	CFLAGS  += -DENABLE_AGC_SHOW_DATA

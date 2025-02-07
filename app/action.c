@@ -42,6 +42,9 @@
 #include "settings.h"
 #include "ui/inputbox.h"
 #include "ui/ui.h"
+#ifdef ENABLE_REGA
+    #include "app/rega.h"
+#endif
 
 #ifdef ENABLE_FEAT_F4HWN_SCREENSHOT
   #include "screenshot.h"
@@ -117,6 +120,10 @@ void (*action_opt_table[])(void) = {
     #endif
 #else
     [ACTION_OPT_RXMODE] = &FUNCTION_NOP,
+#endif
+#ifdef ENABLE_REGA
+    [ACTION_OPT_REGA_ALARM] = &ACTION_RegaAlarm,
+    [ACTION_OPT_REGA_TEST] = &ACTION_RegaTest,
 #endif
 };
 
