@@ -1143,10 +1143,14 @@ void UI_DisplayMenu(void)
             }
 
             // center vertically'ish
+            /*
             if (small)
                 y = 3 - ((lines + 0) / 2);  // untested
             else
                 y = 2 - ((lines + 0) / 2);
+            */
+
+            y = (small ? 3 : 2) - (lines / 2); 
 
             // only for SysInf
             if(UI_MENU_GetCurrentMenuId() == MENU_VOL)
