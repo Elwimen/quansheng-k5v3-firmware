@@ -98,8 +98,6 @@ void (*ProcessKeysFunctions[])(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld) 
 
 static_assert(ARRAY_SIZE(ProcessKeysFunctions) == DISPLAY_N_ELEM);
 
-
-
 static void CheckForIncoming(void)
 {
     if (!g_SquelchLost)
