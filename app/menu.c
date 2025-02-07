@@ -1567,6 +1567,7 @@ static void MENU_Key_0_to_9(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
 
     Offset = (Max >= 100) ? 3 : (Max >= 10) ? 2 : 1;
 
+    /*
     switch (gInputBoxIndex)
     {
         case 1:
@@ -1578,6 +1579,11 @@ static void MENU_Key_0_to_9(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
         case 3:
             Value = (gInputBox[0] * 100) + (gInputBox[1] * 10) + gInputBox[2];
             break;
+    }
+    */
+
+    for (uint8_t i = 0; i < gInputBoxIndex; i++) {
+        Value = (Value * 10) + gInputBox[i];
     }
 
     if (Offset == gInputBoxIndex)
