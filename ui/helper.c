@@ -192,16 +192,16 @@ void UI_DisplayFrequency(const char *string, uint8_t X, uint8_t Y, bool center)
     if (center) {
         uint8_t len = 0;
         for (const char *ptr = string; *ptr; ptr++)
-            if (*ptr != ' ') len++; // Ignore les espaces pour le centrage
+            if (*ptr != ' ') len++; // Ignores spaces for centering
 
-        X -= (len * char_width) / 2; // Ajustement pour le centrage
+        X -= (len * char_width) / 2; // Centering adjustment
         pFb0 = gFrameBuffer[Y] + X;
         pFb1 = pFb0 + 128;
     }
 
     for (; *string; string++) {
         char c = *string;
-        if (c == '-') c = '9' + 1; // Remap du symbole '-'
+        if (c == '-') c = '9' + 1; // Remap of '-' symbol
 
         if (bCanDisplay || c != ' ') {
             bCanDisplay = true;
@@ -209,7 +209,7 @@ void UI_DisplayFrequency(const char *string, uint8_t X, uint8_t Y, bool center)
                 memcpy(pFb0 + 2, gFontBigDigits[c - '0'], char_width - 3);
                 memcpy(pFb1 + 2, gFontBigDigits[c - '0'] + char_width - 3, char_width - 3);
             } else if (c == '.') {
-                memset(pFb1, 0x60, 3); // Remplace les trois affectations
+                memset(pFb1, 0x60, 3); // Replaces the three assignments
                 pFb0 += 3;
                 pFb1 += 3;
                 continue;
