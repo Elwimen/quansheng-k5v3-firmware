@@ -1370,9 +1370,9 @@ void UI_DisplayMain(void)
            }
 
            if (gSetting_set_gui) {
-               UI_PrintStringSmallNormal(String, LCD_WIDTH + 98, 0, line + 1);
+                UI_PrintStringSmallNormal(String, LCD_WIDTH + 98, 0, line + 1);
            } else {
-               GUI_DisplaySmallest(String, 110, line == 0 ? 17 : 49, false, true);
+                GUI_DisplaySmallest(String, 110, line == 0 ? 17 : 49, false, true);
            }
         }
 #endif
