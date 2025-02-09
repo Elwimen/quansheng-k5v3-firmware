@@ -702,7 +702,7 @@ void UI_DisplayMenu(void)
         case MENU_ABR:
             if(gSubMenuSelection == 0)
             {
-                sprintf(String, "%s", "OFF");
+                strcpy(String, "OFF");
             }
             else if(gSubMenuSelection < 61)
             {
@@ -711,7 +711,7 @@ void UI_DisplayMenu(void)
             }
             else
             {
-                sprintf(String, "%s", "ON");    
+                strcpy(String, "ON");
             }
 
             // Obsolete ???
@@ -1023,7 +1023,7 @@ void UI_DisplayMenu(void)
         case MENU_SET_OFF:
             if(gSubMenuSelection == 0)
             {
-                sprintf(String, "%s", "OFF");
+                strcpy(String, "OFF");
             }
             else if(gSubMenuSelection < 121)
             {
@@ -1090,7 +1090,7 @@ void UI_DisplayMenu(void)
             case MENU_SET_VOL:
                 if(gSubMenuSelection == 0)
                 {
-                    sprintf(String, "%s", "OFF");
+                    strcpy(String, "OFF");
                 }
                 else if(gSubMenuSelection < 64)
                 {
