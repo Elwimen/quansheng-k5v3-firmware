@@ -1364,9 +1364,9 @@ void UI_DisplayMain(void)
         */
         if (isMainVFO) {
            if (gMonitor) {
-               sprintf(String, "MONI");
+                strcpy(String, "MONI");
            } else {
-               sprintf(String, "SQL%d", gEeprom.SQUELCH_LEVEL);
+                sprintf(String, "SQL%d", gEeprom.SQUELCH_LEVEL);
            }
 
            if (gSetting_set_gui) {
