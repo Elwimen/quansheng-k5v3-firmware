@@ -451,7 +451,9 @@ const t_sidefunction gSubMenu_SIDEFUNCTIONS[] =
     {"MAIN ONLY",       ACTION_OPT_MAINONLY},
     {"PTT",             ACTION_OPT_PTT},
     {"WIDE\nNARROW",    ACTION_OPT_WN},
+    #if !defined(ENABLE_SPECTRUM) || !defined(ENABLE_FMRADIO)
     {"MUTE",            ACTION_OPT_MUTE},
+    #endif
     #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
         {"POWER\nHIGH",    ACTION_OPT_POWER_HIGH},
         {"REMOVE\nOFFSET",  ACTION_OPT_REMOVE_OFFSET},
@@ -707,7 +709,9 @@ void UI_DisplayMenu(void)
             else if(gSubMenuSelection < 61)
             {
                 sprintf(String, "%02dm:%02ds", (((gSubMenuSelection) * 5) / 60), (((gSubMenuSelection) * 5) % 60));
+                #if !defined(ENABLE_SPECTRUM) || !defined(ENABLE_FMRADIO)
                 ST7565_Gauge(4, 1, 60, gSubMenuSelection);
+                #endif
             }
             else
             {
@@ -739,7 +743,9 @@ void UI_DisplayMenu(void)
             else
             {
                 sprintf(String, "%02dm:%02ds", ((gSubMenuSelection * 15) / 60), ((gSubMenuSelection * 15) % 60));
+                #if !defined(ENABLE_SPECTRUM) || !defined(ENABLE_FMRADIO)
                 ST7565_Gauge(4, 1, 40, gSubMenuSelection);
+                #endif
             }
             break;
 
@@ -854,7 +860,9 @@ void UI_DisplayMenu(void)
 
         case MENU_TOT:
             sprintf(String, "%02dm:%02ds", (((gSubMenuSelection + 1) * 5) / 60), (((gSubMenuSelection + 1) * 5) % 60));
+            #if !defined(ENABLE_SPECTRUM) || !defined(ENABLE_FMRADIO)
             ST7565_Gauge(4, 5, 179, gSubMenuSelection);
+            #endif
             break;
 
         #ifdef ENABLE_VOICE
@@ -871,12 +879,16 @@ void UI_DisplayMenu(void)
             else if(gSubMenuSelection < 81)
             {
                 sprintf(String, "CARRIER\n%02ds:%03dms", ((gSubMenuSelection * 250) / 1000), ((gSubMenuSelection * 250) % 1000));
+                #if !defined(ENABLE_SPECTRUM) || !defined(ENABLE_FMRADIO)
                 ST7565_Gauge(5, 1, 80, gSubMenuSelection);
+                #endif
             }
             else
             {
                 sprintf(String, "TIMEOUT\n%02dm:%02ds", (((gSubMenuSelection - 80) * 5) / 60), (((gSubMenuSelection - 80) * 5) % 60));
+                #if !defined(ENABLE_SPECTRUM) || !defined(ENABLE_FMRADIO)
                 ST7565_Gauge(5, 80, 104, gSubMenuSelection);
+                #endif
             }
             break;
 
@@ -1028,7 +1040,9 @@ void UI_DisplayMenu(void)
             else if(gSubMenuSelection < 121)
             {
                 sprintf(String, "%dh:%02dm", (gSubMenuSelection / 60), (gSubMenuSelection % 60));
+                #if !defined(ENABLE_SPECTRUM) || !defined(ENABLE_FMRADIO)
                 ST7565_Gauge(4, 1, 120, gSubMenuSelection);
+                #endif
             }
             break;
 #endif
@@ -1095,7 +1109,9 @@ void UI_DisplayMenu(void)
                 else if(gSubMenuSelection < 64)
                 {
                     sprintf(String, "%02u", gSubMenuSelection);
+                    #if !defined(ENABLE_SPECTRUM) || !defined(ENABLE_FMRADIO)
                     ST7565_Gauge(4, 1, 63, gSubMenuSelection);
+                    #endif
                 }
                 gEeprom.VOLUME_GAIN = gSubMenuSelection;
                 BK4819_WriteRegister(BK4819_REG_48,
