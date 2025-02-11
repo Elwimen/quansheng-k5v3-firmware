@@ -326,17 +326,19 @@ void SETTINGS_InitEEPROM(void)
         gMR_ChannelExclude[i] = false;
     }
 
-    // 0F30..0F3F
-    EEPROM_ReadBuffer(0x0F30, gCustomAesKey, sizeof(gCustomAesKey));
-    bHasCustomAesKey = false;
-    for (unsigned int i = 0; i < ARRAY_SIZE(gCustomAesKey); i++)
-    {
-        if (gCustomAesKey[i] != 0xFFFFFFFFu)
-        {
-            bHasCustomAesKey = true;
-            return;
-        }
-    }
+        // 0F30..0F3F
+        EEPROM_ReadBuffer(0x0F30, gCustomAesKey, sizeof(gCustomAesKey));
+        bHasCustomAesKey = false;
+        #ifndef ENABLE_FEAT_F4HWN
+            for (unsigned int i = 0; i < ARRAY_SIZE(gCustomAesKey); i++)
+            {
+                if (gCustomAesKey[i] != 0xFFFFFFFFu)
+                {
+                    bHasCustomAesKey = true;
+                    return;
+                }
+            }
+        #endif
 
     #ifdef ENABLE_FEAT_F4HWN
         // 1FF0..0x1FF7
