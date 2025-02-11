@@ -110,6 +110,7 @@ void UI_PrintStringSmall(const char *pString, uint8_t Start, uint8_t End, uint8_
     UI_PrintStringBuffer(pString, gFrameBuffer[Line] + Start, char_width, font);
 }
 
+
 void UI_PrintStringSmallNormal(const char *pString, uint8_t Start, uint8_t End, uint8_t Line)
 {
     UI_PrintStringSmall(pString, Start, End, Line, ARRAY_SIZE(gFontSmall[0]), (const uint8_t *)gFontSmall);
@@ -145,7 +146,6 @@ void UI_PrintStringSmallBufferBold(const char *pString, uint8_t * buffer)
     UI_PrintStringBuffer(pString, buffer, char_width, font);
 }
 
-/*
 void UI_DisplayFrequency(const char *string, uint8_t X, uint8_t Y, bool center)
 {
     const unsigned int char_width  = 13;
@@ -180,8 +180,8 @@ void UI_DisplayFrequency(const char *string, uint8_t X, uint8_t Y, bool center)
         pFb1 += char_width;
     }
 }
-*/
 
+/*
 void UI_DisplayFrequency(const char *string, uint8_t X, uint8_t Y, bool center)
 {
     const unsigned int char_width  = 13;
@@ -219,7 +219,7 @@ void UI_DisplayFrequency(const char *string, uint8_t X, uint8_t Y, bool center)
         pFb1 += char_width;
     }
 }
-
+*/
 
 void UI_DrawPixelBuffer(uint8_t (*buffer)[128], uint8_t x, uint8_t y, bool black)
 {
