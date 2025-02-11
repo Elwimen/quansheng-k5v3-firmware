@@ -36,7 +36,7 @@ bandscope() {
         ENABLE_SPECTRUM=1 \
         ENABLE_FMRADIO=0 \
         ENABLE_AIRCOPY=0 \
-        ENABLE_FEAT_F4HWN_PMR=0 \
+        ENABLE_FEAT_F4HWN_PMR=1 \
         ENABLE_NOAA=0 \
         ENABLE_FEAT_F4HWN_RESCUE_OPS=0 \
         EDITION_STRING=Bandscope \

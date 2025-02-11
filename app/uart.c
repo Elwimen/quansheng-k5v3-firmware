@@ -276,10 +276,8 @@ static void CMD_051B(const uint8_t *pBuffer)
     Reply.Data.Offset = pCmd->Offset;
     Reply.Data.Size   = pCmd->Size;
 
-    /*
     if (bHasCustomAesKey)
         bLocked = gIsLocked;
-    */
 
     if (!bLocked)
         EEPROM_ReadBuffer(pCmd->Offset, Reply.Data.Data, pCmd->Size);
@@ -376,10 +374,8 @@ static void CMD_052D(const uint8_t *pBuffer)
 
     bIsLocked = bHasCustomAesKey;
 
-    /*
     if (!bIsLocked)
         bIsLocked = IsBadChallenge(gCustomAesKey, gChallenge, pCmd->Response);
-    */
 
     if (!bIsLocked)
     {
