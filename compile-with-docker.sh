@@ -119,6 +119,7 @@ case "$1" in
         bandscope
         broadcast
         rescueops
+        voxless
         ;;
     *)
         echo "Usage: $0 {custom|bandscope|broadcast|voxless|standard|all}"

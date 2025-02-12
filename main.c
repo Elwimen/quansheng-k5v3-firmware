@@ -164,7 +164,7 @@ void Main(void)
             gEeprom.KEY_LOCK = 0;
             SETTINGS_SaveSettings();
             #ifndef ENABLE_VOX
-                gMenuCursor = 65; // move to hidden section, fix me if change... !!! Remove VOX and Mic Bar
+                gMenuCursor = 67; // move to hidden section, fix me if change... !!! Remove VOX and Mic Bar
             #else
                 gMenuCursor = 68; // move to hidden section, fix me if change... !!!
             #endif

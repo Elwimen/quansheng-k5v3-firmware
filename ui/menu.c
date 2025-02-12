@@ -86,9 +86,7 @@ const t_menu_item MenuList[] =
     {"BatSav",      MENU_SAVE          }, // was "SAVE"
     {"BatTxt",      MENU_BAT_TXT       },
     {"Mic",         MENU_MIC           },
-#ifdef ENABLE_AUDIO_BAR
     {"MicBar",      MENU_MIC_BAR       },
-#endif
     {"ChDisp",      MENU_MDF           }, // was "MDF"
     {"POnMsg",      MENU_PONMSG        },
     {"BLTime",      MENU_ABR           }, // was "ABR"
@@ -128,9 +126,7 @@ const t_menu_item MenuList[] =
         {"AM Fix",      MENU_AM_FIX        },
     #endif
 #endif
-#ifdef ENABLE_VOX
     {"VOX",         MENU_VOX           },
-#endif
 #ifdef ENABLE_FEAT_F4HWN
     {"SysInf",      MENU_VOL           }, // was "VOL"
 #else
@@ -614,11 +610,13 @@ void UI_DisplayMenu(void)
             }
             break;
 
-        #ifdef ENABLE_AUDIO_BAR
-            case MENU_MIC_BAR:
+        case MENU_MIC_BAR:
+            #ifdef ENABLE_AUDIO_BAR
                 strcpy(String, gSubMenu_OFF_ON[gSubMenuSelection]);
-                break;
-        #endif
+            #else
+                strcpy(String, gSubMenu_OFF_ON[0]);
+            #endif
+            break;
 
         case MENU_STEP: {
             uint16_t step = gStepFrequencyTable[FREQUENCY_GetStepIdxFromSortedIdx(gSubMenuSelection)];
@@ -695,11 +693,13 @@ void UI_DisplayMenu(void)
             break;
 #endif
 
-        #ifdef ENABLE_VOX
-            case MENU_VOX:
+        case MENU_VOX:
+            #ifdef ENABLE_VOX
                 sprintf(String, gSubMenuSelection == 0 ? "OFF" : "%u", gSubMenuSelection);
-                break;
-        #endif
+            #else
+                strcpy(String, gSubMenu_OFF_ON[0]);
+            #endif
+            break;
 
         case MENU_ABR:
             if(gSubMenuSelection == 0)
