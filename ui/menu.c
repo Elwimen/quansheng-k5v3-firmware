@@ -86,9 +86,7 @@ const t_menu_item MenuList[] =
     {"BatSav",      MENU_SAVE          }, // was "SAVE"
     {"BatTxt",      MENU_BAT_TXT       },
     {"Mic",         MENU_MIC           },
-#ifdef ENABLE_AUDIO_BAR
     {"MicBar",      MENU_MIC_BAR       },
-#endif
     {"ChDisp",      MENU_MDF           }, // was "MDF"
     {"POnMsg",      MENU_PONMSG        },
     {"BLTime",      MENU_ABR           }, // was "ABR"
@@ -128,9 +126,7 @@ const t_menu_item MenuList[] =
         {"AM Fix",      MENU_AM_FIX        },
     #endif
 #endif
-#ifdef ENABLE_VOX
     {"VOX",         MENU_VOX           },
-#endif
 #ifdef ENABLE_FEAT_F4HWN
     {"SysInf",      MENU_VOL           }, // was "VOL"
 #else
@@ -455,6 +451,9 @@ const t_sidefunction gSubMenu_SIDEFUNCTIONS[] =
     {"MAIN ONLY",       ACTION_OPT_MAINONLY},
     {"PTT",             ACTION_OPT_PTT},
     {"WIDE\nNARROW",    ACTION_OPT_WN},
+    #if !defined(ENABLE_SPECTRUM) || !defined(ENABLE_FMRADIO)
+    {"MUTE",            ACTION_OPT_MUTE},
+    #endif
     #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
         {"POWER\nHIGH",    ACTION_OPT_POWER_HIGH},
         {"REMOVE\nOFFSET",  ACTION_OPT_REMOVE_OFFSET},
@@ -615,11 +614,13 @@ void UI_DisplayMenu(void)
             }
             break;
 
-        #ifdef ENABLE_AUDIO_BAR
-            case MENU_MIC_BAR:
+        case MENU_MIC_BAR:
+            #ifdef ENABLE_AUDIO_BAR
                 strcpy(String, gSubMenu_OFF_ON[gSubMenuSelection]);
-                break;
-        #endif
+            #else
+                strcpy(String, gSubMenu_OFF_ON[0]);
+            #endif
+            break;
 
         case MENU_STEP: {
             uint16_t step = gStepFrequencyTable[FREQUENCY_GetStepIdxFromSortedIdx(gSubMenuSelection)];
@@ -696,25 +697,29 @@ void UI_DisplayMenu(void)
             break;
 #endif
 
-        #ifdef ENABLE_VOX
-            case MENU_VOX:
+        case MENU_VOX:
+            #ifdef ENABLE_VOX
                 sprintf(String, gSubMenuSelection == 0 ? "OFF" : "%u", gSubMenuSelection);
-                break;
-        #endif
+            #else
+                strcpy(String, gSubMenu_OFF_ON[0]);
+            #endif
+            break;
 
         case MENU_ABR:
             if(gSubMenuSelection == 0)
             {
-                sprintf(String, "%s", "OFF");
+                strcpy(String, "OFF");
             }
             else if(gSubMenuSelection < 61)
             {
                 sprintf(String, "%02dm:%02ds", (((gSubMenuSelection) * 5) / 60), (((gSubMenuSelection) * 5) % 60));
+                #if !defined(ENABLE_SPECTRUM) || !defined(ENABLE_FMRADIO)
                 ST7565_Gauge(4, 1, 60, gSubMenuSelection);
+                #endif
             }
             else
             {
-                sprintf(String, "%s", "ON");    
+                strcpy(String, "ON");
             }
 
             // Obsolete ???
@@ -742,7 +747,9 @@ void UI_DisplayMenu(void)
             else
             {
                 sprintf(String, "%02dm:%02ds", ((gSubMenuSelection * 15) / 60), ((gSubMenuSelection * 15) % 60));
+                #if !defined(ENABLE_SPECTRUM) || !defined(ENABLE_FMRADIO)
                 ST7565_Gauge(4, 1, 40, gSubMenuSelection);
+                #endif
             }
             break;
 
@@ -857,7 +864,9 @@ void UI_DisplayMenu(void)
 
         case MENU_TOT:
             sprintf(String, "%02dm:%02ds", (((gSubMenuSelection + 1) * 5) / 60), (((gSubMenuSelection + 1) * 5) % 60));
+            #if !defined(ENABLE_SPECTRUM) || !defined(ENABLE_FMRADIO)
             ST7565_Gauge(4, 5, 179, gSubMenuSelection);
+            #endif
             break;
 
         #ifdef ENABLE_VOICE
@@ -874,12 +883,16 @@ void UI_DisplayMenu(void)
             else if(gSubMenuSelection < 81)
             {
                 sprintf(String, "CARRIER\n%02ds:%03dms", ((gSubMenuSelection * 250) / 1000), ((gSubMenuSelection * 250) % 1000));
+                #if !defined(ENABLE_SPECTRUM) || !defined(ENABLE_FMRADIO)
                 ST7565_Gauge(5, 1, 80, gSubMenuSelection);
+                #endif
             }
             else
             {
                 sprintf(String, "TIMEOUT\n%02dm:%02ds", (((gSubMenuSelection - 80) * 5) / 60), (((gSubMenuSelection - 80) * 5) % 60));
+                #if !defined(ENABLE_SPECTRUM) || !defined(ENABLE_FMRADIO)
                 ST7565_Gauge(5, 80, 104, gSubMenuSelection);
+                #endif
             }
             break;
 
@@ -1026,12 +1039,14 @@ void UI_DisplayMenu(void)
         case MENU_SET_OFF:
             if(gSubMenuSelection == 0)
             {
-                sprintf(String, "%s", "OFF");
+                strcpy(String, "OFF");
             }
             else if(gSubMenuSelection < 121)
             {
                 sprintf(String, "%dh:%02dm", (gSubMenuSelection / 60), (gSubMenuSelection % 60));
+                #if !defined(ENABLE_SPECTRUM) || !defined(ENABLE_FMRADIO)
                 ST7565_Gauge(4, 1, 120, gSubMenuSelection);
+                #endif
             }
             break;
 #endif
@@ -1091,7 +1106,17 @@ void UI_DisplayMenu(void)
 
         #ifdef ENABLE_FEAT_F4HWN_VOL
             case MENU_SET_VOL:
-                sprintf(String, gSubMenuSelection == 0 ? "OFF" : "%02u", gSubMenuSelection);
+                if(gSubMenuSelection == 0)
+                {
+                    strcpy(String, "OFF");
+                }
+                else if(gSubMenuSelection < 64)
+                {
+                    sprintf(String, "%02u", gSubMenuSelection);
+                    #if !defined(ENABLE_SPECTRUM) || !defined(ENABLE_FMRADIO)
+                    ST7565_Gauge(4, 1, 63, gSubMenuSelection);
+                    #endif
+                }
                 gEeprom.VOLUME_GAIN = gSubMenuSelection;
                 BK4819_WriteRegister(BK4819_REG_48,
                     (11u << 12)                |     // ??? .. 0 ~ 15, doesn't seem to make any difference
@@ -1138,10 +1163,14 @@ void UI_DisplayMenu(void)
             }
 
             // center vertically'ish
+            /*
             if (small)
                 y = 3 - ((lines + 0) / 2);  // untested
             else
                 y = 2 - ((lines + 0) / 2);
+            */
+
+            y = (small ? 3 : 2) - (lines / 2); 
 
             // only for SysInf
             if(UI_MENU_GetCurrentMenuId() == MENU_VOL)
@@ -1210,6 +1239,7 @@ void UI_DisplayMenu(void)
         if (gSubMenuSelection < 0 || !gEeprom.SCAN_LIST_ENABLED[i]) {
             UI_PrintString(pPrintStr, menu_item_x1, menu_item_x2, 2, 8);
         } else {
+            /*
             UI_PrintStringSmallNormal(pPrintStr, menu_item_x1, menu_item_x2, 2);
 
             if (IS_MR_CHANNEL(gEeprom.SCANLIST_PRIORITY_CH1[i])) {
@@ -1221,6 +1251,19 @@ void UI_DisplayMenu(void)
                 sprintf(String, "PRI%d:%u", 2, gEeprom.SCANLIST_PRIORITY_CH2[i] + 1);
                 UI_PrintString(String, menu_item_x1, menu_item_x2, 5, 8);
             }
+            */
+
+            UI_PrintStringSmallNormal(pPrintStr, menu_item_x1, menu_item_x2, 2);
+
+            for (uint8_t pri = 1; pri <= 2; pri++) {
+                uint8_t channel = (pri == 1) ? gEeprom.SCANLIST_PRIORITY_CH1[i] : gEeprom.SCANLIST_PRIORITY_CH2[i];
+
+                if (IS_MR_CHANNEL(channel)) {
+                    sprintf(String, "PRI%d:%u", pri, channel + 1);
+                    UI_PrintString(String, menu_item_x1, menu_item_x2, pri * 2 + 1, 8);
+                }
+            }
+
         }
     }
 

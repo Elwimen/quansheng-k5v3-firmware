@@ -3,7 +3,7 @@
 # 0 = disable
 # 1 = enable
 
-# ---- STOCK QUANSHENG FERATURES ----
+# ---- STOCK QUANSHENG FEATURES ----
 ENABLE_FMRADIO                	?= 0
 ENABLE_UART                   	?= 1
 ENABLE_AIRCOPY                	?= 0
@@ -228,7 +228,7 @@ ifeq ($(ENABLE_FEAT_F4HWN),1)
 	VERSION_STRING_1 ?= v0.22
 
 	AUTHOR_STRING_2 ?= F4HWN
-	VERSION_STRING_2 ?= v3.9
+	VERSION_STRING_2 ?= v4.0
 
 	EDITION_STRING ?= Custom
 

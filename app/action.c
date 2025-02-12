@@ -114,6 +114,11 @@ void (*action_opt_table[])(void) = {
     [ACTION_OPT_PTT] = &ACTION_Ptt,
     [ACTION_OPT_WN] = &ACTION_Wn,
     [ACTION_OPT_BACKLIGHT] = &ACTION_BackLight,
+    #if !defined(ENABLE_SPECTRUM) || !defined(ENABLE_FMRADIO)
+        [ACTION_OPT_MUTE] = &ACTION_Mute,
+    #else
+        [ACTION_OPT_MUTE] = &FUNCTION_NOP,
+    #endif
     #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
         [ACTION_OPT_POWER_HIGH] = &ACTION_Power_High,
         [ACTION_OPT_REMOVE_OFFSET] = &ACTION_Remove_Offset,
@@ -631,6 +636,27 @@ void ACTION_BackLightOnDemand(void)
     
     BACKLIGHT_TurnOn();
 }
+
+    #if !defined(ENABLE_SPECTRUM) || !defined(ENABLE_FMRADIO)
+    void ACTION_Mute(void)
+    {
+        // Toggle mute state
+        gMute = !gMute;
+
+        // Update the registers
+        #ifdef ENABLE_FMRADIO
+            BK1080_WriteRegister(BK1080_REG_05_SYSTEM_CONFIGURATION2, gMute ? 0x0A10 : 0x0A1F);
+        #endif
+        gEeprom.VOLUME_GAIN = gMute ? 0 : gEeprom.VOLUME_GAIN_BACKUP;
+        BK4819_WriteRegister(BK4819_REG_48,
+            (11u << 12)                |  // ??? .. 0 ~ 15, doesn't seem to make any difference
+            (0u << 10)                 |  // AF Rx Gain-1
+            (gEeprom.VOLUME_GAIN << 4) |  // AF Rx Gain-2
+            (gEeprom.DAC_GAIN << 0));     // AF DAC Gain (after Gain-1 and Gain-2)
+
+        gUpdateStatus = true;
+    }
+    #endif
 
     #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
     void ACTION_Power_High(void)

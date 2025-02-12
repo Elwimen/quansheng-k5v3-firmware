@@ -53,9 +53,7 @@ enum
     MENU_MEM_NAME,
     MENU_MDF,
     MENU_SAVE,
-#ifdef ENABLE_VOX
     MENU_VOX,
-#endif
     MENU_ABR,
     MENU_ABR_ON_TX_RX,
     MENU_ABR_MIN,
@@ -73,9 +71,7 @@ enum
     MENU_STE,
     MENU_RP_STE,
     MENU_MIC,
-#ifdef ENABLE_AUDIO_BAR
     MENU_MIC_BAR,
-#endif
     MENU_COMPAND,
     MENU_1_CALL,
     MENU_S_LIST,

@@ -77,8 +77,8 @@ void SETTINGS_InitEEPROM(void)
     gEeprom.DUAL_WATCH            = (Data[4] < 3) ? Data[4] : DUAL_WATCH_CHAN_A;
     gEeprom.BACKLIGHT_TIME        = (Data[5] < 62) ? Data[5] : 12;
     #ifdef ENABLE_FEAT_F4HWN_NARROWER
-        gEeprom.TAIL_TONE_ELIMINATION = ((Data[6] & 0x01) < 2) ? (Data[6] & 0x01) : false;
-        gSetting_set_nfm = (((Data[6] >> 1) & 0x03) < 3) ? ((Data[6] >> 1) & 0x03) : 0;
+        gEeprom.TAIL_TONE_ELIMINATION = Data[6] & 0x01;
+        gSetting_set_nfm = (Data[6] >> 1) & 0x01;
     #else
         gEeprom.TAIL_TONE_ELIMINATION = (Data[6] < 2) ? Data[6] : false;
     #endif
@@ -326,17 +326,19 @@ void SETTINGS_InitEEPROM(void)
         gMR_ChannelExclude[i] = false;
     }
 
-    // 0F30..0F3F
-    EEPROM_ReadBuffer(0x0F30, gCustomAesKey, sizeof(gCustomAesKey));
-    bHasCustomAesKey = false;
-    for (unsigned int i = 0; i < ARRAY_SIZE(gCustomAesKey); i++)
-    {
-        if (gCustomAesKey[i] != 0xFFFFFFFFu)
-        {
-            bHasCustomAesKey = true;
-            return;
-        }
-    }
+        // 0F30..0F3F
+        EEPROM_ReadBuffer(0x0F30, gCustomAesKey, sizeof(gCustomAesKey));
+        bHasCustomAesKey = false;
+        #ifndef ENABLE_FEAT_F4HWN
+            for (unsigned int i = 0; i < ARRAY_SIZE(gCustomAesKey); i++)
+            {
+                if (gCustomAesKey[i] != 0xFFFFFFFFu)
+                {
+                    bHasCustomAesKey = true;
+                    return;
+                }
+            }
+        #endif
 
     #ifdef ENABLE_FEAT_F4HWN
         // 1FF0..0x1FF7
@@ -433,6 +435,10 @@ void SETTINGS_LoadCalibration(void)
         gEEPROM_1F8C                 = Misc.EEPROM_1F8C & 0x01FF;
         gEeprom.VOLUME_GAIN          = (Misc.VOLUME_GAIN < 64) ? Misc.VOLUME_GAIN : 58;
         gEeprom.DAC_GAIN             = (Misc.DAC_GAIN    < 16) ? Misc.DAC_GAIN    : 8;
+
+        #ifdef ENABLE_FEAT_F4HWN
+            gEeprom.VOLUME_GAIN_BACKUP   = gEeprom.VOLUME_GAIN;
+        #endif
 
         BK4819_WriteRegister(BK4819_REG_3B, 22656 + gEeprom.BK4819_XTAL_FREQ_LOW);
 //      BK4819_WriteRegister(BK4819_REG_3C, gEeprom.BK4819_XTAL_FREQ_HIGH);

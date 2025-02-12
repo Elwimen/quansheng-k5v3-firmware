@@ -36,6 +36,8 @@ bandscope() {
         ENABLE_SPECTRUM=1 \
         ENABLE_FMRADIO=0 \
         ENABLE_AIRCOPY=1 \
+        ENABLE_FEAT_F4HWN_PMR=0 \
+        ENABLE_FEAT_F4HWN_GMRS_FRS_MURS=0 \
         ENABLE_NOAA=0 \
         ENABLE_FEAT_F4HWN_RESCUE_OPS=0 \
         EDITION_STRING=Bandscope \
@@ -49,6 +51,8 @@ broadcast() {
         ENABLE_SPECTRUM=0 \
         ENABLE_FMRADIO=1 \
         ENABLE_AIRCOPY=1 \
+        ENABLE_FEAT_F4HWN_PMR=0 \
+        ENABLE_FEAT_F4HWN_GMRS_FRS_MURS=0 \
         ENABLE_NOAA=0 \
         EDITION_STRING=Broadcast \
         ENABLE_FEAT_F4HWN_RESCUE_OPS=0 \
@@ -65,6 +69,8 @@ voxless() {
         ENABLE_AIRCOPY=0 \
         ENABLE_AUDIO_BAR=0 \
         ENABLE_FEAT_F4HWN_SPECTRUM=0 \
+        ENABLE_FEAT_F4HWN_PMR=0 \
+        ENABLE_FEAT_F4HWN_GMRS_FRS_MURS=0 \
         ENABLE_NOAA=0 \
         ENABLE_FEAT_F4HWN_RESTORE_SCAN=0 \
         ENABLE_FEAT_F4HWN_CHARGING_C=0 \
@@ -81,6 +87,8 @@ rescueops() {
         ENABLE_SPECTRUM=0 \
         ENABLE_FMRADIO=0 \
         ENABLE_AIRCOPY=1 \
+        ENABLE_FEAT_F4HWN_PMR=0 \
+        ENABLE_FEAT_F4HWN_GMRS_FRS_MURS=0 \
         ENABLE_NOAA=1 \
         ENABLE_FEAT_F4HWN_RESCUE_OPS=1 \
         EDITION_STRING=RescueOps \
@@ -111,6 +119,7 @@ case "$1" in
         bandscope
         broadcast
         rescueops
+        voxless
         ;;
     *)
         echo "Usage: $0 {custom|bandscope|broadcast|voxless|standard|all}"

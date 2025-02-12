@@ -308,6 +308,7 @@ uint8_t           gIsLocked = 0xFF;
 #ifdef ENABLE_FEAT_F4HWN
     bool          gK5startup = true;
     bool          gBackLight = false;
+    bool          gMute = false;
     uint8_t       gBacklightTimeOriginal;
     uint8_t       gBacklightBrightnessOld;
     uint8_t       gPttOnePushCounter = 0;

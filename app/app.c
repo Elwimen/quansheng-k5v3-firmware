@@ -103,7 +103,6 @@ static_assert(ARRAY_SIZE(ProcessKeysFunctions) == DISPLAY_N_ELEM-1);
 static_assert(ARRAY_SIZE(ProcessKeysFunctions) == DISPLAY_N_ELEM);
 #endif
 
-
 static void CheckForIncoming(void)
 {
     if (!g_SquelchLost)
