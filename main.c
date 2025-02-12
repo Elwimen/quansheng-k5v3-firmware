@@ -32,6 +32,7 @@
 #ifdef ENABLE_FEAT_F4HWN
     #ifdef ENABLE_FMRADIO
         #include "app/fm.h"
+        #include "ui/ui.h"
     #endif
     #ifdef ENABLE_SPECTRUM
         #include "app/spectrum.h"
@@ -312,6 +313,11 @@ void Main(void)
 
         #ifdef ENABLE_FMRADIO
         case 3:
+            gMonitor = false;
+            RADIO_SelectVfos();
+            RADIO_SetupRegisters(true);
+            gRequestDisplayScreen = DISPLAY_FM;
+            GUI_SelectNextDisplay(gRequestDisplayScreen);
             FM_Start(); // For compiler alignments and paddings...
             break;
         #endif
