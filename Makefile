@@ -55,7 +55,7 @@ ENABLE_FEAT_F4HWN_RESET_CHANNEL ?= 0
 ENABLE_FEAT_F4HWN_PMR           ?= 0
 ENABLE_FEAT_F4HWN_GMRS_FRS_MURS	?= 0
 ENABLE_FEAT_F4HWN_CA         	?= 1
-ENABLE_REGA	                	?= 1
+ENABLE_REGA	                	?= 0
 
 # ---- DEBUGGING ----
 ENABLE_AM_FIX_SHOW_DATA       	?= 0
