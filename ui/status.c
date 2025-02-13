@@ -35,6 +35,7 @@
 #include "ui/status.h"
 
 #ifdef ENABLE_FEAT_F4HWN_RX_TX_TIMER
+#ifndef ENABLE_FEAT_F4HWN_DEBUG
 static void convertTime(uint8_t *line, uint8_t type) 
 {
     uint16_t t = (type == 0) ? (gTxTimerCountdown_500ms / 2) : (3600 - gRxTimerCountdown_500ms / 2);
@@ -50,6 +51,7 @@ static void convertTime(uint8_t *line, uint8_t type)
 
     gUpdateStatus = true;
 }
+#endif
 #endif
 
 void UI_DisplayStatus()
@@ -122,28 +124,23 @@ void UI_DisplayStatus()
     }
     x += 10;  // font character width
 
-    // Only for debug
-    // Only for debug
-    // Only for debug
-    
-    bool debug = false;
-    if(debug)
-    {
+    #ifdef ENABLE_FEAT_F4HWN_DEBUG
+        // Only for debug
+        // Only for debug
+        // Only for debug
+
         sprintf(str, "%d", gDebug);
         UI_PrintStringSmallBufferNormal(str, line + x + 1);
         x += 16;
-    }
-    else
-    {
-
-    #ifdef ENABLE_VOICE
+    #else
+        #ifdef ENABLE_VOICE
         // VOICE indicator
         if (gEeprom.VOICE_PROMPT != VOICE_PROMPT_OFF){
             memcpy(line + x, BITMAP_VoicePrompt, sizeof(BITMAP_VoicePrompt));
             x1 = x + sizeof(BITMAP_VoicePrompt);
         }
         x += sizeof(BITMAP_VoicePrompt);
-    #endif
+        #endif
 
         if(!SCANNER_IsScanning()) {
         #ifdef ENABLE_FEAT_F4HWN_RX_TX_TIMER
@@ -185,7 +182,7 @@ void UI_DisplayStatus()
             }
         }
         x += sizeof(gFontDWR) + 3;
-    }
+    #endif
 
 #ifdef ENABLE_VOX
     // VOX indicator
