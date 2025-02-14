@@ -948,6 +948,7 @@ static void DrawStatus()
 static void ShowChannelName(uint32_t f)
 {
     unsigned int i;
+    char String[12];
     memset(String, 0, sizeof(String));
 
     if (isListening)
@@ -970,10 +971,13 @@ static void ShowChannelName(uint32_t f)
     }
     else
     {
+        /*
         for (int i = 36; i < 100; i++)
         {
             gStatusLine[i] = 0b00000000;
         }
+        */
+        memset(&gStatusLine[36], 0, 100 - 28);
     }
     ST7565_BlitStatusLine();
 }
