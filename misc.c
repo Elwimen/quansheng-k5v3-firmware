@@ -119,7 +119,7 @@ enum BacklightOnRxTx_t gSetting_backlight_on_tx_rx;
     uint8_t       gSetting_set_pwr = 1;
     bool          gSetting_set_ptt = 0;
     uint8_t       gSetting_set_tot = 0;
-    uint8_t       gSetting_set_ctr = 11;
+    uint8_t       gSetting_set_ctr = 10;
     bool          gSetting_set_inv = false;
     uint8_t       gSetting_set_eot = 0;
     bool          gSetting_set_lck = false;

@@ -368,8 +368,12 @@ void SETTINGS_InitEEPROM(void)
         gSetting_set_met = (tmp >> 2) & 0x01;
         gSetting_set_gui = (tmp >> 3) & 0x01;
 
+#ifdef ENABLE_FEAT_F4HWN_CONTRAST
         int ctr_value = Data[5] & 0x0F;
         gSetting_set_ctr = (ctr_value > 0 && ctr_value < 16) ? ctr_value : 10;
+#else
+        gSetting_set_ctr = 10;
+#endif
 
         gSetting_set_tmr = Data[4] & 0x01;
 #ifdef ENABLE_FEAT_F4HWN_SLEEP
