@@ -291,7 +291,7 @@ void Main(void)
 #endif
     }
 
-    #ifdef ENABLE_FEAT_F4HWN_RESTORE_SCAN
+    #ifdef ENABLE_FEAT_F4HWN_RESUME_STATE
     switch (gEeprom.CURRENT_STATE) {
         case 1:
             //gScanRangeStart = 0;

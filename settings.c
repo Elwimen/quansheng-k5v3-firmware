@@ -83,7 +83,7 @@ void SETTINGS_InitEEPROM(void)
         gEeprom.TAIL_TONE_ELIMINATION = (Data[6] < 2) ? Data[6] : false;
     #endif
 
-    #ifdef ENABLE_FEAT_F4HWN_RESTORE_SCAN
+    #ifdef ENABLE_FEAT_F4HWN_RESUME_STATE
         gEeprom.VFO_OPEN = Data[7] & 0x01;
         gEeprom.CURRENT_STATE = (Data[7] >> 1) & 0x07;
         gEeprom.CURRENT_LIST = (Data[7] >> 4) & 0x07;
@@ -653,7 +653,7 @@ void SETTINGS_SaveSettings(void)
         State[6] = gEeprom.TAIL_TONE_ELIMINATION;
     #endif
 
-    #ifdef ENABLE_FEAT_F4HWN_RESTORE_SCAN
+    #ifdef ENABLE_FEAT_F4HWN_RESUME_STATE
         State[7] = (gEeprom.VFO_OPEN & 0x01) | ((gEeprom.CURRENT_STATE & 0x07) << 1) | ((gEeprom.SCAN_LIST_DEFAULT & 0x07) << 4);
     #else
         State[7] = gEeprom.VFO_OPEN;
@@ -1016,7 +1016,7 @@ State[1] = 0
     EEPROM_WriteBuffer(0x1FF0, State);
 }
 
-#ifdef ENABLE_FEAT_F4HWN_RESTORE_SCAN
+#ifdef ENABLE_FEAT_F4HWN_RESUME_STATE
     void SETTINGS_WriteCurrentState(void)
     {
         uint8_t State[8];

@@ -431,7 +431,7 @@ static void MAIN_Key_DIGITS(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
             switch(Key) {
                 case KEY_0...KEY_5:
                     gEeprom.SCAN_LIST_DEFAULT = Key;
-                    #ifdef ENABLE_FEAT_F4HWN_RESTORE_SCAN
+                    #ifdef ENABLE_FEAT_F4HWN_RESUME_STATE
                         SETTINGS_WriteCurrentState();
                     #endif
                     break;
@@ -747,7 +747,7 @@ static void MAIN_Key_STAR(bool bKeyPressed, bool bKeyHeld)
             return; 
 
         /*
-        #ifdef ENABLE_FEAT_F4HWN_RESTORE_SCAN
+        #ifdef ENABLE_FEAT_F4HWN_RESUME_STATE
         if(gScanRangeStart == 0) // No ScanRange
         {
             gEeprom.CURRENT_STATE = 1;
