@@ -363,12 +363,16 @@ void SETTINGS_InitEEPROM(void)
 
         int tmp = (Data[5] & 0xF0) >> 4;
 
+#ifdef ENABLE_FEAT_F4HWN_INV
         gSetting_set_inv = (tmp >> 0) & 0x01;
+#else
+        gSetting_set_inv = 0;
+#endif
         gSetting_set_lck = (tmp >> 1) & 0x01;
         gSetting_set_met = (tmp >> 2) & 0x01;
         gSetting_set_gui = (tmp >> 3) & 0x01;
 
-#ifdef ENABLE_FEAT_F4HWN_CONTRAST
+#ifdef ENABLE_FEAT_F4HWN_CTR
         int ctr_value = Data[5] & 0x0F;
         gSetting_set_ctr = (ctr_value > 0 && ctr_value < 16) ? ctr_value : 10;
 #else

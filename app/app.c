@@ -969,19 +969,10 @@ void APP_Update(void)
                 //if (gKeyReading1 != KEY_INVALID)
                 //  gPttWasReleased = true;
             }
+            #if defined(ENABLE_FEAT_F4HWN_CTR) || defined(ENABLE_FEAT_F4HWN_INV)
             ST7565_ContrastAndInv();
+            #endif
         }
-        /*
-        if (gSetting_set_ptt_session) // Improve OnePush if TOT
-        {
-            ProcessKey(KEY_PTT, false, false);
-            gPttIsPressed = false;
-            gPttOnePushCounter = 0;
-            if (gKeyReading1 != KEY_INVALID)
-                gPttWasReleased = true;
-            ST7565_ContrastAndInv();
-        }
-        */
 #endif
 
         APP_EndTransmission();
@@ -1216,7 +1207,9 @@ static void CheckKeys(void)
                 if (gKeyReading1 != KEY_INVALID)
                     gPttWasReleased = true;
                 gPttOnePushCounter = 0;
-                ST7565_ContrastAndInv();            
+                #if defined(ENABLE_FEAT_F4HWN_CTR) || defined(ENABLE_FEAT_F4HWN_INV)
+                ST7565_ContrastAndInv();
+                #endif
             }
         }
         else
@@ -1236,7 +1229,9 @@ static void CheckKeys(void)
                     gPttIsPressed = false;
                     if (gKeyReading1 != KEY_INVALID)
                         gPttWasReleased = true;
+                    #if defined(ENABLE_FEAT_F4HWN_CTR) || defined(ENABLE_FEAT_F4HWN_INV)
                     ST7565_ContrastAndInv();
+                    #endif
                 }
             }
             else

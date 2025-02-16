@@ -75,6 +75,8 @@ voxless() {
         ENABLE_FEAT_F4HWN_RESUME_STATE=0 \
         ENABLE_FEAT_F4HWN_CHARGING_C=0 \
         ENABLE_FEAT_F4HWN_NARROWER=0 \
+        ENABLE_FEAT_F4HWN_INV=0 \
+        ENABLE_FEAT_F4HWN_CTR=0 \
         ENABLE_FEAT_F4HWN_RESCUE_OPS=0 \
         EDITION_STRING=Voxless \
         TARGET=f4hwn.voxless \

@@ -139,9 +139,7 @@ const t_menu_item MenuList[] =
     {"SetPTT",      MENU_SET_PTT       },
     {"SetTOT",      MENU_SET_TOT       },
     {"SetEOT",      MENU_SET_EOT       },
-#ifdef ENABLE_FEAT_F4HWN_CONTRAST
     {"SetCtr",      MENU_SET_CTR       },
-#endif
     {"SetInv",      MENU_SET_INV       },
     {"SetLck",      MENU_SET_LCK       },
     {"SetMet",      MENU_SET_MET       },
@@ -216,6 +214,11 @@ const char gSubMenu_OFF_ON[][4] =
 {
     "OFF",
     "ON"
+};
+
+const char gSubMenu_NA[4] =
+{
+    "N/A"
 };
 
 const char* const gSubMenu_RXMode[] =
@@ -618,7 +621,7 @@ void UI_DisplayMenu(void)
             #ifdef ENABLE_AUDIO_BAR
                 strcpy(String, gSubMenu_OFF_ON[gSubMenuSelection]);
             #else
-                strcpy(String, gSubMenu_OFF_ON[0]);
+                strcpy(String, gSubMenu_NA);
             #endif
             break;
 
@@ -642,7 +645,7 @@ void UI_DisplayMenu(void)
         case MENU_R_DCS:
         case MENU_T_DCS:
             if (gSubMenuSelection == 0)
-                strcpy(String, "OFF");
+                strcpy(String, gSubMenu_OFF_ON[0]);
             else if (gSubMenuSelection < 105)
                 sprintf(String, "D%03oN", DCS_Options[gSubMenuSelection -   1]);
             else
@@ -653,7 +656,7 @@ void UI_DisplayMenu(void)
         case MENU_T_CTCS:
         {
             if (gSubMenuSelection == 0)
-                strcpy(String, "OFF");
+                strcpy(String, gSubMenu_OFF_ON[0]);
             else
                 sprintf(String, "%u.%uHz", CTCSS_Options[gSubMenuSelection - 1] / 10, CTCSS_Options[gSubMenuSelection - 1] % 10);
             break;
@@ -699,16 +702,16 @@ void UI_DisplayMenu(void)
 
         case MENU_VOX:
             #ifdef ENABLE_VOX
-                sprintf(String, gSubMenuSelection == 0 ? "OFF" : "%u", gSubMenuSelection);
+                sprintf(String, gSubMenuSelection == 0 ? gSubMenu_OFF_ON[0] : "%u", gSubMenuSelection);
             #else
-                strcpy(String, gSubMenu_OFF_ON[0]);
+                strcpy(String, gSubMenu_NA);
             #endif
             break;
 
         case MENU_ABR:
             if(gSubMenuSelection == 0)
             {
-                strcpy(String, "OFF");
+                strcpy(String, gSubMenu_OFF_ON[0]);
             }
             else if(gSubMenuSelection < 61)
             {
@@ -743,7 +746,7 @@ void UI_DisplayMenu(void)
 
         case MENU_AUTOLK:
             if (gSubMenuSelection == 0)
-                strcpy(String, "OFF");
+                strcpy(String, gSubMenu_OFF_ON[0]);
             else
             {
                 sprintf(String, "%02dm:%02ds", ((gSubMenuSelection * 15) / 60), ((gSubMenuSelection * 15) % 60));
@@ -855,7 +858,7 @@ void UI_DisplayMenu(void)
         }
 
         case MENU_SAVE:
-            sprintf(String, gSubMenuSelection == 0 ? "OFF" : "1:%u", gSubMenuSelection);
+            sprintf(String, gSubMenuSelection == 0 ? gSubMenu_OFF_ON[0] : "1:%u", gSubMenuSelection);
             break;
 
         case MENU_TDR:
@@ -901,7 +904,7 @@ void UI_DisplayMenu(void)
             break;
 
         case MENU_RP_STE:
-            sprintf(String, gSubMenuSelection == 0 ? "OFF" : "%u*100ms", gSubMenuSelection);
+            sprintf(String, gSubMenuSelection == 0 ? gSubMenu_OFF_ON[0] : "%u*100ms", gSubMenuSelection);
             break;
 
         case MENU_S_LIST:
@@ -1039,7 +1042,7 @@ void UI_DisplayMenu(void)
         case MENU_SET_OFF:
             if(gSubMenuSelection == 0)
             {
-                strcpy(String, "OFF");
+                strcpy(String, gSubMenu_OFF_ON[0]);
             }
             else if(gSubMenuSelection < 121)
             {
@@ -1065,17 +1068,23 @@ void UI_DisplayMenu(void)
             strcpy(String, gSubMenu_SET_TOT[gSubMenuSelection]); // Same as SET_TOT
             break;
 
-#ifdef ENABLE_FEAT_F4HWN_CONTRAST
         case MENU_SET_CTR:
-            sprintf(String, "%d", gSubMenuSelection);
-            gSetting_set_ctr = gSubMenuSelection;
-            ST7565_ContrastAndInv();
+            #ifdef ENABLE_FEAT_F4HWN_CTR
+                sprintf(String, "%d", gSubMenuSelection);
+                gSetting_set_ctr = gSubMenuSelection;
+                ST7565_ContrastAndInv();
+            #else
+                strcpy(String, gSubMenu_NA);
+            #endif
             break;
-#endif
 
         case MENU_SET_INV:
-            strcpy(String, gSubMenu_OFF_ON[gSubMenuSelection]);
-            ST7565_ContrastAndInv();
+            #ifdef ENABLE_FEAT_F4HWN_INV
+                strcpy(String, gSubMenu_OFF_ON[gSubMenuSelection]);
+                ST7565_ContrastAndInv();
+            #else
+                strcpy(String, gSubMenu_NA);
+            #endif
             break;
 
         case MENU_TX_LOCK:
@@ -1108,7 +1117,7 @@ void UI_DisplayMenu(void)
             case MENU_SET_VOL:
                 if(gSubMenuSelection == 0)
                 {
-                    strcpy(String, "OFF");
+                    strcpy(String, gSubMenu_OFF_ON[0]);
                 }
                 else if(gSubMenuSelection < 64)
                 {
