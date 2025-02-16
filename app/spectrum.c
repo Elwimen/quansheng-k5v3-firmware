@@ -867,7 +867,7 @@ uint8_t Rssi2Y(uint16_t rssi)
     return DrawingEndY - Rssi2PX(rssi, 0, DrawingEndY);
 }
 
-#ifdef ENABLE_FEAT_F4HWN_SPECTRUM
+#ifdef ENABLE_FEAT_F4HWN
     static void DrawSpectrum()
     {
         uint16_t steps = GetStepsCount();
