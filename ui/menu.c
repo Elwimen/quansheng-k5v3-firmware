@@ -604,6 +604,10 @@ void UI_DisplayMenu(void)
 
     BACKLIGHT_TurnOn();
 
+    uint8_t gaugeLine = 0;
+    uint8_t gaugeMin = 0;
+    uint8_t gaugeMax = 0;
+
     switch (UI_MENU_GetCurrentMenuId())
     {
         case MENU_SQL:
@@ -717,7 +721,10 @@ void UI_DisplayMenu(void)
             {
                 sprintf(String, "%02dm:%02ds", (((gSubMenuSelection) * 5) / 60), (((gSubMenuSelection) * 5) % 60));
                 #if !defined(ENABLE_SPECTRUM) || !defined(ENABLE_FMRADIO)
-                ST7565_Gauge(4, 1, 60, gSubMenuSelection);
+                //ST7565_Gauge(4, 1, 60, gSubMenuSelection);
+                gaugeLine = 4;
+                gaugeMin = 1;
+                gaugeMax = 60;
                 #endif
             }
             else
@@ -751,7 +758,10 @@ void UI_DisplayMenu(void)
             {
                 sprintf(String, "%02dm:%02ds", ((gSubMenuSelection * 15) / 60), ((gSubMenuSelection * 15) % 60));
                 #if !defined(ENABLE_SPECTRUM) || !defined(ENABLE_FMRADIO)
-                ST7565_Gauge(4, 1, 40, gSubMenuSelection);
+                //ST7565_Gauge(4, 1, 40, gSubMenuSelection);
+                gaugeLine = 4;
+                gaugeMin = 1;
+                gaugeMax = 40;
                 #endif
             }
             break;
@@ -868,7 +878,10 @@ void UI_DisplayMenu(void)
         case MENU_TOT:
             sprintf(String, "%02dm:%02ds", (((gSubMenuSelection + 1) * 5) / 60), (((gSubMenuSelection + 1) * 5) % 60));
             #if !defined(ENABLE_SPECTRUM) || !defined(ENABLE_FMRADIO)
-            ST7565_Gauge(4, 5, 179, gSubMenuSelection);
+            //ST7565_Gauge(4, 5, 179, gSubMenuSelection);
+            gaugeLine = 4;
+            gaugeMin = 5;
+            gaugeMax = 179;
             #endif
             break;
 
@@ -887,14 +900,20 @@ void UI_DisplayMenu(void)
             {
                 sprintf(String, "CARRIER\n%02ds:%03dms", ((gSubMenuSelection * 250) / 1000), ((gSubMenuSelection * 250) % 1000));
                 #if !defined(ENABLE_SPECTRUM) || !defined(ENABLE_FMRADIO)
-                ST7565_Gauge(5, 1, 80, gSubMenuSelection);
+                //ST7565_Gauge(5, 1, 80, gSubMenuSelection);
+                gaugeLine = 5;
+                gaugeMin = 1;
+                gaugeMax = 80;
                 #endif
             }
             else
             {
                 sprintf(String, "TIMEOUT\n%02dm:%02ds", (((gSubMenuSelection - 80) * 5) / 60), (((gSubMenuSelection - 80) * 5) % 60));
                 #if !defined(ENABLE_SPECTRUM) || !defined(ENABLE_FMRADIO)
-                ST7565_Gauge(5, 80, 104, gSubMenuSelection);
+                //ST7565_Gauge(5, 80, 104, gSubMenuSelection);
+                gaugeLine = 5;
+                gaugeMin = 80;
+                gaugeMax = 104;
                 #endif
             }
             break;
@@ -1048,7 +1067,10 @@ void UI_DisplayMenu(void)
             {
                 sprintf(String, "%dh:%02dm", (gSubMenuSelection / 60), (gSubMenuSelection % 60));
                 #if !defined(ENABLE_SPECTRUM) || !defined(ENABLE_FMRADIO)
-                ST7565_Gauge(4, 1, 120, gSubMenuSelection);
+                //ST7565_Gauge(4, 1, 120, gSubMenuSelection);
+                gaugeLine = 4;
+                gaugeMin = 1;
+                gaugeMax = 120;
                 #endif
             }
             break;
@@ -1123,7 +1145,10 @@ void UI_DisplayMenu(void)
                 {
                     sprintf(String, "%02u", gSubMenuSelection);
                     #if !defined(ENABLE_SPECTRUM) || !defined(ENABLE_FMRADIO)
-                    ST7565_Gauge(4, 1, 63, gSubMenuSelection);
+                    //ST7565_Gauge(4, 1, 63, gSubMenuSelection);
+                    gaugeLine = 4;
+                    gaugeMin = 1;
+                    gaugeMax = 63;
                     #endif
                 }
                 gEeprom.VOLUME_GAIN = gSubMenuSelection;
@@ -1143,6 +1168,13 @@ void UI_DisplayMenu(void)
 #endif
 
     }
+
+    #if !defined(ENABLE_SPECTRUM) || !defined(ENABLE_FMRADIO)
+    if(gaugeLine != 0)
+    {
+        ST7565_Gauge(gaugeLine, gaugeMin, gaugeMax, gSubMenuSelection);
+    }
+    #endif
 
     if (!already_printed)
     {   // we now do multi-line text in a single string
