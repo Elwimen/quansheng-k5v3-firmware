@@ -292,22 +292,22 @@ void Main(void)
     }
 
     #ifdef ENABLE_FEAT_F4HWN_RESUME_STATE
-    switch (gEeprom.CURRENT_STATE) {
-        case 1:
-            //gScanRangeStart = 0;
-            //ACTION_Scan(false);
-            gEeprom.SCAN_LIST_DEFAULT = gEeprom.CURRENT_LIST;
-            CHFRSCANNER_Start(true, SCAN_FWD);
-            break;
-
-        case 2:
+    if(gEeprom.CURRENT_STATE == 2 || gEeprom.CURRENT_STATE == 5)
+    {
             gScanRangeStart = gScanRangeStart ? 0 : gTxVfo->pRX->Frequency;
             gScanRangeStop = gEeprom.VfoInfo[!gEeprom.TX_VFO].freq_config_RX.Frequency;
             if(gScanRangeStart > gScanRangeStop)
             {
                 SWAP(gScanRangeStart, gScanRangeStop);
             }
-            //ACTION_Scan(false);
+    }
+    switch (gEeprom.CURRENT_STATE) {
+        case 1:
+            gEeprom.SCAN_LIST_DEFAULT = gEeprom.CURRENT_LIST;
+            CHFRSCANNER_Start(true, SCAN_FWD);
+            break;
+
+        case 2:
             CHFRSCANNER_Start(true, SCAN_FWD);
             break;
 
@@ -320,7 +320,10 @@ void Main(void)
 
         #ifdef ENABLE_SPECTRUM
         case 4:
-            APP_RunSpectrum(); // For compiler alignments and paddings...
+            APP_RunSpectrum();
+            break;
+        case 5:
+            APP_RunSpectrum();
             break;
         #endif
 
