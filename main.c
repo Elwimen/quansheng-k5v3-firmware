@@ -362,7 +362,6 @@ void Main(void)
             APP_RunSpectrum();
         }
         #endif
-        // Pas besoin de `default`, aucun effet si l'état n'est pas traité.
     #endif
         
     while (true) {
