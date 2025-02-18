@@ -604,9 +604,11 @@ void UI_DisplayMenu(void)
 
     BACKLIGHT_TurnOn();
 
-    uint8_t gaugeLine = 0;
-    uint8_t gaugeMin = 0;
-    uint8_t gaugeMax = 0;
+    #if !defined(ENABLE_SPECTRUM) || !defined(ENABLE_FMRADIO)
+        uint8_t gaugeLine = 0;
+        uint8_t gaugeMin = 0;
+        uint8_t gaugeMax = 0;
+    #endif
 
     switch (UI_MENU_GetCurrentMenuId())
     {
