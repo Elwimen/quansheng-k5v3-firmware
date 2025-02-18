@@ -291,6 +291,7 @@ void Main(void)
 #endif
     }
 
+    /*
     #ifdef ENABLE_FEAT_F4HWN_RESUME_STATE
     if(gEeprom.CURRENT_STATE == 2 || gEeprom.CURRENT_STATE == 5)
     {
@@ -332,7 +333,38 @@ void Main(void)
             break;
     }
     #endif
+    */
 
+    #ifdef ENABLE_FEAT_F4HWN_RESUME_STATE
+        if (gEeprom.CURRENT_STATE == 2 || gEeprom.CURRENT_STATE == 5) {
+            gScanRangeStart = gScanRangeStart ? 0 : gTxVfo->pRX->Frequency;
+            gScanRangeStop = gEeprom.VfoInfo[!gEeprom.TX_VFO].freq_config_RX.Frequency;
+            if (gScanRangeStart > gScanRangeStop) {
+                SWAP(gScanRangeStart, gScanRangeStop);
+            }
+        }
+
+        if (gEeprom.CURRENT_STATE == 1) {
+            gEeprom.SCAN_LIST_DEFAULT = gEeprom.CURRENT_LIST;
+        }
+
+        if (gEeprom.CURRENT_STATE == 1 || gEeprom.CURRENT_STATE == 2) {
+            CHFRSCANNER_Start(true, SCAN_FWD);
+        }
+        #ifdef ENABLE_FMRADIO
+        else if (gEeprom.CURRENT_STATE == 3) {
+            ACTION_FM();
+            GUI_SelectNextDisplay(gRequestDisplayScreen);
+        }
+        #endif
+        #ifdef ENABLE_SPECTRUM
+        else if (gEeprom.CURRENT_STATE == 4 || gEeprom.CURRENT_STATE == 5) {
+            APP_RunSpectrum();
+        }
+        #endif
+        // Pas besoin de `default`, aucun effet si l'état n'est pas traité.
+    #endif
+        
     while (true) {
         APP_Update();
 
