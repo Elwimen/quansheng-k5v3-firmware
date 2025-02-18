@@ -1207,15 +1207,9 @@ void MENU_ShowCurrentSetting(void)
             break;
 
         case MENU_SLIST1:
-            gSubMenuSelection = RADIO_FindNextChannel(0, 1, true, 1);
-            break;
-
         case MENU_SLIST2:
-            gSubMenuSelection = RADIO_FindNextChannel(0, 1, true, 2);
-            break;
-
         case MENU_SLIST3:
-            gSubMenuSelection = RADIO_FindNextChannel(0, 1, true, 3);
+            gSubMenuSelection = RADIO_FindNextChannel(0, 1, true, UI_MENU_GetCurrentMenuId() - MENU_SLIST1 + 1);
             break;
 
         #ifdef ENABLE_ALARM
