@@ -60,8 +60,8 @@ broadcast() {
         && cp f4hwn.broadcast* compiled-firmware/"
 }
 
-voxless() {
-    echo "Voxless compilation..."
+basic() {
+    echo "Basic compilation..."
     docker run --rm -v "${PWD}/compiled-firmware:/app/compiled-firmware" $IMAGE_NAME /bin/bash -c "cd /app && make -s \
         ENABLE_SPECTRUM=1 \
         ENABLE_FMRADIO=1 \
@@ -78,9 +78,9 @@ voxless() {
         ENABLE_FEAT_F4HWN_CTR=0 \
         ENABLE_FEAT_F4HWN_NARROWER=0 \
         ENABLE_FEAT_F4HWN_RESCUE_OPS=0 \
-        EDITION_STRING=Voxless \
-        TARGET=f4hwn.voxless \
-        && cp f4hwn.voxless* compiled-firmware/"
+        EDITION_STRING=Basic \
+        TARGET=f4hwn.basic \
+        && cp f4hwn.basic* compiled-firmware/"
 }
 
 rescueops() {
@@ -111,8 +111,8 @@ case "$1" in
     broadcast)
         broadcast
         ;;
-    voxless)
-        voxless
+    basic)
+        basic
         ;;
     rescueops)
         rescueops
@@ -121,10 +121,10 @@ case "$1" in
         bandscope
         broadcast
         rescueops
-        voxless
+        basic
         ;;
     *)
-        echo "Usage: $0 {custom|bandscope|broadcast|voxless|standard|all}"
+        echo "Usage: $0 {custom|bandscope|broadcast|basic|standard|all}"
         exit 1
         ;;
 esac
