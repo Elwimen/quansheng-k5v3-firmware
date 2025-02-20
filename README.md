@@ -97,6 +97,8 @@ Special thanks to Jean-Cyrille F6IWW (2 times), Fabrice 14RC123, David F4BPP, Ol
     * improve ScnRev menu (CARRIER from 250ms to 20s, STOP, TIMEOUT from 5s to 2m)
     * improve KeyLck menu (OFF, delay from 15s to 10m)
     * add HAM CA F Lock band (for Canadian zone),
+    * add PMR 446 F Lock band,
+    * add FRS/GMRS/MURS F Lock band,
     * remove blink and SOS functionality, 
     * remove AM Fix menu (AM Fix is ENABLED by default),
     * add support of 3500mAh battery,
@@ -116,13 +118,14 @@ Special thanks to Jean-Cyrille F6IWW (2 times), Fabrice 14RC123, David F4BPP, Ol
         * scan lists [1, 2, 3],
         * scan all (all channels with ou without list),
     * add scan list shortcuts,
-    * add scan resume mode on startup,
+* add resume mode on startup (scan, bandscope and broadcast FM),
 * new actions:
     * RX MODE,
     * MAIN ONLY,
     * PTT, 
     * WIDE NARROW,
     * 1750Hz,
+    * MUTE,
     * POWER HIGH (RescueOps),
     * REMOVE OFFSET (RescueOps),
 * new key combinations:
