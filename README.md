@@ -52,7 +52,8 @@ Special thanks to Jean-Cyrille F6IWW (2 times), Fabrice 14RC123, David F4BPP, Ol
     * Mid ~2W, 
     * High ~5W,
     * User (see SetPwr),
-* improve s-meter (IARU recommandations),
+* improve S-Meter (IARU Region 1 Technical Recommendation R.1 for VHF/UHF - [read more](https://hamwaves.com/decibel/en/)),
+   * S-Meter (S0/S9) Level EEPROM settings that were introduced in the Egzumer firmware are now ignored and replaced by hardcoded values to comply with the IARU Recommendation.     
 * improve bandscope (Spectrum Analyser):
     * add channel name,
     * add save of some spectrum parameters,
