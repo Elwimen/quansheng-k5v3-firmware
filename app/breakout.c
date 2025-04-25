@@ -256,7 +256,8 @@ void drawBall() {
             drawWall();
 
             isPaused = true;
-            UI_PrintStringSmallBold("GAME OVER", 0, 128, 4);
+            UI_PrintStringSmallBold("GAME", 32, 0, 4);
+            UI_PrintStringSmallBold("OVER", 66, 0, 4);
         }
         initRacket();
         initBall();
