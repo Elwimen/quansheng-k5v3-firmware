@@ -35,6 +35,7 @@ bandscope() {
     docker run --rm -v "${PWD}/compiled-firmware/:/app/compiled-firmware" $IMAGE_NAME /bin/bash -c "rm ./compiled-firmware/*; cd /app && make -s \
         ENABLE_SPECTRUM=1 \
         ENABLE_FMRADIO=0 \
+        ENABLE_VOX=0 \
         ENABLE_AIRCOPY=1 \
         ENABLE_FEAT_F4HWN_PMR=1 \
         ENABLE_FEAT_F4HWN_GMRS_FRS_MURS=1 \
@@ -50,6 +51,7 @@ broadcast() {
     docker run --rm -v "${PWD}/compiled-firmware:/app/compiled-firmware" $IMAGE_NAME /bin/bash -c "cd /app && make -s \
         ENABLE_SPECTRUM=0 \
         ENABLE_FMRADIO=1 \
+        ENABLE_VOX=1 \
         ENABLE_AIRCOPY=1 \
         ENABLE_FEAT_F4HWN_PMR=1 \
         ENABLE_FEAT_F4HWN_GMRS_FRS_MURS=1 \
@@ -88,6 +90,7 @@ rescueops() {
     docker run --rm -v "${PWD}/compiled-firmware:/app/compiled-firmware" $IMAGE_NAME /bin/bash -c "cd /app && make -s \
         ENABLE_SPECTRUM=0 \
         ENABLE_FMRADIO=0 \
+        ENABLE_VOX=1 \
         ENABLE_AIRCOPY=1 \
         ENABLE_FEAT_F4HWN_PMR=1 \
         ENABLE_FEAT_F4HWN_GMRS_FRS_MURS=1 \
