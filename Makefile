@@ -41,6 +41,7 @@ ENABLE_BYP_RAW_DEMODULATORS   	?= 0
 ENABLE_BLMIN_TMP_OFF          	?= 0
 ENABLE_SCAN_RANGES            	?= 1
 ENABLE_FEAT_F4HWN             	?= 1
+ENABLE_FEAT_F4HWN_GAME    	    ?= 0
 ENABLE_FEAT_F4HWN_SCREENSHOT  	?= 0
 ENABLE_FEAT_F4HWN_SPECTRUM    	?= 1
 ENABLE_FEAT_F4HWN_RX_TX_TIMER   ?= 1
@@ -152,6 +153,9 @@ OBJS += app/main.o
 OBJS += app/menu.o
 ifeq ($(ENABLE_SPECTRUM), 1)
 OBJS += app/spectrum.o
+endif
+ifeq ($(ENABLE_FEAT_F4HWN_GAME), 1)
+OBJS += app/breakout.o
 endif
 OBJS += app/scanner.o
 ifeq ($(ENABLE_UART),1)
@@ -429,6 +433,9 @@ ifeq ($(ENABLE_FEAT_F4HWN),1)
 	CFLAGS  += -DEDITION_STRING=\"$(EDITION_STRING)\"
 else
 	CFLAGS  += -DSQL_TONE=550
+endif
+ifeq ($(ENABLE_FEAT_F4HWN_GAME),1)
+	CFLAGS  += -DENABLE_FEAT_F4HWN_GAME
 endif
 ifeq ($(ENABLE_FEAT_F4HWN_SCREENSHOT),1)
 	CFLAGS  += -DENABLE_FEAT_F4HWN_SCREENSHOT

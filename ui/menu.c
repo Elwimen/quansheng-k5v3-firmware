@@ -1227,6 +1227,8 @@ void UI_DisplayMenu(void)
 
                 #if defined(ENABLE_SPECTRUM) && defined(ENABLE_FMRADIO)
                     UI_PrintStringSmallNormal("Basic", 54, 127, 6);
+                #elif defined(ENABLE_FEAT_F4HWN_GAME)
+                    UI_PrintStringSmallNormal("Game", 54, 127, 6);
                 #elif defined(ENABLE_SPECTRUM)
                     UI_PrintStringSmallNormal("Bandscope", 54, 127, 6);
                 #elif defined(ENABLE_FMRADIO)

@@ -37,6 +37,7 @@ bandscope() {
         ENABLE_FMRADIO=0 \
         ENABLE_VOX=0 \
         ENABLE_AIRCOPY=1 \
+        ENABLE_FEAT_F4HWN_GAME=0 \
         ENABLE_FEAT_F4HWN_PMR=1 \
         ENABLE_FEAT_F4HWN_GMRS_FRS_MURS=1 \
         ENABLE_NOAA=0 \
@@ -53,6 +54,7 @@ broadcast() {
         ENABLE_FMRADIO=1 \
         ENABLE_VOX=1 \
         ENABLE_AIRCOPY=1 \
+        ENABLE_FEAT_F4HWN_GAME=0 \
         ENABLE_FEAT_F4HWN_PMR=1 \
         ENABLE_FEAT_F4HWN_GMRS_FRS_MURS=1 \
         ENABLE_NOAA=0 \
@@ -69,11 +71,12 @@ basic() {
         ENABLE_FMRADIO=1 \
         ENABLE_VOX=0 \
         ENABLE_AIRCOPY=0 \
-        ENABLE_AUDIO_BAR=0 \
+        ENABLE_FEAT_F4HWN_GAME=0 \
         ENABLE_FEAT_F4HWN_SPECTRUM=0 \
         ENABLE_FEAT_F4HWN_PMR=1 \
         ENABLE_FEAT_F4HWN_GMRS_FRS_MURS=1 \
         ENABLE_NOAA=0 \
+        ENABLE_AUDIO_BAR=0 \
         ENABLE_FEAT_F4HWN_RESUME_STATE=0 \
         ENABLE_FEAT_F4HWN_CHARGING_C=0 \
         ENABLE_FEAT_F4HWN_INV=1 \
@@ -92,6 +95,7 @@ rescueops() {
         ENABLE_FMRADIO=0 \
         ENABLE_VOX=1 \
         ENABLE_AIRCOPY=1 \
+        ENABLE_FEAT_F4HWN_GAME=0 \
         ENABLE_FEAT_F4HWN_PMR=1 \
         ENABLE_FEAT_F4HWN_GMRS_FRS_MURS=1 \
         ENABLE_NOAA=1 \
@@ -99,6 +103,23 @@ rescueops() {
         EDITION_STRING=RescueOps \
         TARGET=f4hwn.rescueops \
         && cp f4hwn.rescueops* compiled-firmware/"
+}
+
+game() {
+    echo "Game compilation..."
+    docker run --rm -v "${PWD}/compiled-firmware:/app/compiled-firmware" $IMAGE_NAME /bin/bash -c "cd /app && make -s \
+        ENABLE_SPECTRUM=0 \
+        ENABLE_FMRADIO=1 \
+        ENABLE_VOX=1 \
+        ENABLE_AIRCOPY=0 \
+        ENABLE_FEAT_F4HWN_GAME=1 \
+        ENABLE_FEAT_F4HWN_PMR=1 \
+        ENABLE_FEAT_F4HWN_GMRS_FRS_MURS=1 \
+        ENABLE_NOAA=0 \
+        EDITION_STRING=Game \
+        ENABLE_FEAT_F4HWN_RESCUE_OPS=0 \
+        TARGET=f4hwn.game \
+        && cp f4hwn.game* compiled-firmware/"
 }
 
 case "$1" in
@@ -120,14 +141,18 @@ case "$1" in
     rescueops)
         rescueops
         ;;
+    game)
+        game
+        ;;
     all)
         bandscope
         broadcast
-        rescueops
         basic
+        rescueops
+        game
         ;;
     *)
-        echo "Usage: $0 {custom|bandscope|broadcast|basic|standard|all}"
+        echo "Usage: $0 {custom|bandscope|broadcast|basic|rescueops|game|standard|all}"
         exit 1
         ;;
 esac
