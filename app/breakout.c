@@ -482,7 +482,7 @@ void APP_RunBreakout(void) {
                 }
                 else
                 {
-                    SYSTEM_DelayMs(40);
+                    SYSTEM_DelayMs(40 - MIN(levelCountBreackout - 1, 20)); // add more fun...
                 }
             }
 
