@@ -221,7 +221,7 @@ void drawBall() {
 
     if (ball.y <= 0)  // Up
     {
-        ball.dx = map(randInt(0, 8), 0, 7, 3, -3);
+        ball.dx = map(randInt(0, 7), 0, 7, 3, -3);
         ball.dy = 1;
     }
     else if (ball.x <= 2)  // Left
