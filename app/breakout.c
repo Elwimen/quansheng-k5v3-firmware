@@ -359,11 +359,13 @@ static void OnKeyDown(uint8_t key)
     switch (key)
     {
     case KEY_4:
+    case KEY_UP:
         if(!isPaused && racket.x > 0)
             racket.x -= 2;
         isPaused = false;
         break;
     case KEY_0:
+    case KEY_DOWN:
         if(!isPaused && racket.x < 102)
             racket.x += 2;
         isPaused = false;        
@@ -451,6 +453,8 @@ static void Tick()
 // APP_RunBreakout
 void APP_RunBreakout(void) {
         static uint8_t swap = 0;
+
+        srand_custom(BK4819_ReadRegister(BK4819_REG_67) & 0x01FF * gBatteryVoltageAverage * gEeprom.VfoInfo[0].pRX->Frequency);
 
         UI_DisplayClear();
         initWall();
