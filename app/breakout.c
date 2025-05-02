@@ -369,6 +369,10 @@ static void OnKeyDown(uint8_t key)
     case KEY_MENU:
         isPaused = !isPaused;
         kbd.counter = 0;
+        if(isPaused)
+        {
+            UI_PrintStringSmallBold("PAUSE", 0, 128, 4);
+        }
         break;
     case KEY_EXIT:
         isPaused = false;
@@ -376,11 +380,7 @@ static void OnKeyDown(uint8_t key)
         break;
     }
     
-    if(isPaused)
-    {
-        UI_PrintStringSmallBold("PAUSE", 0, 128, 4);
-    }
-    else if(wasPaused)
+    if(wasPaused == true && isPaused == false)
     {
         // Clear the pause text
         for(uint8_t i = 0; i < 8; i++)
