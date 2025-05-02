@@ -167,33 +167,29 @@ int randInt(int min, int max) {
 // PlayBeep
 void playBeep(uint16_t tone)
 {
-    //SYSTEM_DelayMs(10);           // useless ?
     BK4819_PlayTone(tone, true);    // 500 Hz ON
     AUDIO_AudioPathOn();
     BK4819_ExitTxMute();
     SYSTEM_DelayMs(100);
     BK4819_EnterTxMute();
-    //SYSTEM_DelayMs(10);           // useless ?
     AUDIO_AudioPathOff();
 }
 
 // Draw score
 void drawScore()
 {
-    int16_t ballCurrent = ballCount;
-
+    // Clean status line
     memset(gStatusLine,  0, sizeof(gStatusLine));
+
+    // Level
     sprintf(str, "Level %02u", levelCountBreackout);
     GUI_DisplaySmallest(str, 0, 1, true, true);
 
-    if(ballCurrent < 0)
-    {
-        ballCurrent = 0;
-    }
-
-    sprintf(str, "Ball %02u", ballCurrent);
+    // Ball
+    sprintf(str, "Ball %02u", (ballCount < 0) ? 0 : ballCount);
     GUI_DisplaySmallest(str, 45, 1, true, true);
 
+    // Score
     sprintf(str, "Score %04u", score);
     GUI_DisplaySmallest(str, 88, 1, true, true);
 }
@@ -444,18 +440,18 @@ bool HandleUserInput()
 // Tick
 static void Tick()
 {
-    for(uint8_t i = 0; i < 2; i++)
-    {
-        HandleUserInput();
-    }
+    HandleUserInput();
+    HandleUserInput();
 }
 
 // APP_RunBreakout
 void APP_RunBreakout(void) {
         static uint8_t swap = 0;
 
+        // Init seed
         srand_custom(BK4819_ReadRegister(BK4819_REG_67) & 0x01FF * gBatteryVoltageAverage * gEeprom.VfoInfo[0].pRX->Frequency);
 
+        // Init game
         UI_DisplayClear();
         initWall();
         initRacket();
@@ -487,11 +483,11 @@ void APP_RunBreakout(void) {
                 }
                 else
                 {
-                    SYSTEM_DelayMs(40 - MIN(levelCountBreackout - 1, 20)); // add more fun...
+                    SYSTEM_DelayMs(40 - MIN(levelCountBreackout - 1, 20)); // Add more fun...
                 }
             }
 
-            ST7565_BlitStatusLine();  // blank status line
+            ST7565_BlitStatusLine();  // Blank status line
             ST7565_BlitFullScreen();
         }
 }

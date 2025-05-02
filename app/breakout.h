@@ -58,8 +58,8 @@ typedef struct {
 } Racket;
 
 typedef struct {
-    int8_t x;  // x
-    int8_t y;  // y
+    int16_t x;  // x
+    int8_t y;   // y
     uint8_t w;  // width
     uint8_t h;  // height
     int8_t dx;  // move x
