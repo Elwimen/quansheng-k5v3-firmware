@@ -112,6 +112,7 @@ const uint8_t BITMAP_block[4][15] =
 
 const uint8_t BITMAP_blockOn[15] =
 {
+    0b00011110,
     0b00111111,
     0b00111111,
     0b00111111,
@@ -125,8 +126,7 @@ const uint8_t BITMAP_blockOn[15] =
     0b00111111,
     0b00111111,
     0b00111111,
-    0b00111111,
-    0b00111111,
+    0b00011110,
 };
 
 const uint8_t BITMAP_blockEmpty[15] =
