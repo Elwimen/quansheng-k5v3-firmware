@@ -303,11 +303,13 @@ void drawWall() {
                 ball.dx = map(brick[i].x + brick[i].w - ball.x, 0, brick[i].w, 2, -2);
                 ball.dy *= -1;
 
+                BK4819_ToggleGpioOut(BK4819_GPIO6_PIN2_GREEN, true);
                 memcpy(gFrameBuffer[brick[i].y / 8] + brick[i].x, BITMAP_blockOn, sizeof(BITMAP_blockOn));
                 ST7565_BlitLine(brick[i].y / 8);
                 playBeep(600);
                 memcpy(gFrameBuffer[brick[i].y / 8] + brick[i].x, BITMAP_blockEmpty, sizeof(BITMAP_blockEmpty));
                 ST7565_BlitLine(brick[i].y / 8);
+                BK4819_ToggleGpioOut(BK4819_GPIO6_PIN2_GREEN, false);
 
                 if (score % BRICK_NUMBER == 0) {
                     levelCountBreackout++;
@@ -450,6 +452,9 @@ void APP_RunBreakout(void) {
 
         // Init seed
         srand_custom(BK4819_ReadRegister(BK4819_REG_67) & 0x01FF * gBatteryVoltageAverage * gEeprom.VfoInfo[0].pRX->Frequency);
+
+        // Init led
+        BK4819_ToggleGpioOut(BK4819_GPIO6_PIN2_GREEN, false);
 
         // Init game
         UI_DisplayClear();
