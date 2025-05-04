@@ -458,6 +458,9 @@ void APP_RunBreakout(void) {
 
         // Init game
         UI_DisplayClear();
+        score = 0;
+        ballCount = BALL_NUMBER;
+        levelCountBreackout = 1;
         initWall();
         initRacket();
         initBall();
