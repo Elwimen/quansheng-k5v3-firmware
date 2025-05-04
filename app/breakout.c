@@ -164,6 +164,14 @@ int randInt(int min, int max) {
     return min + (rand_custom() % (max - min + 1));
 }
 
+// Reset
+void reset(void)
+{
+    ballCount = BALL_NUMBER;
+    levelCountBreackout = 1;
+    score = 0;
+}
+
 // PlayBeep
 void playBeep(uint16_t tone)
 {
@@ -244,10 +252,7 @@ void drawBall() {
         isBeep = true;
         tone = 800;
         if (ballCount < 0) {
-            ballCount = BALL_NUMBER;
-            levelCountBreackout = 1;
-            score = 0;
-
+            reset();
             initWall();
             drawWall();
 
@@ -458,9 +463,7 @@ void APP_RunBreakout(void) {
 
         // Init game
         UI_DisplayClear();
-        score = 0;
-        ballCount = BALL_NUMBER;
-        levelCountBreackout = 1;
+        reset();
         initWall();
         initRacket();
         initBall();
