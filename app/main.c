@@ -671,7 +671,7 @@ static void MAIN_Key_MENU(bool bKeyPressed, bool bKeyHeld)
             // Exclude work with list 1, 2, 3 or all list
             if(gScanStateDir != SCAN_OFF)
             {
-                if(FUNCTION_IsRx())
+                if(FUNCTION_IsRx() || gScanPauseDelayIn_10ms > 9)
                 {
                     gMR_ChannelExclude[gTxVfo->CHANNEL_SAVE] = true;
 
