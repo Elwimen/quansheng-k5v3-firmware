@@ -128,7 +128,7 @@ game() {
         ENABLE_SPECTRUM=0 \
         ENABLE_FMRADIO=1 \
         ENABLE_VOX=1 \
-        ENABLE_AIRCOPY=0 \
+        ENABLE_AIRCOPY=1 \
         ENABLE_FEAT_F4HWN_GAME=1 \
         ENABLE_FEAT_F4HWN_PMR=1 \
         ENABLE_FEAT_F4HWN_GMRS_FRS_MURS=1 \
