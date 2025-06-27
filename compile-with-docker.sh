@@ -127,7 +127,7 @@ game() {
         cd /app && make -s \
         ENABLE_SPECTRUM=0 \
         ENABLE_FMRADIO=1 \
-        ENABLE_VOX=1 \
+        ENABLE_VOX=0 \
         ENABLE_AIRCOPY=1 \
         ENABLE_FEAT_F4HWN_GAME=1 \
         ENABLE_FEAT_F4HWN_PMR=1 \
