@@ -1,26 +1,38 @@
 #!/bin/sh
-#export DOCKER_DEFAULT_PLATFORM=linux/amd64
-#export DOCKER_NETWORK="--network=host"
+
 IMAGE_NAME="uvk5"
-rm "${PWD}/compiled-firmware/*"
-echo "Building docker image $IMAGE_NAME"
-if ! docker build -t $DOCKER_NETWORK $IMAGE_NAME .
-then
-    echo "Failed to build docker image"
-    exit 1
+FIRMWARE_DIR="${PWD}/compiled-firmware"
+
+# Create firmware output directory if it doesn't exist
+mkdir -p "$FIRMWARE_DIR"
+
+# Clean previously compiled firmware files
+rm -f "$FIRMWARE_DIR"/*
+
+# Build image only if it doesn't already exist
+if ! docker image inspect "$IMAGE_NAME" >/dev/null 2>&1; then
+    echo "Docker image '$IMAGE_NAME' not found, building..."
+    if ! docker build --build-arg BUILDPLATFORM=linux/amd64 -t "$IMAGE_NAME" .; then
+        echo "❌ Failed to build docker image"
+        exit 1
+    fi
 fi
 
+# ------------------ BUILD VARIANTS ------------------
+
 custom() {
-    echo "Custom compilation..."
-    docker run --rm -v "${PWD}/compiled-firmware/:/app/compiled-firmware" $IMAGE_NAME /bin/bash -c "rm ./compiled-firmware/*; cd /app && make -s \
+    echo "🔧 Custom compilation..."
+    docker run --rm -v "$FIRMWARE_DIR:/app/compiled-firmware" "$IMAGE_NAME" /bin/bash -c "\
+        rm -f ./compiled-firmware/* && cd /app && make -s \
         EDITION_STRING=Custom \
         TARGET=f4hwn.custom \
         && cp f4hwn.custom* compiled-firmware/"
 }
 
 standard() {
-    echo "Standard compilation..."
-    docker run --rm -v "${PWD}/compiled-firmware:/app/compiled-firmware" $IMAGE_NAME /bin/bash -c "rm ./compiled-firmware/*; cd /app && make -s \
+    echo "📦 Standard compilation..."
+    docker run --rm -v "$FIRMWARE_DIR:/app/compiled-firmware" "$IMAGE_NAME" /bin/bash -c "\
+        rm -f ./compiled-firmware/* && cd /app && make -s \
         ENABLE_SPECTRUM=0 \
         ENABLE_FMRADIO=0 \
         ENABLE_AIRCOPY=0 \
@@ -31,11 +43,14 @@ standard() {
 }
 
 bandscope() {
-    echo "Bandscope compilation..."
-    docker run --rm -v "${PWD}/compiled-firmware/:/app/compiled-firmware" $IMAGE_NAME /bin/bash -c "rm ./compiled-firmware/*; cd /app && make -s \
+    echo "📺 Bandscope compilation..."
+    docker run --rm -v "$FIRMWARE_DIR:/app/compiled-firmware" "$IMAGE_NAME" /bin/bash -c "\
+        rm -f ./compiled-firmware/* && cd /app && make -s \
         ENABLE_SPECTRUM=1 \
         ENABLE_FMRADIO=0 \
+        ENABLE_VOX=0 \
         ENABLE_AIRCOPY=1 \
+        ENABLE_FEAT_F4HWN_GAME=0 \
         ENABLE_FEAT_F4HWN_PMR=1 \
         ENABLE_FEAT_F4HWN_GMRS_FRS_MURS=1 \
         ENABLE_NOAA=0 \
@@ -46,32 +61,37 @@ bandscope() {
 }
 
 broadcast() {
-    echo "Broadcast compilation..."
-    docker run --rm -v "${PWD}/compiled-firmware:/app/compiled-firmware" $IMAGE_NAME /bin/bash -c "cd /app && make -s \
+    echo "📻 Broadcast compilation..."
+    docker run --rm -v "$FIRMWARE_DIR:/app/compiled-firmware" "$IMAGE_NAME" /bin/bash -c "\
+        cd /app && make -s \
         ENABLE_SPECTRUM=0 \
         ENABLE_FMRADIO=1 \
+        ENABLE_VOX=1 \
         ENABLE_AIRCOPY=1 \
+        ENABLE_FEAT_F4HWN_GAME=0 \
         ENABLE_FEAT_F4HWN_PMR=1 \
         ENABLE_FEAT_F4HWN_GMRS_FRS_MURS=1 \
         ENABLE_NOAA=0 \
-        EDITION_STRING=Broadcast \
         ENABLE_FEAT_F4HWN_RESCUE_OPS=0 \
+        EDITION_STRING=Broadcast \
         TARGET=f4hwn.broadcast \
         && cp f4hwn.broadcast* compiled-firmware/"
 }
 
 basic() {
-    echo "Basic compilation..."
-    docker run --rm -v "${PWD}/compiled-firmware:/app/compiled-firmware" $IMAGE_NAME /bin/bash -c "cd /app && make -s \
+    echo "☘️ Basic compilation..."
+    docker run --rm -v "$FIRMWARE_DIR:/app/compiled-firmware" "$IMAGE_NAME" /bin/bash -c "\
+        cd /app && make -s \
         ENABLE_SPECTRUM=1 \
         ENABLE_FMRADIO=1 \
         ENABLE_VOX=0 \
         ENABLE_AIRCOPY=0 \
-        ENABLE_AUDIO_BAR=0 \
+        ENABLE_FEAT_F4HWN_GAME=0 \
         ENABLE_FEAT_F4HWN_SPECTRUM=0 \
         ENABLE_FEAT_F4HWN_PMR=1 \
         ENABLE_FEAT_F4HWN_GMRS_FRS_MURS=1 \
         ENABLE_NOAA=0 \
+        ENABLE_AUDIO_BAR=0 \
         ENABLE_FEAT_F4HWN_RESUME_STATE=0 \
         ENABLE_FEAT_F4HWN_CHARGING_C=0 \
         ENABLE_FEAT_F4HWN_INV=1 \
@@ -84,11 +104,14 @@ basic() {
 }
 
 rescueops() {
-    echo "RescueOps compilation..."
-    docker run --rm -v "${PWD}/compiled-firmware:/app/compiled-firmware" $IMAGE_NAME /bin/bash -c "cd /app && make -s \
+    echo "🚨 RescueOps compilation..."
+    docker run --rm -v "$FIRMWARE_DIR:/app/compiled-firmware" "$IMAGE_NAME" /bin/bash -c "\
+        cd /app && make -s \
         ENABLE_SPECTRUM=0 \
         ENABLE_FMRADIO=0 \
+        ENABLE_VOX=1 \
         ENABLE_AIRCOPY=1 \
+        ENABLE_FEAT_F4HWN_GAME=0 \
         ENABLE_FEAT_F4HWN_PMR=1 \
         ENABLE_FEAT_F4HWN_GMRS_FRS_MURS=1 \
         ENABLE_NOAA=1 \
@@ -98,33 +121,43 @@ rescueops() {
         && cp f4hwn.rescueops* compiled-firmware/"
 }
 
+game() {
+    echo "🎮 Game compilation..."
+    docker run --rm -v "$FIRMWARE_DIR:/app/compiled-firmware" "$IMAGE_NAME" /bin/bash -c "\
+        cd /app && make -s \
+        ENABLE_SPECTRUM=0 \
+        ENABLE_FMRADIO=1 \
+        ENABLE_VOX=0 \
+        ENABLE_AIRCOPY=1 \
+        ENABLE_FEAT_F4HWN_GAME=1 \
+        ENABLE_FEAT_F4HWN_PMR=1 \
+        ENABLE_FEAT_F4HWN_GMRS_FRS_MURS=1 \
+        ENABLE_NOAA=0 \
+        ENABLE_FEAT_F4HWN_RESCUE_OPS=0 \
+        EDITION_STRING=Game \
+        TARGET=f4hwn.game \
+        && cp f4hwn.game* compiled-firmware/"
+}
+
+# ------------------ MENU ------------------
+
 case "$1" in
-    custom)
-        custom
-        ;;
-    standard)
-        standard
-        ;;
-    bandscope)
-        bandscope
-        ;;
-    broadcast)
-        broadcast
-        ;;
-    basic)
-        basic
-        ;;
-    rescueops)
-        rescueops
-        ;;
+    custom) custom ;;
+    standard) standard ;;
+    bandscope) bandscope ;;
+    broadcast) broadcast ;;
+    basic) basic ;;
+    rescueops) rescueops ;;
+    game) game ;;
     all)
         bandscope
         broadcast
-        rescueops
         basic
+        rescueops
+        game
         ;;
     *)
-        echo "Usage: $0 {custom|bandscope|broadcast|basic|standard|all}"
+        echo "Usage: $0 {custom|standard|bandscope|broadcast|basic|rescueops|game|all} [--rebuild]"
         exit 1
         ;;
 esac

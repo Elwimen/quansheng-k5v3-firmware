@@ -31,6 +31,10 @@
 #include "app/spectrum.h"
 #endif
 
+#ifdef ENABLE_FEAT_F4HWN_GAME
+#include "app/breakout.h"
+#endif
+
 #include "audio.h"
 #include "board.h"
 #include "driver/bk4819.h"
@@ -582,6 +586,13 @@ static void MAIN_Key_DIGITS(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
         ACTION_BackLight();
         return;
     }
+    #ifdef ENABLE_FEAT_F4HWN_GAME
+    else if(Key == 7)
+    {
+        APP_RunBreakout();
+        return;
+    }
+    #endif
 
     processFKeyFunction(Key, true);
 }
@@ -660,7 +671,7 @@ static void MAIN_Key_MENU(bool bKeyPressed, bool bKeyHeld)
             // Exclude work with list 1, 2, 3 or all list
             if(gScanStateDir != SCAN_OFF)
             {
-                if(FUNCTION_IsRx())
+                if(FUNCTION_IsRx() || gScanPauseDelayIn_10ms > 9)
                 {
                     gMR_ChannelExclude[gTxVfo->CHANNEL_SAVE] = true;
 
