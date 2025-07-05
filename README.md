@@ -48,6 +48,7 @@ Special thanks to Jean-Cyrille F6IWW (2 times), Fabrice 14RC123, David F4BPP, Ol
     * Broadcast (with commercial FM radio support),
     * Basic (with spectrum analyzer and commercial FM radios support, but without certain functions such as Vox, Aircopy, etc.),
     * RescueOps (specifically designed for first responders: firefighters, sea rescue, mountain rescue),
+    * Game (with a small breakout game),
 * improve default power settings level: 
     * Low1 to Low5 (<~20mW, ~125mW, ~250mW, ~500mW, ~1W), 
     * Mid ~2W, 
