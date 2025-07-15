@@ -9,13 +9,16 @@ mkdir -p "$FIRMWARE_DIR"
 # Clean previously compiled firmware files
 rm -f "$FIRMWARE_DIR"/*
 
-# Build image only if it doesn't already exist
-if ! docker image inspect "$IMAGE_NAME" >/dev/null 2>&1; then
-    echo "Docker image '$IMAGE_NAME' not found, building..."
-    if ! docker build --build-arg BUILDPLATFORM=linux/amd64 -t "$IMAGE_NAME" .; then
-        echo "❌ Failed to build docker image"
-        exit 1
-    fi
+# Clean up old Docker artifacts
+echo "🧽 Cleaning up old Docker artifacts..."
+docker system prune -f --volumes >/dev/null 2>&1 || true
+
+# Always rebuild the Docker image to ensure latest code changes
+echo "⚙️ Rebuilding Docker image '$IMAGE_NAME'..."
+docker rmi "$IMAGE_NAME" 2>/dev/null || true
+if ! docker build --build-arg BUILDPLATFORM=linux/amd64 -t "$IMAGE_NAME" .; then
+    echo "❌ Failed to build docker image"
+    exit 1
 fi
 
 # ------------------ BUILD VARIANTS ------------------
@@ -157,7 +160,7 @@ case "$1" in
         game
         ;;
     *)
-        echo "Usage: $0 {custom|standard|bandscope|broadcast|basic|rescueops|game|all} [--rebuild]"
+        echo "Usage: $0 {custom|standard|bandscope|broadcast|basic|rescueops|game|all}"
         exit 1
         ;;
 esac
