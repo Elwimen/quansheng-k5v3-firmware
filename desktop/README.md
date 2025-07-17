@@ -1,4 +1,4 @@
-# Quansheng K5 Frame Viewer
+# Quansheng K5 Viewer
 
 This Python script is a simple viewer that displays current screen from the Quansheng K5 transceiver (under F4HWN firmware), transmitted via a serial connection (UART).
 
@@ -39,7 +39,7 @@ SERIAL_PORT = 'COM3'                    # Windows
 3. Then start the viewer:
 
 ```bash
-python viewer.py
+python k5viewer.py
 ```
 
 ## 🎮 Controls
