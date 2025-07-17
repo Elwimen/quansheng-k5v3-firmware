@@ -728,10 +728,6 @@ static void ToggleBacklight()
     {
         BACKLIGHT_TurnOff();
     }
-// For screenshot
-#ifdef ENABLE_FEAT_F4HWN_SCREENSHOT
-    getScreenShot();
-#endif
 }
 
 static void ToggleStepsCount()
@@ -1645,6 +1641,10 @@ static void Tick()
     if (redrawScreen)
     {
         Render();
+        // For screenshot
+        #ifdef ENABLE_FEAT_F4HWN_SCREENSHOT
+            getScreenShot(false);
+        #endif
         redrawScreen = false;
     }
 }

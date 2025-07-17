@@ -16,6 +16,10 @@
 
 #include "app/breakout.h"
 
+#ifdef ENABLE_FEAT_F4HWN_SCREENSHOT
+#include "screenshot.h"
+#endif
+
 static uint32_t randSeed = 1;
 static uint8_t blockAnim = 0;
 
@@ -478,6 +482,11 @@ void APP_RunBreakout(void) {
                 if(swap == 0)
                 {
                     blockAnim = (blockAnim + 1) % 4;
+
+                    // For screenshot
+                    #ifdef ENABLE_FEAT_F4HWN_SCREENSHOT
+                        getScreenShot(false);
+                    #endif
                 }
                 
                 swap = (swap + 1) % 4;

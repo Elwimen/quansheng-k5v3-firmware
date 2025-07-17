@@ -51,6 +51,9 @@ static void AIRCOPY_clear()
     {
         crc[i] = 0;
     }
+    #ifdef ENABLE_FEAT_F4HWN_SCREENSHOT
+        getScreenShot(true);
+    #endif
 }
 
 bool AIRCOPY_SendMessage(void)
@@ -78,7 +81,7 @@ bool AIRCOPY_SendMessage(void)
     if (++gAirCopyBlockNumber >= 0x78) {
         gAircopyState = AIRCOPY_COMPLETE;
         #ifdef ENABLE_FEAT_F4HWN_SCREENSHOT
-            getScreenShot();
+            getScreenShot(false);
         #endif
         //NVIC_SystemReset();
     }
@@ -139,7 +142,7 @@ void AIRCOPY_StorePacket(void)
     if (Offset == 0x1E00) {
         gAircopyState = AIRCOPY_COMPLETE;
         #ifdef ENABLE_FEAT_F4HWN_SCREENSHOT
-            getScreenShot();
+            getScreenShot(false);
         #endif
     }
 

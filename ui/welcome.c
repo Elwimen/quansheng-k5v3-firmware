@@ -28,6 +28,10 @@
 #include "version.h"
 #include "bitmaps.h"
 
+#ifdef ENABLE_FEAT_F4HWN_SCREENSHOT
+    #include "screenshot.h"
+#endif
+
 void UI_DisplayReleaseKeys(void)
 {
     memset(gStatusLine,  0, sizeof(gStatusLine));
@@ -198,5 +202,9 @@ void UI_DisplayWelcome(void)
 
         //ST7565_BlitStatusLine();  // blank status line : I think it's useless
         ST7565_BlitFullScreen();
+
+        #ifdef ENABLE_FEAT_F4HWN_SCREENSHOT
+            getScreenShot(true);
+        #endif
     }
 }

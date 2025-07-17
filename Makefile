@@ -154,6 +154,9 @@ OBJS += app/menu.o
 ifeq ($(ENABLE_SPECTRUM), 1)
 OBJS += app/spectrum.o
 endif
+ifeq ($(ENABLE_FEAT_F4HWN_SCREENSHOT), 1)
+OBJS += screenshot.o
+endif
 ifeq ($(ENABLE_FEAT_F4HWN_GAME), 1)
 OBJS += app/breakout.o
 endif
