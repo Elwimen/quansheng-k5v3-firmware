@@ -6,10 +6,18 @@ os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "1"
 import pygame
 import sys
 import time
+import argparse
 from datetime import datetime
 
 # Serial configuration
-SERIAL_PORT = '/dev/cu.usbserial-11130'  # Change if needed
+parser = argparse.ArgumentParser(description="K5 Screen Viewer")
+parser.add_argument(
+    "-port", dest="serial_port", default="/dev/ttyUSB0",
+    help="Serial port to use (default: /dev/ttyUSB0)"
+)
+args = parser.parse_args()
+
+SERIAL_PORT = args.serial_port
 BAUDRATE = 38400
 TIMEOUT = 0.5
 
@@ -81,6 +89,7 @@ def draw_frame(screen, framebuffer, bg_color=(202, 225, 255), fg_color=(0, 0, 0)
 
 def main():
     pixel_size = 4
+    lost_frame = 0
 
     try:
         ser = serial.Serial(SERIAL_PORT, BAUDRATE, timeout=TIMEOUT)
@@ -91,7 +100,7 @@ def main():
     pygame.init()
     screen = pygame.display.set_mode((WIDTH * (pixel_size - 1), HEIGHT * pixel_size))
     base_title = "Quansheng K5 Viewer by F4HWN"
-    pygame.display.set_caption(f"{base_title} – waiting data")
+    pygame.display.set_caption(f"{base_title} – No data")
 
     fg_color = (0, 0, 0)
     bg_color = (202, 202, 202)
@@ -144,6 +153,12 @@ def main():
                     pygame.display.set_caption(f"{base_title} – FPS: {fps:.1f}")
                     frame_count = 0
                     last_time = now
+                    lost_frame = 0
+            elif 'None':
+                lost_frame += 1
+                if(lost_frame > 4):
+                    pygame.display.set_caption(f"{base_title} – No data")
+
 
     except KeyboardInterrupt:
         print("\n[✔] Exiting")
