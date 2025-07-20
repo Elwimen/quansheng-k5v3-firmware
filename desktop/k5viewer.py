@@ -122,10 +122,13 @@ def main():
                         print(f"[✔] Screenshot saved: {filename}")
                     elif event.key == pygame.K_o:
                         bg_color = (255, 180, 100)
+                        fg_color = (0, 0, 0)
                     elif event.key == pygame.K_b:
                         bg_color = (24, 116, 205)
+                        fg_color = (0, 0, 0)
                     elif event.key == pygame.K_g:
                         bg_color = (202, 202, 202)
+                        fg_color = (0, 0, 0)
                     elif event.key == pygame.K_i:
                         if bg_color == (0, 0, 0):
                             bg_color, fg_color = fg_color, (0, 0, 0)
