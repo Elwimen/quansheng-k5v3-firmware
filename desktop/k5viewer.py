@@ -1,23 +1,20 @@
 #!/usr/bin/env python3
 
-import serial
 import os
-os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "1"
-import pygame
 import sys
 import time
+import datetime
 import argparse
-from datetime import datetime
+
+os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "hide"
+
+import pygame
+import serial
+from serial.tools import list_ports
+
 
 # Serial configuration
-parser = argparse.ArgumentParser(description="K5 Screen Viewer")
-parser.add_argument(
-    "-port", dest="serial_port", default="/dev/ttyUSB0",
-    help="Serial port to use (default: /dev/ttyUSB0)"
-)
-args = parser.parse_args()
-
-SERIAL_PORT = args.serial_port
+DEFAULT_PORT = '/dev/ttyUSB0'  # Change if needed (/dev/cu.usbserial-11130)
 BAUDRATE = 38400
 TIMEOUT = 0.5
 
@@ -33,7 +30,16 @@ TYPE_DIFF = b'\x02'
 # Framebuffer
 framebuffer = bytearray([0] * FRAME_SIZE)
 
-def read_frame(ser):
+
+COLOR_SETS = {  # {key: (name, foreground, background)}
+    "g": ("Grey", pygame.Color(0, 0, 0), pygame.Color(202, 202, 202)),
+    "o": ("Orange", pygame.Color(0, 0, 0), pygame.Color(255, 180, 100)),
+    "b": ("Blue", pygame.Color(0, 0, 0), pygame.Color(24, 116, 205)),
+}
+
+DEFAULT_COLOR = "g"  # Must be a key of "COLOR_SETS"
+
+def read_frame(ser: serial.Serial) -> bytearray:
     global framebuffer
     while True:
         b = ser.read(1)
@@ -54,7 +60,8 @@ def read_frame(ser):
                     framebuffer = apply_diff(framebuffer, payload)
                     return framebuffer
 
-def apply_diff(framebuffer, diff_payload):
+
+def apply_diff(framebuffer: bytearray, diff_payload: bytes) -> bytearray:
     i = 0
     while i + 9 <= len(diff_payload):
         block_index = diff_payload[i]
@@ -65,9 +72,8 @@ def apply_diff(framebuffer, diff_payload):
         i += 8
     return framebuffer
 
-def draw_frame(screen, framebuffer, bg_color=(202, 225, 255), fg_color=(0, 0, 0), pixel_size=4):
-    screen.fill(bg_color)
 
+def draw_frame(screen: pygame.Surface, framebuffer: bytearray, bg_color: pygame.Color, fg_color: pygame.Color, pixel_size: int = 4) -> pygame.Surface:
     def get_bit(bit_idx):
         byte_idx = bit_idx // 8
         bit_pos = bit_idx % 8
@@ -75,6 +81,7 @@ def draw_frame(screen, framebuffer, bg_color=(202, 225, 255), fg_color=(0, 0, 0)
             return (framebuffer[byte_idx] >> bit_pos) & 0x01
         return 0
 
+    screen.fill(bg_color)
     bit_index = 0
     for y in range(64):
         for x in range(128):
@@ -87,87 +94,109 @@ def draw_frame(screen, framebuffer, bg_color=(202, 225, 255), fg_color=(0, 0, 0)
     pygame.display.flip()
     return pygame.display.get_surface().copy()
 
-def main():
+
+def run_viewer(args: argparse.Namespace, ser: serial.Serial):
     pixel_size = 4
-    lost_frame = 0
-
-    try:
-        ser = serial.Serial(SERIAL_PORT, BAUDRATE, timeout=TIMEOUT)
-    except serial.SerialException as e:
-        print(f"[!] Serial error: {e}")
-        sys.exit(1)
-
     pygame.init()
     screen = pygame.display.set_mode((WIDTH * (pixel_size - 1), HEIGHT * pixel_size))
     base_title = "Quansheng K5 Viewer by F4HWN"
     pygame.display.set_caption(f"{base_title} – No data")
 
-    fg_color = (0, 0, 0)
-    bg_color = (202, 202, 202)
+    fg_color, bg_color = COLOR_SETS[DEFAULT_COLOR][1:]
     last_surface = None
     frame_count = 0
-    last_time = time.time()
+    frame_lost = 0
+    last_time = time.monotonic()
 
-    try:
-        while True:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                raise KeyboardInterrupt
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_q:
                     raise KeyboardInterrupt
-                elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_q:
-                        raise KeyboardInterrupt
-                    elif event.key == pygame.K_SPACE and last_surface:
-                        filename = datetime.now().strftime("screenshot_%Y%m%d_%H%M%S.png")
-                        pygame.image.save(last_surface, filename)
-                        print(f"[✔] Screenshot saved: {filename}")
-                    elif event.key == pygame.K_o:
-                        bg_color = (255, 180, 100)
-                        fg_color = (0, 0, 0)
-                    elif event.key == pygame.K_b:
-                        bg_color = (24, 116, 205)
-                        fg_color = (0, 0, 0)
-                    elif event.key == pygame.K_g:
-                        bg_color = (202, 202, 202)
-                        fg_color = (0, 0, 0)
-                    elif event.key == pygame.K_i:
-                        if bg_color == (0, 0, 0):
-                            bg_color, fg_color = fg_color, (0, 0, 0)
-                        else:
-                            bg_color, fg_color = (0, 0, 0), bg_color
-                        draw_frame(screen, framebuffer, bg_color, fg_color, pixel_size)
-                    elif event.key == pygame.K_UP:
-                        if pixel_size < 11:
-                            pixel_size += 1
-                        screen = pygame.display.set_mode((WIDTH * (pixel_size - 1), HEIGHT * pixel_size))
-                        draw_frame(screen, framebuffer, bg_color, fg_color, pixel_size)
-                    elif event.key == pygame.K_DOWN:
-                        if pixel_size > 2:
-                            pixel_size -= 1
-                        screen = pygame.display.set_mode((WIDTH * (pixel_size - 1), HEIGHT * pixel_size))
-                        draw_frame(screen, framebuffer, bg_color, fg_color, pixel_size)
-
-            frame = read_frame(ser)
-            if frame:
-                last_surface = draw_frame(screen, framebuffer, bg_color, fg_color, pixel_size)
-                frame_count += 1
-                now = time.time()
-                if now - last_time >= 1.0:
-                    fps = frame_count / (now - last_time)
-                    pygame.display.set_caption(f"{base_title} – FPS: {fps:.1f}")
-                    frame_count = 0
-                    last_time = now
-                    lost_frame = 0
-            elif 'None':
-                lost_frame += 1
-                if(lost_frame > 4):
-                    pygame.display.set_caption(f"{base_title} – No data")
+                if event.key == pygame.K_SPACE and last_surface:
+                    filename = datetime.datetime.now().strftime("screenshot_%Y%m%d_%H%M%S.png")
+                    pygame.image.save(last_surface, filename)
+                    print(f"[✔] Screenshot saved: {filename}")
+                elif event.key == pygame.K_i:
+                    if bg_color == pygame.Color(0, 0, 0):
+                        bg_color, fg_color = fg_color, pygame.Color(0, 0, 0)
+                    else:
+                        bg_color, fg_color = pygame.Color(0, 0, 0), bg_color
+                    draw_frame(screen, framebuffer, bg_color, fg_color, pixel_size)
+                elif event.key == pygame.K_UP:
+                    if pixel_size < 11:
+                        pixel_size += 1
+                    screen = pygame.display.set_mode((WIDTH * (pixel_size - 1), HEIGHT * pixel_size))
+                    draw_frame(screen, framebuffer, bg_color, fg_color, pixel_size)
+                elif event.key == pygame.K_DOWN:
+                    if pixel_size > 2:
+                        pixel_size -= 1
+                    screen = pygame.display.set_mode((WIDTH * (pixel_size - 1), HEIGHT * pixel_size))
+                    draw_frame(screen, framebuffer, bg_color, fg_color, pixel_size)
+                pressed_key = event.unicode
+                if pressed_key in COLOR_SETS.keys():
+                    fg_color, bg_color = COLOR_SETS[pressed_key][1:]
+        frame = read_frame(ser)
+        if frame:
+            last_surface = draw_frame(screen, framebuffer, bg_color, fg_color, pixel_size)
+            frame_count += 1
+            now = time.monotonic()
+            if now - last_time >= 1.0:
+                fps = frame_count / (now - last_time)
+                pygame.display.set_caption(f"{base_title} – FPS: {fps:.1f}")
+                frame_count = 0
+                last_time = now
+                frame_lost = 0
+        else:
+            frame_lost = min(frame_lost + 1, 5)
+            if frame_lost == 5:
+                pygame.display.set_caption(f"{base_title} – No data")
 
 
+def cmd_list_ports(args: argparse.Namespace):
+    ports = list_ports.comports()
+    print("Available ports:")
+    for port in ports:
+        if port.vid is None:  # Skipping virtual or non-USB ports
+            continue
+        description = " - ".join(filter(None, (port.product, port.manufacturer)))
+        if description:
+            print(f"- {description} : {port.device}")
+        else:
+            print(f"- {port.device}")
+
+def main():
+    parser = argparse.ArgumentParser(
+        prog="K5Viewer",
+        description="A live viewer for UV-K5 radios with F4HWn firmware",
+        epilog="F4HWN repo: https://github.com/armel/uv-k5-firmware-custom"
+    )
+    parser.add_argument("--list-ports", action="store_true", help="list available ports and exit")
+    parser.add_argument("--port", type=str, help="serial port to use (in place of 'DEFAULT_PORT')")
+    args = parser.parse_args()
+    if args.list_ports:
+        cmd_list_ports(args)
+        exit(0)
+    # Running viewer
+    if not args.port and not DEFAULT_PORT:
+        print("Please specify the serial port to use or set 'DEFAULT_PORT', do 'k5viewer.py --help' for help")
+        exit(1)
+    serial_port = args.port or DEFAULT_PORT
+    try:
+        ser = serial.Serial(serial_port, BAUDRATE, timeout=TIMEOUT)
+    except serial.SerialException as e:
+        print(f"[!] Serial error: {e}")
+        sys.exit(1)
+    try:
+        run_viewer(args, ser)
     except KeyboardInterrupt:
         print("\n[✔] Exiting")
         ser.close()
         pygame.quit()
         sys.exit()
+
 
 if __name__ == "__main__":
     main()
