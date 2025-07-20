@@ -33,8 +33,8 @@ framebuffer = bytearray([0] * FRAME_SIZE)
 
 COLOR_SETS = {  # {key: (name, foreground, background)}
     "g": ("Grey", pygame.Color(0, 0, 0), pygame.Color(202, 202, 202)),
-    "o": ("Orange", pygame.Color(0, 0, 0), pygame.Color(255, 180, 100)),
-    "b": ("Blue", pygame.Color(0, 0, 0), pygame.Color(24, 116, 205)),
+    "o": ("Orange", pygame.Color(0, 0, 0), pygame.Color(255, 193, 37)),
+    "b": ("Blue", pygame.Color(0, 0, 0), pygame.Color(28, 134, 228)),
 }
 
 DEFAULT_COLOR = "g"  # Must be a key of "COLOR_SETS"
@@ -96,7 +96,7 @@ def draw_frame(screen: pygame.Surface, framebuffer: bytearray, bg_color: pygame.
 
 
 def run_viewer(args: argparse.Namespace, ser: serial.Serial):
-    pixel_size = 4
+    pixel_size = 5
     pixel_lcd = 0
     pygame.init()
     screen = pygame.display.set_mode((WIDTH * (pixel_size - 1), HEIGHT * pixel_size))
