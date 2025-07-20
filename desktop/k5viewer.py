@@ -73,7 +73,7 @@ def apply_diff(framebuffer: bytearray, diff_payload: bytes) -> bytearray:
     return framebuffer
 
 
-def draw_frame(screen: pygame.Surface, framebuffer: bytearray, bg_color: pygame.Color, fg_color: pygame.Color, pixel_size: int = 4) -> pygame.Surface:
+def draw_frame(screen: pygame.Surface, framebuffer: bytearray, bg_color: pygame.Color, fg_color: pygame.Color, pixel_size: int = 4, pixel_lcd: int = 0) -> pygame.Surface:
     def get_bit(bit_idx):
         byte_idx = bit_idx // 8
         bit_pos = bit_idx % 8
@@ -88,7 +88,7 @@ def draw_frame(screen: pygame.Surface, framebuffer: bytearray, bg_color: pygame.
             if get_bit(bit_index):
                 px = x * (pixel_size - 1)
                 py = y * pixel_size
-                pygame.draw.rect(screen, fg_color, (px, py, pixel_size - 1, pixel_size))
+                pygame.draw.rect(screen, fg_color, (px, py, pixel_size - 1 - pixel_lcd, pixel_size - pixel_lcd))
             bit_index += 1
 
     pygame.display.flip()
@@ -97,6 +97,7 @@ def draw_frame(screen: pygame.Surface, framebuffer: bytearray, bg_color: pygame.
 
 def run_viewer(args: argparse.Namespace, ser: serial.Serial):
     pixel_size = 4
+    pixel_lcd = 0
     pygame.init()
     screen = pygame.display.set_mode((WIDTH * (pixel_size - 1), HEIGHT * pixel_size))
     base_title = "Quansheng K5 Viewer by F4HWN"
@@ -119,28 +120,31 @@ def run_viewer(args: argparse.Namespace, ser: serial.Serial):
                     filename = datetime.datetime.now().strftime("screenshot_%Y%m%d_%H%M%S.png")
                     pygame.image.save(last_surface, filename)
                     print(f"[✔] Screenshot saved: {filename}")
+                elif event.key == pygame.K_p:
+                    pixel_lcd = 1 - pixel_lcd
+                    draw_frame(screen, framebuffer, bg_color, fg_color, pixel_size, pixel_lcd)
                 elif event.key == pygame.K_i:
                     if bg_color == pygame.Color(0, 0, 0):
                         bg_color, fg_color = fg_color, pygame.Color(0, 0, 0)
                     else:
                         bg_color, fg_color = pygame.Color(0, 0, 0), bg_color
-                    draw_frame(screen, framebuffer, bg_color, fg_color, pixel_size)
+                    draw_frame(screen, framebuffer, bg_color, fg_color, pixel_size, pixel_lcd)
                 elif event.key == pygame.K_UP:
                     if pixel_size < 11:
                         pixel_size += 1
                     screen = pygame.display.set_mode((WIDTH * (pixel_size - 1), HEIGHT * pixel_size))
-                    draw_frame(screen, framebuffer, bg_color, fg_color, pixel_size)
+                    draw_frame(screen, framebuffer, bg_color, fg_color, pixel_size, pixel_lcd)
                 elif event.key == pygame.K_DOWN:
                     if pixel_size > 2:
                         pixel_size -= 1
                     screen = pygame.display.set_mode((WIDTH * (pixel_size - 1), HEIGHT * pixel_size))
-                    draw_frame(screen, framebuffer, bg_color, fg_color, pixel_size)
+                    draw_frame(screen, framebuffer, bg_color, fg_color, pixel_size, pixel_lcd)
                 pressed_key = event.unicode
                 if pressed_key in COLOR_SETS.keys():
                     fg_color, bg_color = COLOR_SETS[pressed_key][1:]
         frame = read_frame(ser)
         if frame:
-            last_surface = draw_frame(screen, framebuffer, bg_color, fg_color, pixel_size)
+            last_surface = draw_frame(screen, framebuffer, bg_color, fg_color, pixel_size, pixel_lcd)
             frame_count += 1
             now = time.monotonic()
             if now - last_time >= 1.0:

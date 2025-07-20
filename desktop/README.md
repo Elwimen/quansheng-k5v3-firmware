@@ -64,6 +64,7 @@ pip install pyserial pygame
 | `B`       | Set background to **blue**      |
 | `O`       | Set background to **orange**    |
 | `I`       | Toggle **video inversion**      |
+| `P`       | Toggle **LCD pixel mode**       |
 | `SPACE`   | Save a screenshot as PNG        |
 | `UP`      | Increase window size            |
 | `DOWN`    | Decrease window size            |
