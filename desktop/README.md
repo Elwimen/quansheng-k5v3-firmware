@@ -42,11 +42,11 @@ pip install pyserial pygame
 	Alternatively, you can manually edit the script and change the `DEFAULT_PORT` variable near the top of the file:
 
 	```python
-	DEFAULT_PORT = '/dev/ttyUSB0'  			 # Linux
+	DEFAULT_PORT = '/dev/ttyUSB0'              # Linux
 	# or
-	DEFAULT_PORT = '/dev/cu.usbserial-xxxx'  # macOS
+	DEFAULT_PORT = '/dev/cu.usbserial-xxxx'    # macOS
 	# or
-	DEFAULT_PORT = 'COM3'                    # Windows
+	DEFAULT_PORT = 'COM3'                      # Windows
 	```
 
 	You can also list available serial ports to help you choose:
