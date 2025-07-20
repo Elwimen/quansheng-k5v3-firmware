@@ -27,20 +27,33 @@ pip install pyserial pygame
 
 ## ▶️ How to Run
 
-1. Connect your Quansheng K5 (running F4HWN firmware) to your computer via your Baofeng/Kenwood-like USB-2-Serial-cable.
-2. Edit the `SERIAL_PORT` value in `viewer.py` to match your system:
+1. Connect your **Quansheng K5** (running **F4HWN firmware** v4.2) to your computer using a Baofeng/Kenwood-style USB-to-Serial cable.
 
-```python
-SERIAL_PORT = '/dev/cu.usbserial-xxxx'  # macOS/Linux
-# or
-SERIAL_PORT = 'COM3'                    # Windows
-```
+2. Run the `k5viewer` with the appropriate serial port:
 
-3. Then start the viewer:
+   ```bash
+   python k5viewer.py -port /dev/ttyUSB0             # Linux
+   python k5viewer.py -port /dev/cu.usbserial-xxxx   # macOS
+   python k5viewer.py -port COM3                     # Windows
+   ```
+>[!NOTE]   
+>If no -port is provided, the script defaults to /dev/ttyUSB0.
 
-```bash
-python k5viewer.py
-```
+	Alternatively, you can manually edit the script and change the `DEFAULT_PORT` variable near the top of the file:
+
+	```python
+	DEFAULT_PORT = '/dev/ttyUSB0'  			 # Linux
+	# or
+	DEFAULT_PORT = '/dev/cu.usbserial-xxxx'  # macOS
+	# or
+	DEFAULT_PORT = 'COM3'                    # Windows
+	```
+
+	You can also list available serial ports to help you choose:
+
+	```bash
+	python k5viewer.py --list-ports
+	```
 
 ## 🎮 Controls
 
