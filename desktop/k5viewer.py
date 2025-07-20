@@ -130,13 +130,15 @@ def run_viewer(args: argparse.Namespace, ser: serial.Serial):
                         bg_color, fg_color = pygame.Color(0, 0, 0), bg_color
                     draw_frame(screen, framebuffer, bg_color, fg_color, pixel_size, pixel_lcd)
                 elif event.key == pygame.K_UP:
-                    if pixel_size < 11:
+                    if pixel_size < 12:
                         pixel_size += 1
+                    #print(f"[✔] Resize: {pixel_size, (WIDTH * (pixel_size - 1)), HEIGHT * pixel_size}")
                     screen = pygame.display.set_mode((WIDTH * (pixel_size - 1), HEIGHT * pixel_size))
                     draw_frame(screen, framebuffer, bg_color, fg_color, pixel_size, pixel_lcd)
                 elif event.key == pygame.K_DOWN:
-                    if pixel_size > 2:
+                    if pixel_size > 3:
                         pixel_size -= 1
+                    #print(f"[✔] Resize: {pixel_size, (WIDTH * (pixel_size - 1)), HEIGHT * pixel_size}")
                     screen = pygame.display.set_mode((WIDTH * (pixel_size - 1), HEIGHT * pixel_size))
                     draw_frame(screen, framebuffer, bg_color, fg_color, pixel_size, pixel_lcd)
                 pressed_key = event.unicode
