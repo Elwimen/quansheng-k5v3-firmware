@@ -32,9 +32,9 @@ pip install pyserial pygame
 2. Run the `k5viewer` with the appropriate serial port:
 
    ```bash
-   python k5viewer.py -port /dev/ttyUSB0             # Linux
-   python k5viewer.py -port /dev/cu.usbserial-xxxx   # macOS
-   python k5viewer.py -port COM3                     # Windows
+   ./k5viewer.py -port /dev/ttyUSB0             # Linux
+   ./k5viewer.py -port /dev/cu.usbserial-xxxx   # macOS
+   ./k5viewer.py -port COM3                     # Windows
    ```
 >[!NOTE]   
 >If no -port is provided, the script defaults to /dev/ttyUSB0.
@@ -52,7 +52,7 @@ pip install pyserial pygame
 	You can also list available serial ports to help you choose:
 
 	```bash
-	python k5viewer.py --list-ports
+	./k5viewer.py --list-ports
 	```
 
 ## 🎮 Controls
