@@ -39,6 +39,13 @@ COLOR_SETS = {  # {key: (name, foreground, background)}
 
 DEFAULT_COLOR = "g"  # Must be a key of "COLOR_SETS"
 
+def send_keepalive(ser: serial.Serial):
+    # Send keepalive frame
+    try:
+        ser.write(b'\x55\xAA\x00\x00')  # Keepalive frame
+    except serial.SerialException:
+        pass
+
 def read_frame(ser: serial.Serial) -> bytearray:
     global framebuffer
     while True:
@@ -160,6 +167,8 @@ def run_viewer(args: argparse.Namespace, ser: serial.Serial):
             if frame_lost == 5:
                 pygame.display.set_caption(f"{base_title} – No data")
 
+        send_keepalive(ser)
+
 
 def cmd_list_ports(args: argparse.Namespace):
     ports = list_ports.comports()
@@ -172,6 +181,7 @@ def cmd_list_ports(args: argparse.Namespace):
             print(f"- {description} : {port.device}")
         else:
             print(f"- {port.device}")
+
 
 def main():
     parser = argparse.ArgumentParser(

@@ -17,15 +17,27 @@
 #include "debugging.h"
 #include "driver/st7565.h"
 #include "screenshot.h"
+#include "misc.h"
 
 void getScreenShot(bool force)
 {
     static uint8_t previousFrame[1024] = {0}; // Last frame sent
     static uint8_t forcedBlock = 0;           // Block to force send each frame
+    static uint8_t keepAlive = 10;            // Keepalive counter
     uint8_t currentFrame[1024];
     uint16_t index = 0;
     uint8_t acc = 0;
     uint8_t bitCount = 0;
+
+    if (UART_IsCableConnected()) {
+        keepAlive = 10;
+    } else if (keepAlive > 0) {
+        if (--keepAlive == 0) {
+            return;
+        }
+    }
+
+    //gDebug = keepAlive;
 
     // Build current frame (status line: first 8 lines)
     for (uint8_t b = 0; b < 8; b++) {
