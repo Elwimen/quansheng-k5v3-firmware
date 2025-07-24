@@ -1,6 +1,6 @@
 # Quansheng K5 Viewer
 
-This Python script is a simple viewer that displays current screen from the Quansheng K5 transceiver (under F4HWN firmware), transmitted via a serial connection (UART).
+This Python script is a lightweight viewer that displays the live screen output of the Quansheng K5 transceiver (running F4HWN firmware), transmitted via UART to your computer through a Baofeng/Kenwood-style USB-to-Serial cable.
 
 ## 🚀 Features
 
