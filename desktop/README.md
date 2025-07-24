@@ -8,7 +8,8 @@ This Python script is a simple viewer that displays current screen from the Quan
 - Delta frame update support for reduced bandwidth
 - Screenshot capture in PNG format
 - Background color toggle: gray, blue or orange
-- Invert video mode
+- Toggle invert video mode
+- Toggle LCD pixel mode 
 - Increase or decrease window size
 - Display FPS in window title
 
