@@ -106,16 +106,12 @@ void UART_LogSend(const void *pBuffer, uint32_t Size)
 
 #ifdef ENABLE_FEAT_F4HWN_SCREENSHOT
     bool UART_IsCableConnected(void) {
-        bool detected = false;
         for (size_t i = 0; i < sizeof(UART_DMA_Buffer); i++) {
             if (UART_DMA_Buffer[i] == 0x55) {
-                detected = true;
-                break;
+                UART_DMA_Buffer[i] = 0x00;  // Clear only the matched byte
+                return true;
             }
         }
-
-        // Réinitialise le buffer pour éviter de détecter de vieux octets
-        memset(UART_DMA_Buffer, 0x00, sizeof(UART_DMA_Buffer));
-        return detected;
+        return false;
     }
 #endif
