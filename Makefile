@@ -46,7 +46,7 @@ ENABLE_SCAN_RANGES            	?= 1
 # Thank you @markusb
 ENABLE_REGA                     ?= 0
 # Thank you @reppad
-ENABLE_EXTRA_UART_CMD           ?= 1
+ENABLE_EXTRA_UART_CMD           ?= 0
 
 # ---- F4HWN MODS ----
 
