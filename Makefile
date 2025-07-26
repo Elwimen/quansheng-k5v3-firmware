@@ -40,6 +40,16 @@ ENABLE_REDUCE_LOW_MID_TX_POWER	?= 0
 ENABLE_BYP_RAW_DEMODULATORS   	?= 0
 ENABLE_BLMIN_TMP_OFF          	?= 0
 ENABLE_SCAN_RANGES            	?= 1
+
+# ---- CONTRIB MODS ----
+
+# Thank you @markusb
+ENABLE_REGA                     ?= 0
+# Thank you @reppad
+ENABLE_EXTRA_UART_CMD           ?= 1
+
+# ---- F4HWN MODS ----
+
 ENABLE_FEAT_F4HWN             	?= 1
 ENABLE_FEAT_F4HWN_GAME    	    ?= 0
 ENABLE_FEAT_F4HWN_SCREENSHOT  	?= 0
@@ -58,8 +68,6 @@ ENABLE_FEAT_F4HWN_PMR           ?= 0
 ENABLE_FEAT_F4HWN_GMRS_FRS_MURS	?= 0
 ENABLE_FEAT_F4HWN_CA         	?= 1
 ENABLE_FEAT_F4HWN_DEBUG         ?= 0
-ENABLE_REGA	                	?= 0
-ENABLE_EXTRA_UART_CMD           ?= 0
 
 # ---- DEBUGGING ----
 ENABLE_AM_FIX_SHOW_DATA       	?= 0
