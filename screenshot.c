@@ -32,11 +32,12 @@ void getScreenShot(bool force)
     uint8_t acc = 0;
     uint8_t bitCount = 0;
 
-    /*
-    if (!gSetting_set_scr)
+    if (gUART_LockScreenshot > 0) // Lock screenshot if Chirp is in used
+    {
+        gUART_LockScreenshot--;
         return;
-    */
-    
+    }
+
     if (UART_IsCableConnected()) {
         keepAlive = 10;
     } else if (keepAlive > 0) {

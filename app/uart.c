@@ -637,4 +637,7 @@ void UART_HandleCommand(void)
             break;
 #endif
     }
+    #ifdef ENABLE_FEAT_F4HWN_SCREENSHOT
+        gUART_LockScreenshot = 20; // lock screenshot
+    #endif
 }
