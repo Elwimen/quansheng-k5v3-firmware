@@ -25,30 +25,32 @@ fi
 
 custom() {
     echo "🔧 Custom compilation..."
-    docker run --rm -v "$FIRMWARE_DIR:/app/compiled-firmware" "$IMAGE_NAME" /bin/bash -c "\
-        rm -f ./compiled-firmware/* && cd /app && make -s \
+    docker run --rm -v "${PWD}:/app" --user $(id -u):$(id -g) "$IMAGE_NAME" /bin/bash -c "\
+        cd /app && git submodule update --init --recursive && make -s clean && make -s \
         EDITION_STRING=Custom \
         TARGET=f4hwn.custom \
-        && cp f4hwn.custom* compiled-firmware/"
+        && mv f4hwn.custom* compiled-firmware/ \
+        && make -s clean"
 }
 
 standard() {
     echo "📦 Standard compilation..."
-    docker run --rm -v "$FIRMWARE_DIR:/app/compiled-firmware" "$IMAGE_NAME" /bin/bash -c "\
-        rm -f ./compiled-firmware/* && cd /app && make -s \
+    docker run --rm -v "${PWD}:/app" --user $(id -u):$(id -g) "$IMAGE_NAME" /bin/bash -c "\
+        cd /app && git submodule update --init --recursive && make -s clean && make -s \
         ENABLE_SPECTRUM=0 \
         ENABLE_FMRADIO=0 \
         ENABLE_AIRCOPY=0 \
         ENABLE_NOAA=0 \
         EDITION_STRING=Standard \
         TARGET=f4hwn.standard \
-        && cp f4hwn.standard* compiled-firmware/"
+        && mv f4hwn.standard* compiled-firmware/ \
+        && make -s clean"
 }
 
 bandscope() {
     echo "📺 Bandscope compilation..."
-    docker run --rm -v "$FIRMWARE_DIR:/app/compiled-firmware" "$IMAGE_NAME" /bin/bash -c "\
-        rm -f ./compiled-firmware/* && cd /app && make -s \
+    docker run --rm -v "${PWD}:/app" --user $(id -u):$(id -g) "$IMAGE_NAME" /bin/bash -c "\
+        cd /app && git submodule update --init --recursive && make -s clean && make -s \
         ENABLE_SPECTRUM=1 \
         ENABLE_FMRADIO=0 \
         ENABLE_VOX=0 \
@@ -61,13 +63,14 @@ bandscope() {
         ENABLE_FEAT_F4HWN_RESCUE_OPS=0 \
         EDITION_STRING=Bandscope \
         TARGET=f4hwn.bandscope \
-        && cp f4hwn.bandscope* compiled-firmware/"
+        && mv f4hwn.bandscope* compiled-firmware/ \
+        && make -s clean"
 }
 
 broadcast() {
     echo "📻 Broadcast compilation..."
-    docker run --rm -v "$FIRMWARE_DIR:/app/compiled-firmware" "$IMAGE_NAME" /bin/bash -c "\
-        cd /app && make -s \
+    docker run --rm -v "${PWD}:/app" --user $(id -u):$(id -g) "$IMAGE_NAME" /bin/bash -c "\
+        cd /app && git submodule update --init --recursive && make -s clean && make -s \
         ENABLE_SPECTRUM=0 \
         ENABLE_FMRADIO=1 \
         ENABLE_VOX=1 \
@@ -80,13 +83,14 @@ broadcast() {
         ENABLE_FEAT_F4HWN_RESCUE_OPS=0 \
         EDITION_STRING=Broadcast \
         TARGET=f4hwn.broadcast \
-        && cp f4hwn.broadcast* compiled-firmware/"
+        && mv f4hwn.broadcast* compiled-firmware/ \
+        && make -s clean"
 }
 
 basic() {
     echo "☘️ Basic compilation..."
-    docker run --rm -v "$FIRMWARE_DIR:/app/compiled-firmware" "$IMAGE_NAME" /bin/bash -c "\
-        cd /app && make -s \
+    docker run --rm -v "${PWD}:/app" --user $(id -u):$(id -g) "$IMAGE_NAME" /bin/bash -c "\
+        cd /app && git submodule update --init --recursive && make -s clean && make -s \
         ENABLE_SPECTRUM=1 \
         ENABLE_FMRADIO=1 \
         ENABLE_VOX=0 \
@@ -105,13 +109,14 @@ basic() {
         ENABLE_FEAT_F4HWN_RESCUE_OPS=0 \
         EDITION_STRING=Basic \
         TARGET=f4hwn.basic \
-        && cp f4hwn.basic* compiled-firmware/"
+        && mv f4hwn.basic* compiled-firmware/ \
+        && make -s clean"
 }
 
 rescueops() {
     echo "🚨 RescueOps compilation..."
-    docker run --rm -v "$FIRMWARE_DIR:/app/compiled-firmware" "$IMAGE_NAME" /bin/bash -c "\
-        cd /app && make -s \
+    docker run --rm -v "${PWD}:/app" --user $(id -u):$(id -g) "$IMAGE_NAME" /bin/bash -c "\
+        cd /app && git submodule update --init --recursive && make -s clean && make -s \
         ENABLE_SPECTRUM=0 \
         ENABLE_FMRADIO=0 \
         ENABLE_VOX=1 \
@@ -124,13 +129,14 @@ rescueops() {
         ENABLE_FEAT_F4HWN_RESCUE_OPS=1 \
         EDITION_STRING=RescueOps \
         TARGET=f4hwn.rescueops \
-        && cp f4hwn.rescueops* compiled-firmware/"
+        && mv f4hwn.rescueops* compiled-firmware/ \
+        && make -s clean"
 }
 
 game() {
     echo "🎮 Game compilation..."
-    docker run --rm -v "$FIRMWARE_DIR:/app/compiled-firmware" "$IMAGE_NAME" /bin/bash -c "\
-        cd /app && make -s \
+    docker run --rm -v "${PWD}:/app" --user $(id -u):$(id -g) "$IMAGE_NAME" /bin/bash -c "\
+        cd /app && git submodule update --init --recursive && make -s clean && make -s \
         ENABLE_SPECTRUM=0 \
         ENABLE_FMRADIO=1 \
         ENABLE_VOX=0 \
@@ -142,7 +148,8 @@ game() {
         ENABLE_FEAT_F4HWN_RESCUE_OPS=0 \
         EDITION_STRING=Game \
         TARGET=f4hwn.game \
-        && cp f4hwn.game* compiled-firmware/"
+        && mv f4hwn.game* compiled-firmware/ \
+        && make -s clean"
 }
 
 # ------------------ MENU ------------------
