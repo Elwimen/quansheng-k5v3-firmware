@@ -4,42 +4,42 @@
 # 1 = enable
 
 # ---- STOCK QUANSHENG FEATURES ----
-ENABLE_FMRADIO                	?= 0
-ENABLE_UART                   	?= 1
-ENABLE_AIRCOPY                	?= 0
-ENABLE_NOAA                   	?= 0
-ENABLE_VOICE                  	?= 0
-ENABLE_VOX                    	?= 1
-ENABLE_ALARM                  	?= 0
-ENABLE_TX1750                 	?= 1
-ENABLE_PWRON_PASSWORD         	?= 0
-ENABLE_DTMF_CALLING           	?= 0
-ENABLE_FLASHLIGHT             	?= 1
+ENABLE_FMRADIO                  ?= 0
+ENABLE_UART                     ?= 1
+ENABLE_AIRCOPY                  ?= 0
+ENABLE_NOAA                     ?= 0
+ENABLE_VOICE                    ?= 0
+ENABLE_VOX                      ?= 1
+ENABLE_ALARM                    ?= 0
+ENABLE_TX1750                   ?= 1
+ENABLE_PWRON_PASSWORD           ?= 0
+ENABLE_DTMF_CALLING             ?= 0
+ENABLE_FLASHLIGHT               ?= 1
 
 # ---- CUSTOM MODS ----
-ENABLE_SPECTRUM               	?= 0
-ENABLE_BIG_FREQ               	?= 1
-ENABLE_SMALL_BOLD             	?= 1
-ENABLE_CUSTOM_MENU_LAYOUT     	?= 1
-ENABLE_KEEP_MEM_NAME          	?= 1
-ENABLE_WIDE_RX                	?= 1
-ENABLE_TX_WHEN_AM             	?= 0
-ENABLE_F_CAL_MENU             	?= 0
-ENABLE_CTCSS_TAIL_PHASE_SHIFT 	?= 0
-ENABLE_BOOT_BEEPS             	?= 0
-ENABLE_SHOW_CHARGE_LEVEL      	?= 0
-ENABLE_REVERSE_BAT_SYMBOL     	?= 0
-ENABLE_NO_CODE_SCAN_TIMEOUT   	?= 1
-ENABLE_AM_FIX                 	?= 1
-ENABLE_SQUELCH_MORE_SENSITIVE 	?= 1
-ENABLE_FASTER_CHANNEL_SCAN    	?= 1
-ENABLE_RSSI_BAR               	?= 1
-ENABLE_AUDIO_BAR              	?= 1
-ENABLE_COPY_CHAN_TO_VFO       	?= 1
-ENABLE_REDUCE_LOW_MID_TX_POWER	?= 0
-ENABLE_BYP_RAW_DEMODULATORS   	?= 0
-ENABLE_BLMIN_TMP_OFF          	?= 0
-ENABLE_SCAN_RANGES            	?= 1
+ENABLE_SPECTRUM                 ?= 0
+ENABLE_BIG_FREQ                 ?= 1
+ENABLE_SMALL_BOLD               ?= 1
+ENABLE_CUSTOM_MENU_LAYOUT       ?= 1
+ENABLE_KEEP_MEM_NAME            ?= 1
+ENABLE_WIDE_RX                  ?= 1
+ENABLE_TX_WHEN_AM               ?= 0
+ENABLE_F_CAL_MENU               ?= 0
+ENABLE_CTCSS_TAIL_PHASE_SHIFT   ?= 0
+ENABLE_BOOT_BEEPS               ?= 0
+ENABLE_SHOW_CHARGE_LEVEL        ?= 0
+ENABLE_REVERSE_BAT_SYMBOL       ?= 0
+ENABLE_NO_CODE_SCAN_TIMEOUT     ?= 1
+ENABLE_AM_FIX                   ?= 1
+ENABLE_SQUELCH_MORE_SENSITIVE   ?= 1
+ENABLE_FASTER_CHANNEL_SCAN      ?= 1
+ENABLE_RSSI_BAR                 ?= 1
+ENABLE_AUDIO_BAR                ?= 1
+ENABLE_COPY_CHAN_TO_VFO         ?= 1
+ENABLE_REDUCE_LOW_MID_TX_POWER  ?= 0
+ENABLE_BYP_RAW_DEMODULATORS     ?= 0
+ENABLE_BLMIN_TMP_OFF            ?= 0
+ENABLE_SCAN_RANGES              ?= 1
 
 # ---- CONTRIB MODS ----
 
@@ -50,10 +50,10 @@ ENABLE_EXTRA_UART_CMD           ?= 0
 
 # ---- F4HWN MODS ----
 
-ENABLE_FEAT_F4HWN             	?= 1
-ENABLE_FEAT_F4HWN_GAME    	    ?= 0
-ENABLE_FEAT_F4HWN_SCREENSHOT  	?= 0
-ENABLE_FEAT_F4HWN_SPECTRUM    	?= 1
+ENABLE_FEAT_F4HWN               ?= 1
+ENABLE_FEAT_F4HWN_GAME          ?= 0
+ENABLE_FEAT_F4HWN_SCREENSHOT    ?= 0
+ENABLE_FEAT_F4HWN_SPECTRUM      ?= 1
 ENABLE_FEAT_F4HWN_RX_TX_TIMER   ?= 1
 ENABLE_FEAT_F4HWN_CHARGING_C    ?= 0
 ENABLE_FEAT_F4HWN_SLEEP         ?= 1
@@ -66,19 +66,19 @@ ENABLE_FEAT_F4HWN_VOL           ?= 0
 ENABLE_FEAT_F4HWN_RESET_CHANNEL ?= 0
 ENABLE_FEAT_F4HWN_PMR           ?= 0
 ENABLE_FEAT_F4HWN_GMRS_FRS_MURS	?= 0
-ENABLE_FEAT_F4HWN_CA         	?= 1
+ENABLE_FEAT_F4HWN_CA            ?= 1
 ENABLE_FEAT_F4HWN_DEBUG         ?= 0
 
 # ---- DEBUGGING ----
-ENABLE_AM_FIX_SHOW_DATA       	?= 0
-ENABLE_AGC_SHOW_DATA          	?= 0
-ENABLE_UART_RW_BK_REGS        	?= 0
+ENABLE_AM_FIX_SHOW_DATA         ?= 0
+ENABLE_AGC_SHOW_DATA            ?= 0
+ENABLE_UART_RW_BK_REGS          ?= 0
 
 # ---- COMPILER/LINKER OPTIONS ----
-ENABLE_CLANG                  	?= 0
-ENABLE_SWD                    	?= 0
-ENABLE_OVERLAY                	?= 0
-ENABLE_LTO                    	?= 1
+ENABLE_CLANG                    ?= 0
+ENABLE_SWD                      ?= 0
+ENABLE_OVERLAY                  ?= 0
+ENABLE_LTO                      ?= 1
 
 #############################################################
 
