@@ -49,7 +49,12 @@ def send_keepalive(ser: serial.Serial):
 def read_frame(ser: serial.Serial) -> bytearray:
     global framebuffer
     while True:
-        b = ser.read(1)
+        try:
+            b = ser.read(1)
+        except serial.SerialException as e:
+            #print(f"[ERROR] Serial read failed: {e}")
+            print("[!] Your USB serial cable is probably being used by another application such as Chirp.")
+            sys.exit(1)
         if not b:
             return None
         if b == HEADER[0:1]:
