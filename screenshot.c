@@ -40,8 +40,14 @@ void getScreenShot(bool force)
 
     if (UART_IsCableConnected()) {
         keepAlive = 10;
-    } else if (keepAlive > 0) {
+    }
+
+    if (keepAlive > 0) {
         if (--keepAlive == 0) return;
+    }
+    else
+    {
+        return;
     }
 
     // Build current frame from status line (first 8 lines)
