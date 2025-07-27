@@ -12,6 +12,8 @@ import pygame
 import serial
 from serial.tools import list_ports
 
+# Version
+VERSION = '1.0'
 
 # Serial configuration
 DEFAULT_PORT = '/dev/ttyUSB0'  # Change if needed (/dev/cu.usbserial-11130)
@@ -112,7 +114,7 @@ def run_viewer(args: argparse.Namespace, ser: serial.Serial):
     pixel_lcd = 0
     pygame.init()
     screen = pygame.display.set_mode((WIDTH * (pixel_size - 1), HEIGHT * pixel_size))
-    base_title = "Quansheng K5 Viewer by F4HWN"
+    base_title = f"Quansheng K5Viewer v{VERSION} by F4HWN"
     pygame.display.set_caption(f"{base_title} – No data")
 
     fg_color, bg_color = COLOR_SETS[DEFAULT_COLOR][1:]
@@ -163,7 +165,7 @@ def run_viewer(args: argparse.Namespace, ser: serial.Serial):
             now = time.monotonic()
             if now - last_time >= 1.0:
                 fps = frame_count / (now - last_time)
-                pygame.display.set_caption(f"{base_title} – FPS: {fps:.1f}")
+                pygame.display.set_caption(f"{base_title} – FPS: {fps:>04.1f}")
                 frame_count = 0
                 last_time = now
                 frame_lost = 0
@@ -191,11 +193,13 @@ def cmd_list_ports(args: argparse.Namespace):
 def main():
     parser = argparse.ArgumentParser(
         prog="K5Viewer",
-        description="A live viewer for UV-K5 radios with F4HWn firmware",
+        description="A live viewer for UV-K5 radios with F4HWN firmware",
         epilog="F4HWN repo: https://github.com/armel/uv-k5-firmware-custom"
     )
     parser.add_argument("--list-ports", action="store_true", help="list available ports and exit")
     parser.add_argument("--port", type=str, help="serial port to use (in place of 'DEFAULT_PORT')")
+    parser.add_argument("--version", action="version", version=f"%(prog)s {VERSION}", help="show program's version number and exit")
+
     args = parser.parse_args()
     if args.list_ports:
         cmd_list_ports(args)
