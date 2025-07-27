@@ -213,7 +213,7 @@ def main():
     try:
         run_viewer(args, ser)
     except KeyboardInterrupt:
-        print("\n[✔] Exiting")
+        print("[✔] Exiting")
         ser.close()
         pygame.quit()
         sys.exit()
