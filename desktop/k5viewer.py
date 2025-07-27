@@ -55,7 +55,7 @@ def read_frame(ser: serial.Serial) -> bytearray:
             b = ser.read(1)
         except serial.SerialException as e:
             #print(f"[ERROR] Serial read failed: {e}")
-            print("[!] Your USB serial cable is probably being used by another application such as Chirp.")
+            print("[!] Your USB serial cable is probably being used by another application such as Chirp or Chrome.")
             sys.exit(1)
         if not b:
             return None
