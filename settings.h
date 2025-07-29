@@ -217,10 +217,10 @@ typedef struct {
     bool                  SCAN_LIST_ENABLED[3];
     uint8_t               SCANLIST_PRIORITY_CH1[3];
     uint8_t               SCANLIST_PRIORITY_CH2[3];
-#ifdef ENABLE_FEAT_F4HWN_RESUME_STATE
+//#ifdef ENABLE_FEAT_F4HWN_RESUME_STATE // Fix me !!! What the hell is this?
     uint8_t               CURRENT_STATE;
     uint8_t               CURRENT_LIST;
-#endif
+//#endif                                // Fix me !!! What the hell is this?
 
     uint8_t               field29_0x26;
     uint8_t               field30_0x27;
