@@ -21,6 +21,16 @@ if ! docker build --build-arg BUILDPLATFORM=linux/amd64 -t "$IMAGE_NAME" .; then
     exit 1
 fi
 
+# -------------------- CLEAN ALL ---------------------
+
+clean() {
+    echo "🧽 Cleaning all"
+    docker rmi uvk5
+    docker buildx prune -f
+    docker buildx history ls | awk 'NR>1 {print $1}' | xargs docker buildx history rm
+    make clean
+}
+
 # ------------------ BUILD VARIANTS ------------------
 
 custom() {
@@ -148,6 +158,7 @@ game() {
 # ------------------ MENU ------------------
 
 case "$1" in
+    clean) clean ;;
     custom) custom ;;
     standard) standard ;;
     bandscope) bandscope ;;
@@ -163,7 +174,7 @@ case "$1" in
         game
         ;;
     *)
-        echo "Usage: $0 {custom|standard|bandscope|broadcast|basic|rescueops|game|all}"
+        echo "Usage: $0 {clean|custom|standard|bandscope|broadcast|basic|rescueops|game|all}"
         exit 1
         ;;
 esac
