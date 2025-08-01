@@ -37,6 +37,7 @@ COLOR_SETS = {  # {key: (name, foreground, background)}
     "g": ("Grey", pygame.Color(0, 0, 0), pygame.Color(202, 202, 202)),
     "o": ("Orange", pygame.Color(0, 0, 0), pygame.Color(255, 193, 37)),
     "b": ("Blue", pygame.Color(0, 0, 0), pygame.Color(28, 134, 228)),
+    "w": ("White", pygame.Color(0, 0, 0), pygame.Color(255, 255, 255)),
 }
 
 DEFAULT_COLOR = "g"  # Must be a key of "COLOR_SETS"
