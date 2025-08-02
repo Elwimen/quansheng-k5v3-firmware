@@ -119,7 +119,7 @@ Special thanks to Jean-Cyrille F6IWW (2 times), Fabrice 14RC123, David F4BPP, Ol
         * scan list 2,
         * scan list 3,
         * scan lists [1, 2, 3],
-        * scan all (all channels with ou without list),
+        * scan all (all channels with or without list),
     * add scan list shortcuts,
 * add resume mode on startup (scan, bandscope and broadcast FM),
 * new actions:
