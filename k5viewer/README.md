@@ -46,8 +46,8 @@ pip install pyserial pygame
    ./k5viewer.py -port /dev/cu.usbserial-xxxx   # macOS
    ./k5viewer.py -port COM3                     # Windows
    ```
-    >[!NOTE]   
-    >If no -port is provided, the script defaults to /dev/ttyUSB0.
+    > [!NOTE]   
+    > If no -port is provided, the script defaults to /dev/ttyUSB0.
 
 	Alternatively, you can manually edit the script and change the `DEFAULT_PORT` variable near the top of the file:
 
