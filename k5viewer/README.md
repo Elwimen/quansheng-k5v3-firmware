@@ -51,7 +51,7 @@ pip install pyserial pygame
 
 Alternatively, you can manually edit the script and change the `DEFAULT_PORT` variable near the top of the file:
 
-	```python
+   ```python
 	DEFAULT_PORT = '/dev/ttyUSB0'              # Linux
 	# or
 	DEFAULT_PORT = '/dev/cu.usbserial-xxxx'    # macOS
@@ -61,7 +61,7 @@ Alternatively, you can manually edit the script and change the `DEFAULT_PORT` va
 
 You can also list available serial ports to help you choose:
 
-	```bash
+   ```bash
 	./k5viewer.py --list-ports
 	```
 
