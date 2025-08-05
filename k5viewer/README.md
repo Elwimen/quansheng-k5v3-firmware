@@ -57,13 +57,13 @@ Alternatively, you can manually edit the script and change the `DEFAULT_PORT` va
 	DEFAULT_PORT = '/dev/cu.usbserial-xxxx'    # macOS
 	# or
 	DEFAULT_PORT = 'COM3'                      # Windows
-	```
+   ```
 
 You can also list available serial ports to help you choose:
 
    ```bash
 	./k5viewer.py --list-ports
-	```
+   ```
 
 ## 🎮 Controls
 
