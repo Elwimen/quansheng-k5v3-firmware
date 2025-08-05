@@ -49,7 +49,7 @@ pip install pyserial pygame
  > [!NOTE]   
  > If no -port is provided, the script defaults to /dev/ttyUSB0.
 
-	Alternatively, you can manually edit the script and change the `DEFAULT_PORT` variable near the top of the file:
+Alternatively, you can manually edit the script and change the `DEFAULT_PORT` variable near the top of the file:
 
 	```python
 	DEFAULT_PORT = '/dev/ttyUSB0'              # Linux
@@ -59,7 +59,7 @@ pip install pyserial pygame
 	DEFAULT_PORT = 'COM3'                      # Windows
 	```
 
-	You can also list available serial ports to help you choose:
+You can also list available serial ports to help you choose:
 
 	```bash
 	./k5viewer.py --list-ports
