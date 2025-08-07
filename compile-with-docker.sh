@@ -9,14 +9,27 @@ mkdir -p "$FIRMWARE_DIR"
 # Clean previously compiled firmware files
 rm -f "$FIRMWARE_DIR"/*
 
-# Build image only if it doesn't already exist
-if ! docker image inspect "$IMAGE_NAME" >/dev/null 2>&1; then
-    echo "Docker image '$IMAGE_NAME' not found, building..."
-    if ! docker build --build-arg BUILDPLATFORM=linux/amd64 -t "$IMAGE_NAME" .; then
-        echo "❌ Failed to build docker image"
-        exit 1
-    fi
+# Clean up old Docker artifacts
+echo "🧽 Cleaning up old Docker artifacts..."
+docker system prune -f --volumes >/dev/null 2>&1 || true
+
+# Always rebuild the Docker image to ensure latest code changes
+echo "⚙️ Rebuilding Docker image '$IMAGE_NAME'..."
+docker rmi "$IMAGE_NAME" 2>/dev/null || true
+if ! docker build --build-arg BUILDPLATFORM=linux/amd64 -t "$IMAGE_NAME" .; then
+    echo "❌ Failed to build docker image"
+    exit 1
 fi
+
+# -------------------- CLEAN ALL ---------------------
+
+clean() {
+    echo "🧽 Cleaning all"
+    docker rmi uvk5
+    docker buildx prune -f
+    docker buildx history ls | awk 'NR>1 {print $1}' | xargs docker buildx history rm
+    make clean
+}
 
 # ------------------ BUILD VARIANTS ------------------
 
@@ -50,6 +63,7 @@ bandscope() {
         ENABLE_FMRADIO=0 \
         ENABLE_VOX=0 \
         ENABLE_AIRCOPY=1 \
+        ENABLE_FEAT_F4HWN_SCREENSHOT=1 \
         ENABLE_FEAT_F4HWN_GAME=0 \
         ENABLE_FEAT_F4HWN_PMR=1 \
         ENABLE_FEAT_F4HWN_GMRS_FRS_MURS=1 \
@@ -68,6 +82,7 @@ broadcast() {
         ENABLE_FMRADIO=1 \
         ENABLE_VOX=1 \
         ENABLE_AIRCOPY=1 \
+        ENABLE_FEAT_F4HWN_SCREENSHOT=1 \
         ENABLE_FEAT_F4HWN_GAME=0 \
         ENABLE_FEAT_F4HWN_PMR=1 \
         ENABLE_FEAT_F4HWN_GMRS_FRS_MURS=1 \
@@ -96,7 +111,7 @@ basic() {
         ENABLE_FEAT_F4HWN_CHARGING_C=0 \
         ENABLE_FEAT_F4HWN_INV=1 \
         ENABLE_FEAT_F4HWN_CTR=0 \
-        ENABLE_FEAT_F4HWN_NARROWER=0 \
+        ENABLE_FEAT_F4HWN_NARROWER=1 \
         ENABLE_FEAT_F4HWN_RESCUE_OPS=0 \
         EDITION_STRING=Basic \
         TARGET=f4hwn.basic \
@@ -111,6 +126,7 @@ rescueops() {
         ENABLE_FMRADIO=0 \
         ENABLE_VOX=1 \
         ENABLE_AIRCOPY=1 \
+        ENABLE_FEAT_F4HWN_SCREENSHOT=1 \
         ENABLE_FEAT_F4HWN_GAME=0 \
         ENABLE_FEAT_F4HWN_PMR=1 \
         ENABLE_FEAT_F4HWN_GMRS_FRS_MURS=1 \
@@ -142,6 +158,7 @@ game() {
 # ------------------ MENU ------------------
 
 case "$1" in
+    clean) clean ;;
     custom) custom ;;
     standard) standard ;;
     bandscope) bandscope ;;
@@ -157,7 +174,7 @@ case "$1" in
         game
         ;;
     *)
-        echo "Usage: $0 {custom|standard|bandscope|broadcast|basic|rescueops|game|all} [--rebuild]"
+        echo "Usage: $0 {clean|custom|standard|bandscope|broadcast|basic|rescueops|game|all}"
         exit 1
         ;;
 esac

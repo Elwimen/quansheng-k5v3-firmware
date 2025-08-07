@@ -190,6 +190,9 @@ volatile bool     gTxTimeoutReached;
     #ifdef ENABLE_FEAT_F4HWN_RX_TX_TIMER
         volatile uint16_t gRxTimerCountdown_500ms;
     #endif
+    #ifdef ENABLE_FEAT_F4HWN_SCREENSHOT
+         volatile uint8_t  gUART_LockScreenshot = 0; // lock screenshot if Chirp is used
+    #endif
 #endif
 
 volatile uint16_t gTailNoteEliminationCountdown_10ms;

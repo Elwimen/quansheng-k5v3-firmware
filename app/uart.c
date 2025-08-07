@@ -106,6 +106,7 @@ typedef struct {
     } Data;
 } REPLY_051D_t;
 
+#ifdef ENABLE_EXTRA_UART_CMD
 typedef struct {
     Header_t Header;
     struct {
@@ -127,6 +128,7 @@ typedef struct {
     Header_t Header;
     uint32_t Response[4];
 } CMD_052D_t;
+#endif
 
 typedef struct {
     Header_t Header;
@@ -136,10 +138,13 @@ typedef struct {
     } Data;
 } REPLY_052D_t;
 
+
+#ifdef ENABLE_EXTRA_UART_CMD
 typedef struct {
     Header_t Header;
     uint32_t Timestamp;
 } CMD_052F_t;
+#endif
 
 static const uint8_t Obfuscation[16] =
 {
@@ -329,6 +334,7 @@ static void CMD_051D(const uint8_t *pBuffer)
     SendReply(&Reply, sizeof(Reply));
 }
 
+#ifdef ENABLE_EXTRA_UART_CMD
 // read RSSI
 static void CMD_0527(void)
 {
@@ -438,6 +444,7 @@ static void CMD_052F(const uint8_t *pBuffer)
 
     SendVersion();
 }
+#endif
 
 #ifdef ENABLE_UART_RW_BK_REGS
 static void CMD_0601_ReadBK4819Reg(const uint8_t *pBuffer)
@@ -591,7 +598,8 @@ void UART_HandleCommand(void)
     
         case 0x0521:    // Not implementing non-authentic command
             break;
-    
+
+#ifdef ENABLE_EXTRA_UART_CMD
         case 0x0527:
             CMD_0527();
             break;
@@ -609,6 +617,7 @@ void UART_HandleCommand(void)
         case 0x052F:
             CMD_052F(UART_Command.Buffer);
             break;
+#endif
     
         case 0x05DD: // reset
             #if defined(ENABLE_OVERLAY)
@@ -628,4 +637,7 @@ void UART_HandleCommand(void)
             break;
 #endif
     }
+    #ifdef ENABLE_FEAT_F4HWN_SCREENSHOT
+        gUART_LockScreenshot = 20; // lock screenshot
+    #endif
 }

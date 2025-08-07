@@ -75,6 +75,10 @@
 #include "ui/status.h"
 #include "ui/ui.h"
 
+#ifdef ENABLE_FEAT_F4HWN_SCREENSHOT
+    #include "screenshot.h"
+#endif
+
 static bool flagSaveVfo;
 static bool flagSaveSettings;
 static bool flagSaveChannel;
@@ -1381,13 +1385,23 @@ void APP_TimeSlice10ms(void)
 #endif
     }
 
-    if (gUpdateDisplay) {
+    bool gUpdateDisplayCurrent = gUpdateDisplay;
+    bool gUpdateStatusCurrent  = gUpdateStatus;
+
+    if (gUpdateDisplayCurrent) {
         gUpdateDisplay = false;
         GUI_DisplayScreen();
     }
 
-    if (gUpdateStatus)
+    if (gUpdateStatusCurrent) {
         UI_DisplayStatus();
+    }
+
+    #ifdef ENABLE_FEAT_F4HWN_SCREENSHOT
+    if (gUpdateDisplayCurrent || gUpdateStatusCurrent) {
+        getScreenShot(false);
+    }
+    #endif
 
     // Skipping authentic device checks
 

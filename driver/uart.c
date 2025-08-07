@@ -15,6 +15,7 @@
  */
 
 #include <stdbool.h>
+#include <string.h>
 #include "bsp/dp32g030/dma.h"
 #include "bsp/dp32g030/syscon.h"
 #include "bsp/dp32g030/uart.h"
@@ -102,3 +103,15 @@ void UART_LogSend(const void *pBuffer, uint32_t Size)
         UART_Send(pBuffer, Size);
     }
 }
+
+#ifdef ENABLE_FEAT_F4HWN_SCREENSHOT
+    bool UART_IsCableConnected(void) {
+        for (size_t i = 0; i < sizeof(UART_DMA_Buffer); i++) {
+            if (UART_DMA_Buffer[i] == 0x55) {
+                UART_DMA_Buffer[i] = 0x00;  // Clear only the matched byte
+                return true;
+            }
+        }
+        return false;
+    }
+#endif

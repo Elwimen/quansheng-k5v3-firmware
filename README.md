@@ -119,7 +119,7 @@ Special thanks to Jean-Cyrille F6IWW (2 times), Fabrice 14RC123, David F4BPP, Ol
         * scan list 2,
         * scan list 3,
         * scan lists [1, 2, 3],
-        * scan all (all channels with ou without list),
+        * scan all (all channels with or without list),
     * add scan list shortcuts,
 * add resume mode on startup (scan, bandscope and broadcast FM),
 * new actions:
@@ -153,6 +153,7 @@ Special thanks to Jean-Cyrille F6IWW (2 times), Fabrice 14RC123, David F4BPP, Ol
 * remove 200Tx, 350Tx and 500Tx,
 * unlock TX on all bands needs only to be repeat 3 times,
 * code refactoring and many memory optimization,
+* displays the live screen of the Quansheng K5 on your computer via a USB-to-Serial cable,
 * and more...
 
 ## Main features from Egzumer:
