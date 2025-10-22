@@ -1,0 +1,14 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : [],
+		"files" : [],
+		"nodes" : []
+	},
+	"installers" : [],
+	"paths" : 
+	{
+		"build" : "Drivers/PY32F071_HAL_Driver",
+		"source" : "Drivers/PY32F071_HAL_Driver"
+	}
+}
