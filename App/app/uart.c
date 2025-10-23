@@ -29,7 +29,7 @@
 #include "driver/backlight.h"
 #include "driver/bk4819.h"
 #include "driver/crc.h"
-#include "driver/eeprom.h"
+#include "driver/py25q16.h"
 #include "driver/gpio.h"
 #include "driver/uart.h"
 #include "functions.h"
@@ -284,8 +284,10 @@ static void CMD_051B(const uint8_t *pBuffer)
         bLocked = gIsLocked;
 
     if (!bLocked)
-        EEPROM_ReadBuffer(pCmd->Offset, Reply.Data.Data, pCmd->Size);
-
+    {
+        PY25Q16_ReadBuffer(pCmd->Offset, Reply.Data.Data, pCmd->Size);
+    }
+    
     SendReply(&Reply, pCmd->Size + 8);
 }
 

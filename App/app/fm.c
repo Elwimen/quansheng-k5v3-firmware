@@ -23,7 +23,7 @@
 #include "app/generic.h"
 #include "audio.h"
 #include "driver/bk1080.h"
-#include "driver/eeprom.h"
+#include "driver/py25q16.h"
 #include "driver/gpio.h"
 #include "functions.h"
 #include "misc.h"

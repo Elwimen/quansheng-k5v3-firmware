@@ -9,8 +9,7 @@ target_sources(App INTERFACE
     # driver/adc.c
     driver/backlight.c
     driver/bk4819.c
-    # driver/eeprom.c
-    driver/storage.c
+    driver/py25q16.c
     driver/gpio.c
     driver/i2c.c
     driver/keyboard.c
@@ -87,7 +86,7 @@ if(NOT SQL_TONE)
 endif()
 target_compile_definitions(App INTERFACE SQL_TONE=${SQL_TONE})
 
-if(ENABLE_AIRCOPY AND ENABLE_UART)
+if(ENABLE_AIRCOPY OR ENABLE_UART)
     target_sources(App INTERFACE driver/crc.c)
 endif()
 

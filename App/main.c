@@ -48,7 +48,7 @@
 #include "driver/gpio.h"
 #include "driver/system.h"
 #include "driver/systick.h"
-#include "driver/eeprom.h"
+#include "driver/py25q16.h"
 #ifdef ENABLE_UART
     #include "driver/uart.h"
 #endif
@@ -59,6 +59,9 @@
 #include "ui/lock.h"
 #include "ui/welcome.h"
 #include "ui/menu.h"
+
+#include "external/printf/printf.h"
+
 void _putchar(__attribute__((unused)) char c)
 {
 

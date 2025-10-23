@@ -25,7 +25,7 @@
 #include "audio.h"
 #include "dcs.h"
 #include "driver/bk4819.h"
-#include "driver/eeprom.h"
+#include "driver/py25q16.h"
 #include "driver/gpio.h"
 #include "driver/system.h"
 #include "frequencies.h"
@@ -240,11 +240,11 @@ void RADIO_ConfigureChannel(const unsigned int VFO, const unsigned int configure
     pVfo->SCANLIST3_PARTICIPATION = bParticipation3;
     pVfo->CHANNEL_SAVE            = channel;
 
-    uint16_t base;
+    uint32_t base;
     if (IS_MR_CHANNEL(channel))
         base = channel * 16;
     else
-        base = 0x0C80 + ((channel - FREQ_CHANNEL_FIRST) * 32) + (VFO * 16);
+        base = 0x001000 + ((channel - FREQ_CHANNEL_FIRST) * 32) + (VFO * 16);
 
     if (configure == VFO_CONFIGURE_RELOAD || IS_FREQ_CHANNEL(channel))
     {
@@ -253,7 +253,7 @@ void RADIO_ConfigureChannel(const unsigned int VFO, const unsigned int configure
         
         // ***************
 
-        EEPROM_ReadBuffer(base + 8, data, sizeof(data));
+        PY25Q16_ReadBuffer(base + 8, data, sizeof(data));
 
         tmp = data[3] & 0x0F;
         if (tmp > TX_OFFSET_FREQUENCY_DIRECTION_SUB)
@@ -366,7 +366,7 @@ void RADIO_ConfigureChannel(const unsigned int VFO, const unsigned int configure
             uint32_t Frequency;
             uint32_t Offset;
         } __attribute__((packed)) info;
-        EEPROM_ReadBuffer(base, &info, sizeof(info));
+        PY25Q16_ReadBuffer(base, &info, sizeof(info));
         if(info.Frequency==0xFFFFFFFF)
             pVfo->freq_config_RX.Frequency = frequencyBandTable[band].lower;
         else
@@ -449,7 +449,8 @@ void RADIO_ConfigureSquelchAndOutputPower(VFO_Info_t *pInfo)
     // squelch
 
     FREQUENCY_Band_t Band = FREQUENCY_GetBand(pInfo->pRX->Frequency);
-    uint16_t Base = (Band < BAND4_174MHz) ? 0x1E60 : 0x1E00;
+    // 0x1E60 : 0x1E00
+    uint32_t Base = (Band < BAND4_174MHz) ? 0x010060 : 0x010000;
 
     if (gEeprom.SQUELCH_LEVEL == 0)
     {   // squelch == 0 (off)
@@ -465,14 +466,14 @@ void RADIO_ConfigureSquelchAndOutputPower(VFO_Info_t *pInfo)
     {   // squelch >= 1
         Base += gEeprom.SQUELCH_LEVEL;                                        // my eeprom squelch-1
                                                                               // VHF   UHF
-        EEPROM_ReadBuffer(Base + 0x00, &pInfo->SquelchOpenRSSIThresh,    1);  //  50    10
-        EEPROM_ReadBuffer(Base + 0x10, &pInfo->SquelchCloseRSSIThresh,   1);  //  40     5
+        PY25Q16_ReadBuffer(Base + 0x00, &pInfo->SquelchOpenRSSIThresh,    1);  //  50    10
+        PY25Q16_ReadBuffer(Base + 0x10, &pInfo->SquelchCloseRSSIThresh,   1);  //  40     5
 
-        EEPROM_ReadBuffer(Base + 0x20, &pInfo->SquelchOpenNoiseThresh,   1);  //  65    90
-        EEPROM_ReadBuffer(Base + 0x30, &pInfo->SquelchCloseNoiseThresh,  1);  //  70   100
+        PY25Q16_ReadBuffer(Base + 0x20, &pInfo->SquelchOpenNoiseThresh,   1);  //  65    90
+        PY25Q16_ReadBuffer(Base + 0x30, &pInfo->SquelchCloseNoiseThresh,  1);  //  70   100
 
-        EEPROM_ReadBuffer(Base + 0x40, &pInfo->SquelchCloseGlitchThresh, 1);  //  90    90
-        EEPROM_ReadBuffer(Base + 0x50, &pInfo->SquelchOpenGlitchThresh,  1);  // 100   100
+        PY25Q16_ReadBuffer(Base + 0x40, &pInfo->SquelchCloseGlitchThresh, 1);  //  90    90
+        PY25Q16_ReadBuffer(Base + 0x50, &pInfo->SquelchOpenGlitchThresh,  1);  // 100   100
 
 
         uint16_t noise_open   = pInfo->SquelchOpenNoiseThresh;
@@ -551,7 +552,7 @@ void RADIO_ConfigureSquelchAndOutputPower(VFO_Info_t *pInfo)
         currentPower--;
     }
 
-    EEPROM_ReadBuffer(0x1ED0 + (Band * 16) + (Op * 3), Txp, 3);
+    PY25Q16_ReadBuffer(0x1ED0 + (Band * 16) + (Op * 3), Txp, 3);
 
 #ifdef ENABLE_FEAT_F4HWN
     // make low and mid even lower

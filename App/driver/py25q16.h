@@ -14,18 +14,15 @@
  *     limitations under the License.
  */
 
-#include <stddef.h>
-#include <string.h>
+#ifndef DRIVER_PY25Q16_H
+#define DRIVER_PY25Q16_H
 
-#include "driver/eeprom.h"
-#include "driver/system.h"
+#include <stdint.h>
 
-void EEPROM_ReadBuffer(uint16_t Address, void *pBuffer, uint8_t Size)
-{
-    
-}
+void PY25Q16_Init();
+void PY25Q16_ReadBuffer(uint32_t Address, void *pBuffer, uint32_t Size);
+void PY25Q16_WriteBuffer(uint16_t Address, const void *pBuffer);
 
-void EEPROM_WriteBuffer(uint16_t Address, const void *pBuffer)
-{
-    
-}
+#define EEPROM_WriteBuffer PY25Q16_WriteBuffer
+
+#endif

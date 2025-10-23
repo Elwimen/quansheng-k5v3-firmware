@@ -22,7 +22,7 @@
 #endif
 #include "driver/bk1080.h"
 #include "driver/bk4819.h"
-#include "driver/eeprom.h"
+#include "driver/py25q16.h"
 #include "misc.h"
 #include "settings.h"
 #include "ui/menu.h"
@@ -44,7 +44,7 @@ void SETTINGS_InitEEPROM(void)
 {
     uint8_t Data[16] = {0};
     // 0E70..0E77
-    EEPROM_ReadBuffer(0x0E70, Data, 8);
+    PY25Q16_ReadBuffer(0x004000, Data, 8);
     gEeprom.CHAN_1_CALL          = IS_MR_CHANNEL(Data[0]) ? Data[0] : MR_CHANNEL_FIRST;
     gEeprom.SQUELCH_LEVEL        = (Data[1] < 10) ? Data[1] : 1;
     gEeprom.TX_TIMEOUT_TIMER     = (Data[2] > 4 && Data[2] < 180) ? Data[2] : 11;
@@ -65,7 +65,7 @@ void SETTINGS_InitEEPROM(void)
     gEeprom.MIC_SENSITIVITY      = (Data[7] <  5) ? Data[7] : 4;
 
     // 0E78..0E7F
-    EEPROM_ReadBuffer(0x0E78, Data, 8);
+    PY25Q16_ReadBuffer(0x004008, Data, 8);
     gEeprom.BACKLIGHT_MAX         = (Data[0] & 0xF) <= 10 ? (Data[0] & 0xF) : 10;
     gEeprom.BACKLIGHT_MIN         = (Data[0] >> 4) < gEeprom.BACKLIGHT_MAX ? (Data[0] >> 4) : 0;
 #ifdef ENABLE_BLMIN_TMP_OFF
@@ -92,7 +92,7 @@ void SETTINGS_InitEEPROM(void)
     #endif
 
     // 0E80..0E87
-    EEPROM_ReadBuffer(0x0E80, Data, 8);
+    PY25Q16_ReadBuffer(0x005000, Data, 8);
     gEeprom.ScreenChannel[0]   = IS_VALID_CHANNEL(Data[0]) ? Data[0] : (FREQ_CHANNEL_FIRST + BAND6_400MHz);
     gEeprom.ScreenChannel[1]   = IS_VALID_CHANNEL(Data[3]) ? Data[3] : (FREQ_CHANNEL_FIRST + BAND6_400MHz);
     gEeprom.MrChannel[0]       = IS_MR_CHANNEL(Data[1])    ? Data[1] : MR_CHANNEL_FIRST;
@@ -114,7 +114,7 @@ void SETTINGS_InitEEPROM(void)
             uint8_t  band:2;
             //uint8_t  space:2;
         } __attribute__((packed)) fmCfg;
-        EEPROM_ReadBuffer(0x0E88, &fmCfg, 4);
+        PY25Q16_ReadBuffer(0x006000, &fmCfg, 4);
 
         gEeprom.FM_Band = fmCfg.band;
         //gEeprom.FM_Space = fmCfg.space;
@@ -127,12 +127,12 @@ void SETTINGS_InitEEPROM(void)
     }
 
     // 0E40..0E67
-    EEPROM_ReadBuffer(0x0E40, gFM_Channels, sizeof(gFM_Channels));
+    PY25Q16_ReadBuffer(0x003000, gFM_Channels, sizeof(gFM_Channels));
     FM_ConfigureChannelState();
 #endif
 
     // 0E90..0E97
-    EEPROM_ReadBuffer(0x0E90, Data, 8);
+    PY25Q16_ReadBuffer(0x007000, Data, 8);
     gEeprom.BEEP_CONTROL                 = Data[0] & 1;
     gEeprom.KEY_M_LONG_PRESS_ACTION      = ((Data[0] >> 1) < ACTION_OPT_LEN) ? (Data[0] >> 1) : ACTION_OPT_NONE;
     gEeprom.KEY_1_SHORT_PRESS_ACTION     = (Data[1] < ACTION_OPT_LEN) ? Data[1] : ACTION_OPT_MONITOR;
@@ -149,12 +149,12 @@ void SETTINGS_InitEEPROM(void)
 
     // 0E98..0E9F
     #ifdef ENABLE_PWRON_PASSWORD
-        EEPROM_ReadBuffer(0x0E98, Data, 8);
+        PY25Q16_ReadBuffer(0x007000 + 0x8, Data, 8);
         memcpy(&gEeprom.POWER_ON_PASSWORD, Data, 4);
     #endif
 
     // 0EA0..0EA7
-    EEPROM_ReadBuffer(0x0EA0, Data, 8);
+    PY25Q16_ReadBuffer(0x007000 + 0x10, Data, 8);
     #ifdef ENABLE_VOICE
     gEeprom.VOICE_PROMPT = (Data[0] < 3) ? Data[0] : VOICE_PROMPT_ENGLISH;
     #endif
@@ -170,7 +170,7 @@ void SETTINGS_InitEEPROM(void)
     #endif
 
     // 0EA8..0EAF
-    EEPROM_ReadBuffer(0x0EA8, Data, 8);
+    PY25Q16_ReadBuffer(0x007000 + 0x18, Data, 8);
     #ifdef ENABLE_ALARM
         gEeprom.ALARM_MODE                 = (Data[0] <  2) ? Data[0] : true;
     #endif
@@ -180,7 +180,7 @@ void SETTINGS_InitEEPROM(void)
     gEeprom.BATTERY_TYPE                   = (Data[4] < BATTERY_TYPE_UNKNOWN) ? Data[4] : BATTERY_TYPE_1600_MAH;
 
     // 0ED0..0ED7
-    EEPROM_ReadBuffer(0x0ED0, Data, 8);
+    PY25Q16_ReadBuffer(0x007000 + 0x40, Data, 8);
     gEeprom.DTMF_SIDE_TONE               = (Data[0] <   2) ? Data[0] : true;
 
 #ifdef ENABLE_DTMF_CALLING
@@ -194,7 +194,7 @@ void SETTINGS_InitEEPROM(void)
     gEeprom.DTMF_HASH_CODE_PERSIST_TIME  = (Data[7] < 101) ? Data[7] * 10 : 100;
 
     // 0ED8..0EDF
-    EEPROM_ReadBuffer(0x0ED8, Data, 8);
+    PY25Q16_ReadBuffer(0x007000 + 0x48, Data, 8);
     gEeprom.DTMF_CODE_PERSIST_TIME  = (Data[0] < 101) ? Data[0] * 10 : 100;
     gEeprom.DTMF_CODE_INTERVAL_TIME = (Data[1] < 101) ? Data[1] * 10 : 100;
 #ifdef ENABLE_DTMF_CALLING
@@ -202,7 +202,7 @@ void SETTINGS_InitEEPROM(void)
 
     // 0EE0..0EE7
 
-    EEPROM_ReadBuffer(0x0EE0, Data, sizeof(gEeprom.ANI_DTMF_ID));
+    PY25Q16_ReadBuffer(0x008000, Data, sizeof(gEeprom.ANI_DTMF_ID));
     if (DTMF_ValidateCodes((char *)Data, sizeof(gEeprom.ANI_DTMF_ID))) {
         memcpy(gEeprom.ANI_DTMF_ID, Data, sizeof(gEeprom.ANI_DTMF_ID));
     } else {
@@ -211,7 +211,7 @@ void SETTINGS_InitEEPROM(void)
 
 
     // 0EE8..0EEF
-    EEPROM_ReadBuffer(0x0EE8, Data, sizeof(gEeprom.KILL_CODE));
+    PY25Q16_ReadBuffer(0x008000 + 0x8, Data, sizeof(gEeprom.KILL_CODE));
     if (DTMF_ValidateCodes((char *)Data, sizeof(gEeprom.KILL_CODE))) {
         memcpy(gEeprom.KILL_CODE, Data, sizeof(gEeprom.KILL_CODE));
     } else {
@@ -219,7 +219,7 @@ void SETTINGS_InitEEPROM(void)
     }
 
     // 0EF0..0EF7
-    EEPROM_ReadBuffer(0x0EF0, Data, sizeof(gEeprom.REVIVE_CODE));
+    PY25Q16_ReadBuffer(0x008000 + 0x10, Data, sizeof(gEeprom.REVIVE_CODE));
     if (DTMF_ValidateCodes((char *)Data, sizeof(gEeprom.REVIVE_CODE))) {
         memcpy(gEeprom.REVIVE_CODE, Data, sizeof(gEeprom.REVIVE_CODE));
     } else {
@@ -228,7 +228,7 @@ void SETTINGS_InitEEPROM(void)
 #endif
 
     // 0EF8..0F07
-    EEPROM_ReadBuffer(0x0EF8, Data, sizeof(gEeprom.DTMF_UP_CODE));
+    PY25Q16_ReadBuffer(0x008000 + 0x18, Data, sizeof(gEeprom.DTMF_UP_CODE));
     if (DTMF_ValidateCodes((char *)Data, sizeof(gEeprom.DTMF_UP_CODE))) {
         memcpy(gEeprom.DTMF_UP_CODE, Data, sizeof(gEeprom.DTMF_UP_CODE));
     } else {
@@ -236,7 +236,7 @@ void SETTINGS_InitEEPROM(void)
     }
 
     // 0F08..0F17
-    EEPROM_ReadBuffer(0x0F08, Data, sizeof(gEeprom.DTMF_DOWN_CODE));
+    PY25Q16_ReadBuffer(0x008000 + 0x28, Data, sizeof(gEeprom.DTMF_DOWN_CODE));
     if (DTMF_ValidateCodes((char *)Data, sizeof(gEeprom.DTMF_DOWN_CODE))) {
         memcpy(gEeprom.DTMF_DOWN_CODE, Data, sizeof(gEeprom.DTMF_DOWN_CODE));
     } else {
@@ -244,7 +244,7 @@ void SETTINGS_InitEEPROM(void)
     }
 
     // 0F18..0F1F
-    EEPROM_ReadBuffer(0x0F18, Data, 8);
+    PY25Q16_ReadBuffer(0x009000, Data, 8);
     gEeprom.SCAN_LIST_DEFAULT = (Data[0] < 6) ? Data[0] : 0;  // we now have 'all' channel scan option
 
     // Fake data
@@ -277,7 +277,7 @@ void SETTINGS_InitEEPROM(void)
     }
 
     // 0F40..0F47
-    EEPROM_ReadBuffer(0x0F40, Data, 8);
+    PY25Q16_ReadBuffer(0x00b000, Data, 8);
     gSetting_F_LOCK            = (Data[0] < F_LOCK_LEN) ? Data[0] : F_LOCK_DEF;
 #ifndef ENABLE_FEAT_F4HWN
     gSetting_350TX             = (Data[1] < 2) ? Data[1] : false;  // was true
@@ -316,7 +316,7 @@ void SETTINGS_InitEEPROM(void)
     }
 
     // 0D60..0E27
-    EEPROM_ReadBuffer(0x0D60, gMR_ChannelAttributes, sizeof(gMR_ChannelAttributes));
+    PY25Q16_ReadBuffer(0x002000, gMR_ChannelAttributes, sizeof(gMR_ChannelAttributes));
     for(uint16_t i = 0; i < sizeof(gMR_ChannelAttributes); i++) {
         ChannelAttributes_t *att = &gMR_ChannelAttributes[i];
         if(att->__val == 0xff){
@@ -327,7 +327,7 @@ void SETTINGS_InitEEPROM(void)
     }
 
         // 0F30..0F3F
-        EEPROM_ReadBuffer(0x0F30, gCustomAesKey, sizeof(gCustomAesKey));
+        PY25Q16_ReadBuffer(0x00a000, gCustomAesKey, sizeof(gCustomAesKey));
         bHasCustomAesKey = false;
         #ifndef ENABLE_FEAT_F4HWN
             for (unsigned int i = 0; i < ARRAY_SIZE(gCustomAesKey); i++)
@@ -342,7 +342,8 @@ void SETTINGS_InitEEPROM(void)
 
     #ifdef ENABLE_FEAT_F4HWN
         // 1FF0..0x1FF7
-        EEPROM_ReadBuffer(0x1FF0, Data, 8);
+        // TODO: address TBD
+        PY25Q16_ReadBuffer(0x00c000, Data, 8);
         gSetting_set_pwr = (((Data[7] & 0xF0) >> 4) < 7) ? ((Data[7] & 0xF0) >> 4) : 0;
         gSetting_set_ptt = (((Data[7] & 0x0F)) < 2) ? ((Data[7] & 0x0F)) : 0;
 
@@ -398,16 +399,19 @@ void SETTINGS_LoadCalibration(void)
 {
 //  uint8_t Mic;
 
-    EEPROM_ReadBuffer(0x1EC0, gEEPROM_RSSI_CALIB[3], 8);
+    // 0x1EC0
+    PY25Q16_ReadBuffer(0x010000 + 0xc0, gEEPROM_RSSI_CALIB[3], 8);
     memcpy(gEEPROM_RSSI_CALIB[4], gEEPROM_RSSI_CALIB[3], 8);
     memcpy(gEEPROM_RSSI_CALIB[5], gEEPROM_RSSI_CALIB[3], 8);
     memcpy(gEEPROM_RSSI_CALIB[6], gEEPROM_RSSI_CALIB[3], 8);
 
-    EEPROM_ReadBuffer(0x1EC8, gEEPROM_RSSI_CALIB[0], 8);
+    // 0x1EC8
+    PY25Q16_ReadBuffer(0x010000 + 0xc8, gEEPROM_RSSI_CALIB[0], 8);
     memcpy(gEEPROM_RSSI_CALIB[1], gEEPROM_RSSI_CALIB[0], 8);
     memcpy(gEEPROM_RSSI_CALIB[2], gEEPROM_RSSI_CALIB[0], 8);
 
-    EEPROM_ReadBuffer(0x1F40, gBatteryCalibration, 12);
+    // 0x1F40
+    PY25Q16_ReadBuffer(0x010000 + 0x140, gBatteryCalibration, 12);
     if (gBatteryCalibration[0] >= 5000)
     {
         gBatteryCalibration[0] = 1900;
@@ -416,11 +420,13 @@ void SETTINGS_LoadCalibration(void)
     gBatteryCalibration[5] = 2300;
 
     #ifdef ENABLE_VOX
-        EEPROM_ReadBuffer(0x1F50 + (gEeprom.VOX_LEVEL * 2), &gEeprom.VOX1_THRESHOLD, 2);
-        EEPROM_ReadBuffer(0x1F68 + (gEeprom.VOX_LEVEL * 2), &gEeprom.VOX0_THRESHOLD, 2);
+        // 0x1F50
+        PY25Q16_ReadBuffer(0x010000 + 0x150 + (gEeprom.VOX_LEVEL * 2), &gEeprom.VOX1_THRESHOLD, 2);
+        // 0x1F68
+        PY25Q16_ReadBuffer(0x010000 + 0x168 + (gEeprom.VOX_LEVEL * 2), &gEeprom.VOX0_THRESHOLD, 2);
     #endif
 
-    //EEPROM_ReadBuffer(0x1F80 + gEeprom.MIC_SENSITIVITY, &Mic, 1);
+    //PY25Q16_ReadBuffer(0x1F80 + gEeprom.MIC_SENSITIVITY, &Mic, 1);
     //gEeprom.MIC_SENSITIVITY_TUNING = (Mic < 32) ? Mic : 15;
     gEeprom.MIC_SENSITIVITY_TUNING = gMicGain_dB2[gEeprom.MIC_SENSITIVITY];
 
@@ -436,7 +442,8 @@ void SETTINGS_LoadCalibration(void)
 
         // radio 1 .. 04 00 46 00 50 00 2C 0E
         // radio 2 .. 05 00 46 00 50 00 2C 0E
-        EEPROM_ReadBuffer(0x1F88, &Misc, 8);
+        // 0x1F88
+        PY25Q16_ReadBuffer(0x010000 + 0x188, &Misc, 8);
 
         gEeprom.BK4819_XTAL_FREQ_LOW = (Misc.BK4819_XtalFreqLow >= -1000 && Misc.BK4819_XtalFreqLow <= 1000) ? Misc.BK4819_XtalFreqLow : 0;
         gEEPROM_1F8A                 = Misc.EEPROM_1F8A & 0x01FF;
@@ -461,7 +468,7 @@ uint32_t SETTINGS_FetchChannelFrequency(const int channel)
         uint32_t offset;
     } __attribute__((packed)) info;
 
-    EEPROM_ReadBuffer(channel * 16, &info, sizeof(info));
+    PY25Q16_ReadBuffer(channel * 16, &info, sizeof(info));
 
     return info.frequency;
 }
@@ -479,7 +486,8 @@ void SETTINGS_FetchChannelName(char *s, const int channel)
     if (!RADIO_CheckValidChannel(channel, false, 0))
         return;
 
-    EEPROM_ReadBuffer(0x0F50 + (channel * 16), s, 10);
+    // 0x0F50
+    PY25Q16_ReadBuffer(0x00e000 + (channel * 16), s, 10);
 
     int i;
     for (i = 0; i < 10; i++)
@@ -576,7 +584,8 @@ void SETTINGS_SaveVfoIndices(void)
     uint8_t State[8];
 
     #ifndef ENABLE_NOAA
-        EEPROM_ReadBuffer(0x0E80, State, sizeof(State));
+        // 0x0E80
+        PY25Q16_ReadBuffer(0x005000, State, sizeof(State));
     #endif
 
     State[0] = gEeprom.ScreenChannel[0];
@@ -778,7 +787,9 @@ void SETTINGS_SaveSettings(void)
     EEPROM_WriteBuffer(0x0F40, State);
 
 #ifdef ENABLE_FEAT_F4HWN
-    EEPROM_ReadBuffer(0x1FF0, State, sizeof(State));
+    // 0x1FF0
+    // TODO: TBD
+    PY25Q16_ReadBuffer(0x00c000, State, sizeof(State));
 
     //memset(State, 0xFF, sizeof(State));
 
@@ -894,7 +905,8 @@ void SETTINGS_SaveBatteryCalibration(const uint16_t * batteryCalibration)
 {
     uint16_t buf[4];
     EEPROM_WriteBuffer(0x1F40, batteryCalibration);
-    EEPROM_ReadBuffer( 0x1F48, buf, sizeof(buf));
+    // 0x1F48
+    PY25Q16_ReadBuffer(0x010000 + 0x148, buf, sizeof(buf));
     buf[0] = batteryCalibration[4];
     buf[1] = batteryCalibration[5];
     EEPROM_WriteBuffer(0x1F48, buf);
@@ -924,8 +936,9 @@ void SETTINGS_UpdateChannel(uint8_t channel, const VFO_Info_t *pVFO, bool keep, 
             .scanlist3 = 0,
             };        // default attributes
 
-        uint16_t offset = 0x0D60 + (channel & ~7u);
-        EEPROM_ReadBuffer(offset, state, sizeof(state));
+        // 0x0D60
+        uint16_t offset = 0x002000 + (channel & ~7u);
+        PY25Q16_ReadBuffer(offset, state, sizeof(state));
 
         if (keep) {
             att.band = pVFO->Band;
@@ -964,7 +977,8 @@ void SETTINGS_WriteBuildOptions(void)
     uint8_t State[8];
 
 #ifdef ENABLE_FEAT_F4HWN
-    EEPROM_ReadBuffer(0x1FF0, State, sizeof(State));
+    // 0x1FF0
+    PY25Q16_ReadBuffer(0x00c000, State, sizeof(State));
 #endif
     
 State[0] = 0
@@ -1024,7 +1038,8 @@ State[1] = 0
     void SETTINGS_WriteCurrentState(void)
     {
         uint8_t State[8];
-        EEPROM_ReadBuffer(0x0E78, State, sizeof(State));
+        // 0x0E78
+        PY25Q16_ReadBuffer(0x004000 + 0x8, State, sizeof(State));
         //State[3] = (gEeprom.CURRENT_STATE << 4) | (gEeprom.BATTERY_SAVE & 0x0F);
         State[7] = (gEeprom.VFO_OPEN & 0x01) | ((gEeprom.CURRENT_STATE & 0x07) << 1) | ((gEeprom.SCAN_LIST_DEFAULT & 0x07) << 4);
         EEPROM_WriteBuffer(0x0E78, State);
@@ -1035,7 +1050,8 @@ State[1] = 0
     void SETTINGS_WriteCurrentVol(void)
     {
         uint8_t State[8];
-        EEPROM_ReadBuffer(0x1F88, State, sizeof(State));
+        // 0x1F88
+        PY25Q16_ReadBuffer(0x010000 + 0x188, State, sizeof(State));
         State[6] = gEeprom.VOLUME_GAIN;
         EEPROM_WriteBuffer(0x1F88, State);
     }
@@ -1048,7 +1064,7 @@ void SETTINGS_ResetTxLock(void)
     for(uint8_t channel = 0; channel < 200; channel++)
     {
         uint16_t OffsetVFO = channel * 16;
-        EEPROM_ReadBuffer(OffsetVFO + 8, State, sizeof(State));
+        PY25Q16_ReadBuffer(OffsetVFO + 8, State, sizeof(State));
         State[4] |= (1 << 6);
         EEPROM_WriteBuffer(OffsetVFO + 8, State);
     }

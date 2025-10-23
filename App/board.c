@@ -32,7 +32,7 @@
 #endif
 
 #include "driver/crc.h"
-#include "driver/eeprom.h"
+#include "driver/py25q16.h"
 #include "driver/flash.h"
 #include "driver/gpio.h"
 #include "driver/system.h"
@@ -144,6 +144,7 @@ void BOARD_Init(void)
     BOARD_GPIO_Init();
     BACKLIGHT_InitHardware();
     BOARD_ADC_Init();
+    PY25Q16_Init();
     ST7565_Init();
 #ifdef ENABLE_FMRADIO
     BK1080_Init0();

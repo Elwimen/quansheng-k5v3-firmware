@@ -66,16 +66,17 @@
                 "ENABLE_AM_FIX_SHOW_DATA": false,
                 "ENABLE_AGC_SHOW_DATA": false,
                 "ENABLE_UART_RW_BK_REGS": false,
-                "ENABLE_SWD": true,
+                "ENABLE_SWD": false,
                 "VERSION_STRING_1": "v0.22",
                 "VERSION_STRING_2": "v4.2"
             }
         },
         {
             "name": "Custom",
-            "inherits": "default",
+            "inherits": "Broadcast",
             "cacheVariables": {
-                "ENABLE_FEAT_F4HWN": true
+                "ENABLE_SWD": true,
+                "ENABLE_AIRCOPY": false
             }
         },
         {

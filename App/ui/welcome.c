@@ -16,7 +16,7 @@
 
 #include <string.h>
 
-#include "driver/eeprom.h"
+#include "driver/py25q16.h"
 #include "driver/st7565.h"
 #include "external/printf/printf.h"
 #include "helper/battery.h"
@@ -75,8 +75,10 @@ void UI_DisplayWelcome(void)
         memset(WelcomeString0, 0, sizeof(WelcomeString0));
         memset(WelcomeString1, 0, sizeof(WelcomeString1));
 
-        EEPROM_ReadBuffer(0x0EB0, WelcomeString0, 16);
-        EEPROM_ReadBuffer(0x0EC0, WelcomeString1, 16);
+        // 0x0EB0
+        PY25Q16_ReadBuffer(0x007020, WelcomeString0, 16);
+        // 0x0EC0
+        PY25Q16_ReadBuffer(0x007030, WelcomeString1, 16);
 
         sprintf(WelcomeString2, "%u.%02uV %u%%",
                 gBatteryVoltageAverage / 100,
