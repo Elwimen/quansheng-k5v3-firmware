@@ -6,7 +6,6 @@ target_compile_definitions(App INTERFACE PRINTF_INCLUDE_CONFIG_H)
 
 target_sources(App INTERFACE
     # Drivers
-    # driver/adc.c
     driver/backlight.c
     driver/bk4819.c
     driver/py25q16.c
