@@ -14,7 +14,6 @@
  *     limitations under the License.
  */
 
-#include <stddef.h>
 #include <string.h>
 
 #include "driver/py25q16.h"
@@ -25,6 +24,9 @@
 #include "py32f071_ll_dma.h"
 #include "driver/system.h"
 #include "driver/systick.h"
+#include "external/printf/printf.h"
+
+// #define DEBUG
 
 #define SPIx SPI2
 #define CHANNEL_RD LL_DMA_CHANNEL_4
@@ -224,6 +226,9 @@ void PY25Q16_Init()
 
 void PY25Q16_ReadBuffer(uint32_t Address, void *pBuffer, uint32_t Size)
 {
+#ifdef DEBUG
+    printf("spi flash read: %06x %ld\n", Address, Size);
+#endif
     CS_Assert();
 
     SPI_WriteByte(0x03); // Fast read
@@ -246,24 +251,28 @@ void PY25Q16_ReadBuffer(uint32_t Address, void *pBuffer, uint32_t Size)
 
 void PY25Q16_WriteBuffer(uint32_t Address, const void *pBuffer, uint32_t Size, bool Append)
 {
+#ifdef DEBUG
+    printf("spi flash write: %06x %ld %d\n", Address, Size, Append);
+#endif
+    uint32_t SecIndex = Address / SECTOR_SIZE;
+    uint32_t SecAddr = SecIndex * SECTOR_SIZE;
+    uint32_t SecOffset = Address % SECTOR_SIZE;
+    uint32_t SecSize = SECTOR_SIZE - SecOffset;
+
     while (Size)
     {
-        uint32_t SecIndex = Address / SECTOR_SIZE;
-        uint32_t SecOffset = Address % SECTOR_SIZE;
-        uint32_t SecSize = SECTOR_SIZE - SecOffset;
         if (Size < SecSize)
         {
             SecSize = Size;
         }
 
-        uint32_t SecAddr = SecIndex * SECTOR_SIZE;
         if (SecAddr != SectorCacheAddr)
         {
             PY25Q16_ReadBuffer(SecAddr, SectorCache, SECTOR_SIZE);
             SectorCacheAddr = SecAddr;
         }
 
-        if (0 != strncmp(pBuffer, (char *)SectorCache + SecOffset, SecSize))
+        if (0 != memcmp(pBuffer, (char *)SectorCache + SecOffset, SecSize))
         {
             bool Erase = false;
             for (uint32_t i = 0; i < SecSize; i++)
@@ -299,6 +308,10 @@ void PY25Q16_WriteBuffer(uint32_t Address, const void *pBuffer, uint32_t Size, b
         Address += SecSize;
         pBuffer += SecSize;
         Size -= SecSize;
+
+        SecAddr += SECTOR_SIZE;
+        SecOffset = 0;
+        SecSize = SECTOR_SIZE;
     } // while
 }
 
@@ -368,6 +381,9 @@ static void WriteEnable()
 
 static void SectorErase(uint32_t Addr)
 {
+#ifdef DEBUG
+    printf("spi flash sector erase: %06x\n", Addr);
+#endif
     WriteEnable();
     WaitWIP();
 
@@ -381,9 +397,10 @@ static void SectorErase(uint32_t Addr)
 
 static void SectorProgram(uint32_t Addr, const uint8_t *Buf, uint32_t Size)
 {
+    uint32_t Size1 = PAGE_SIZE - (Addr % PAGE_SIZE);
+
     while (Size)
     {
-        uint32_t Size1 = PAGE_SIZE - (Addr % PAGE_SIZE);
         if (Size < Size1)
         {
             Size1 = Size;
@@ -394,13 +411,19 @@ static void SectorProgram(uint32_t Addr, const uint8_t *Buf, uint32_t Size)
         Addr += Size1;
         Buf += Size1;
         Size -= Size1;
+
+        Size1 = PAGE_SIZE;
     }
 }
 
 static void PageProgram(uint32_t Addr, const uint8_t *Buf, uint32_t Size)
 {
+#ifdef DEBUG
+    printf("spi flash page program: %06x %ld\n", Addr, Size);
+#endif
+
     WriteEnable();
-    WaitWIP();
+    // WaitWIP();
 
     CS_Assert();
 
