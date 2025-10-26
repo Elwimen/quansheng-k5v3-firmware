@@ -75,6 +75,9 @@ target_link_options(${EXE_NAME} PRIVATE "-Wl,-Map=${EXE_NAME}.map")
 # Add the map file to the list of files to be removed with 'clean' target
 set_target_properties(${EXE_NAME} PROPERTIES ADDITIONAL_CLEAN_FILES ${EXE_NAME}.map)
 
+# Force linker to ignore RWX segment warning even if cache exists
+target_link_options(${EXE_NAME} PRIVATE -Wl,--no-warn-rwx-segment)
+
 # -----------------------------------
 #  Post build processing
 #
