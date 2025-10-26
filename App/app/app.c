@@ -44,7 +44,7 @@
 #include "audio.h"
 #include "board.h"
 #ifdef ENABLE_FEAT_F4HWN_SLEEP
-    #include "bsp/dp32g030/pwmplus.h"
+    // #include "bsp/dp32g030/pwmplus.h"
 #endif
 #include "driver/backlight.h"
 #ifdef ENABLE_FMRADIO
@@ -1626,18 +1626,19 @@ void APP_TimeSlice500ms(void)
             gBacklightCountdown_500ms = 0;
             gPowerSave_10ms = 1;
             gWakeUp = true;
-            PWM_PLUS0_CH0_COMP = 0;
+            // TODO:
+            // PWM_PLUS0_CH0_COMP = 0;
             ST7565_ShutDown();
         }
         else if(gSleepModeCountdown_500ms != 0 && gSleepModeCountdown_500ms < 21 && gSetting_set_off != 0)
         {
             if(gSleepModeCountdown_500ms % 4 == 0)
             {
-                PWM_PLUS0_CH0_COMP = value[gEeprom.BACKLIGHT_MAX] * 4; // Max brightness
+                // PWM_PLUS0_CH0_COMP = value[gEeprom.BACKLIGHT_MAX] * 4; // Max brightness
             }
             else
             {
-                PWM_PLUS0_CH0_COMP = 0;
+                // PWM_PLUS0_CH0_COMP = 0;
             }
         }
     }

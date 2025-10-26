@@ -117,7 +117,7 @@ static void SPI_ReadBuf(uint8_t *Buf, uint32_t Size)
                               | LL_DMA_MEMORY_INCREMENT     //
                               | LL_DMA_PDATAALIGN_BYTE      //
                               | LL_DMA_MDATAALIGN_BYTE      //
-                              | LL_DMA_PRIORITY_LOW         //
+                              | LL_DMA_PRIORITY_MEDIUM      //
     );
 
     LL_DMA_ConfigTransfer(DMA1, CHANNEL_WR,                 //
@@ -127,7 +127,7 @@ static void SPI_ReadBuf(uint8_t *Buf, uint32_t Size)
                               | LL_DMA_MEMORY_NOINCREMENT   //
                               | LL_DMA_PDATAALIGN_BYTE      //
                               | LL_DMA_MDATAALIGN_BYTE      //
-                              | LL_DMA_PRIORITY_LOW         //
+                              | LL_DMA_PRIORITY_MEDIUM      //
     );
 
     LL_DMA_SetMemoryAddress(DMA1, CHANNEL_RD, (uint32_t)Buf);

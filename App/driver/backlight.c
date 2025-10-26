@@ -1,4 +1,5 @@
-/* Copyright 2023 Dual Tachyon
+/* Copyright 2025 muzkr https://github.com/muzkr
+ * Copyright 2023 Dual Tachyon
  * https://github.com/DualTachyon
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,18 +15,32 @@
  *     limitations under the License.
  */
 
-#include "backlight.h"
-// #include "bsp/dp32g030/gpio.h"
-// #include "bsp/dp32g030/pwmplus.h"
-// #include "bsp/dp32g030/portcon.h"
+#include "driver/backlight.h"
+#include "py32f071_ll_system.h"
+#include "py32f071_ll_dma.h"
+#include "py32f071_ll_bus.h"
+#include "py32f071_ll_tim.h"
 #include "driver/gpio.h"
+#include "driver/systick.h"
 #include "settings.h"
+#include "external/printf/printf.h"
 
 #ifdef ENABLE_FEAT_F4HWN
     #include "driver/system.h"
     #include "audio.h"
     #include "misc.h"
 #endif
+
+#define PWM_FREQ 240
+#define DUTY_CYCLE_LEVELS 64
+
+#define DUTY_CYCLE_ON_VALUE GPIO_PIN_MASK(GPIO_PIN_BACKLIGHT)
+#define DUTY_CYCLE_OFF_VALUE (DUTY_CYCLE_ON_VALUE << 16)
+
+#define TIMx TIM7
+#define DMA_CHANNEL LL_DMA_CHANNEL_7
+
+static uint32_t dutyCycle[DUTY_CYCLE_LEVELS];
 
 // this is decremented once every 500ms
 uint16_t gBacklightCountdown_500ms = 0;
@@ -40,31 +55,36 @@ bool backlightOn;
 #endif
 
 void BACKLIGHT_InitHardware()
-{/*
-    // 48MHz / 94 / 1024 ~ 500Hz
-    const uint32_t PWM_FREQUENCY_HZ =  25000;
-    PWM_PLUS0_CLKSRC |= ((48000000 / 1024 / PWM_FREQUENCY_HZ) << 16);
-    PWM_PLUS0_PERIOD = 1023;
+{
+    LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_TIM7);
+    LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_DMA1);
 
-    PORTCON_PORTB_SEL0 &= ~(0
-        // Back light
-        | PORTCON_PORTB_SEL0_B6_MASK
-        );
-    PORTCON_PORTB_SEL0 |= 0
-        // Back light PWM
-        | PORTCON_PORTB_SEL0_B6_BITS_PWMP0_CH0
-        ;
+    LL_APB1_GRP1_ForceReset(LL_APB1_GRP1_PERIPH_TIM7);
+    LL_APB1_GRP1_ReleaseReset(LL_APB1_GRP1_PERIPH_TIM7);
 
-    PWM_PLUS0_GEN =     
-        PWMPLUS_GEN_CH0_OE_BITS_ENABLE |
-        PWMPLUS_GEN_CH0_OUTINV_BITS_ENABLE |
-        0;
+    // 48 MHz / ((1 + PSC) * (1 + ARR)) == PWM_freq * levels
+    LL_TIM_SetPrescaler(TIMx, 0);
+    LL_TIM_SetAutoReload(TIMx, SystemCoreClock / PWM_FREQ / DUTY_CYCLE_LEVELS - 1);
+    LL_TIM_EnableARRPreload(TIMx);
+    LL_TIM_EnableDMAReq_UPDATE(TIMx);
+    LL_TIM_EnableUpdateEvent(TIMx);
 
-    PWM_PLUS0_CFG =     
-        PWMPLUS_CFG_CNT_REP_BITS_ENABLE |
-        PWMPLUS_CFG_COUNTER_EN_BITS_ENABLE |
-        0;
-    */
+    LL_DMA_DisableChannel(DMA1, DMA_CHANNEL) ;
+    LL_SYSCFG_SetDMARemap(DMA1, DMA_CHANNEL, LL_SYSCFG_DMA_MAP_TIM7_UP);
+
+    LL_DMA_ConfigTransfer(DMA1, DMA_CHANNEL,                //
+                          LL_DMA_DIRECTION_MEMORY_TO_PERIPH //
+                              | LL_DMA_MODE_CIRCULAR        //
+                              | LL_DMA_PERIPH_NOINCREMENT   //
+                              | LL_DMA_MEMORY_INCREMENT     //
+                              | LL_DMA_PDATAALIGN_WORD      //
+                              | LL_DMA_MDATAALIGN_WORD      //
+                              | LL_DMA_PRIORITY_LOW         //
+    );
+
+    LL_DMA_SetMemoryAddress(DMA1, DMA_CHANNEL, (uint32_t)dutyCycle);
+    LL_DMA_SetPeriphAddress(DMA1, DMA_CHANNEL, (uint32_t)(&GPIO_PORT(GPIO_PIN_BACKLIGHT)->BSRR));
+    LL_DMA_SetDataLength(DMA1, DMA_CHANNEL, sizeof(dutyCycle) / sizeof(uint32_t));
 }
 
 static void BACKLIGHT_Sound(void)
@@ -81,9 +101,6 @@ static void BACKLIGHT_Sound(void)
 
 void BACKLIGHT_TurnOn(void)
 {
-    // TODO: This is temporary. Will delete
-    GPIO_TurnOnBacklight();
-
     #ifdef ENABLE_FEAT_F4HWN_SLEEP
         gSleepModeCountdown_500ms = gSetting_set_off * 120;
     #endif
@@ -140,7 +157,6 @@ void BACKLIGHT_TurnOn(void)
 
 void BACKLIGHT_TurnOff()
 {
-    GPIO_TurnOffBacklight();
 #ifdef ENABLE_BLMIN_TMP_OFF
     register uint8_t tmp;
 
@@ -162,16 +178,49 @@ bool BACKLIGHT_IsOn()
     return backlightOn;
 }
 
-static uint8_t currentBrightness;
+static uint8_t currentBrightness = 0;
 
 void BACKLIGHT_SetBrightness(uint8_t brigtness)
 {
+    // printf("BL: %d\n", brigtness);
+
+    if (currentBrightness == brigtness)
+    {
+        return;
+    }
+
+    if (0 == brigtness)
+    {
+        LL_TIM_DisableCounter(TIMx);
+        LL_DMA_DisableChannel(DMA1, DMA_CHANNEL);
+        SYSTICK_DelayUs(1);
+        GPIO_TurnOffBacklight();
+    }
+    else
+    {
+        const uint32_t level = (uint32_t)(value[brigtness]) * DUTY_CYCLE_LEVELS / 255;
+        if (level >= DUTY_CYCLE_LEVELS)
+        {
+            LL_TIM_DisableCounter(TIMx);
+            LL_DMA_DisableChannel(DMA1, DMA_CHANNEL);
+            GPIO_TurnOnBacklight();
+        }
+        else
+        {
+            for (uint32_t i = 0; i < DUTY_CYCLE_LEVELS; i++)
+            {
+                dutyCycle[i] = i < level ? DUTY_CYCLE_ON_VALUE : DUTY_CYCLE_OFF_VALUE;
+            }
+
+            if (!LL_TIM_IsEnabledCounter(TIMx))
+            {
+                LL_DMA_EnableChannel(DMA1, DMA_CHANNEL);
+                LL_TIM_EnableCounter(TIMx);
+            }
+        }
+    }
+
     currentBrightness = brigtness;
-    /*
-    PWM_PLUS0_CH0_COMP = value[brigtness] * 4;
-    */
-    //PWM_PLUS0_CH0_COMP = (1 << brigtness) - 1;
-    //PWM_PLUS0_SWLOAD = 1;
 }
 
 uint8_t BACKLIGHT_GetBrightness(void)
