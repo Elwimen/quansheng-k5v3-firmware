@@ -25,7 +25,7 @@
 #include "py32f071_ll_gpio.h"
 #include "py32f071_ll_rcc.h"
 #include "py32f071_ll_adc.h"
-#include "driver/dac.h"
+#include "driver/voice.h"
 #include "driver/backlight.h"
 #ifdef ENABLE_FMRADIO
     #include "driver/bk1080.h"
@@ -180,7 +180,7 @@ void BOARD_Init(void)
     BACKLIGHT_InitHardware();
     BOARD_ADC_Init();
 #ifdef ENABLE_VOICE
-    DAC_Init();
+    VOICE_Init();
 #endif
     PY25Q16_Init();
     ST7565_Init();

@@ -106,7 +106,7 @@ enable_feature(ENABLE_AIRCOPY
 )
 enable_feature(ENABLE_NOAA)
 enable_feature(ENABLE_VOICE 
-    driver/dac.c
+    driver/voice.c
 )
 enable_feature(ENABLE_VOX)
 enable_feature(ENABLE_ALARM)
