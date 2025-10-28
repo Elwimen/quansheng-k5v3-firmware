@@ -1975,10 +1975,24 @@ void MENU_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
             MENU_Key_MENU(bKeyPressed, bKeyHeld);
             break;
         case KEY_UP:
-            MENU_Key_UP_DOWN(bKeyPressed, bKeyHeld,  1);
+            #ifdef ENABLE_NAVIG_LEFT_RIGHT
+                if(gIsInSubMenu)
+                    MENU_Key_UP_DOWN(bKeyPressed, bKeyHeld, -1);
+                else
+                    MENU_Key_UP_DOWN(bKeyPressed, bKeyHeld, 1);
+            #else
+                MENU_Key_UP_DOWN(bKeyPressed, bKeyHeld, 1);
+            #endif
             break;
         case KEY_DOWN:
-            MENU_Key_UP_DOWN(bKeyPressed, bKeyHeld, -1);
+            #ifdef ENABLE_NAVIG_LEFT_RIGHT
+                if(gIsInSubMenu)
+                    MENU_Key_UP_DOWN(bKeyPressed, bKeyHeld, 1);
+                else
+                    MENU_Key_UP_DOWN(bKeyPressed, bKeyHeld, -1);
+            #else
+                MENU_Key_UP_DOWN(bKeyPressed, bKeyHeld, -1);
+            #endif
             break;
         case KEY_EXIT:
             MENU_Key_EXIT(bKeyPressed, bKeyHeld);
