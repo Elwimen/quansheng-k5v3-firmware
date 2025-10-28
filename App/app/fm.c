@@ -547,11 +547,19 @@ void FM_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
             Key_MENU(state);
             break;
         case KEY_UP:
-            Key_UP_DOWN(state, 1);
+            #ifdef ENABLE_NAVIG_LEFT_RIGHT
+                Key_UP_DOWN(state, -1);
+            #else
+                Key_UP_DOWN(state, 1);
+            #endif
             break;
         case KEY_DOWN:
-            Key_UP_DOWN(state, -1);
-            break;;
+            #ifdef ENABLE_NAVIG_LEFT_RIGHT
+                Key_UP_DOWN(state, 1);
+            #else
+                Key_UP_DOWN(state, -1);
+            #endif
+            break;
         case KEY_EXIT:
             Key_EXIT(state);
             break;
