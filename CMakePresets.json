@@ -76,7 +76,7 @@
             "name": "Custom",
             "inherits": "Broadcast",
             "cacheVariables": {
-                "ENABLE_VOICE": true,
+                "ENABLE_VOICE": false,
                 "ENABLE_SWD": true,
                 "ENABLE_AIRCOPY": false,
                 "EDITION_STRING": "Custom",

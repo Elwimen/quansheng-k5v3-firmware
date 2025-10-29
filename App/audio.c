@@ -269,7 +269,7 @@ static bool LoadVoiceClip(uint8_t VoiceID)
         uint32_t Size;
     } Info;
     PY25Q16_ReadBuffer(Addr + 8 * VoiceID, &Info, 8);
-    
+
     if (Info.Offset > 0x0b0000 || Info.Size > 0x019000)
     {
         return false;
@@ -285,7 +285,8 @@ static inline uint32_t CalcDelay(uint32_t Size)
     return 2 * Size; // in ms!!
 }
 
-static void LoadVoiceSamples() {
+static void LoadVoiceSamples()
+{
     if (0 == VoiceClipState.Addr || 0 == VoiceClipState.Size)
     {
         return;
