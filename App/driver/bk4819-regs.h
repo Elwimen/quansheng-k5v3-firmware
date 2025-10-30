@@ -1,4 +1,5 @@
-/* Copyright 2023 Dual Tachyon
+/* Copyright 2025 muzkr https://github.com/muzkr
+ * Copyright 2023 Dual Tachyon
  * https://github.com/DualTachyon
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -138,8 +139,8 @@ enum BK4819_GPIO_PIN_t {
     BK4819_GPIO1_PIN29_PA_ENABLE = 1,
     BK4819_GPIO3_PIN31_UHF_LNA = 3,
     BK4819_GPIO4_PIN32_VHF_LNA = 4,
-    BK4819_GPIO5_PIN1_RED = 5,
-    BK4819_GPIO6_PIN2_GREEN = 6,
+    BK4819_GPIO6_PIN2_GREEN = 5,
+    BK4819_GPIO5_PIN1_RED = 6,
 };
 
 typedef enum BK4819_GPIO_PIN_t BK4819_GPIO_PIN_t;
