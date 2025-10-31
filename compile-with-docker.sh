@@ -8,6 +8,7 @@ set -euo pipefail
 #   ./compile-with-docker.sh Custom
 #   ./compile-with-docker.sh Bandscope -DENABLE_SPECTRUM=ON
 #   ./compile-with-docker.sh Broadcast -DENABLE_FEAT_F4HWN_GAME=ON -DENABLE_NOAA=ON
+#   ./compile-with-docker.sh All
 # Default preset: "Custom"
 # ---------------------------------------------
 
@@ -21,9 +22,9 @@ EXTRA_ARGS=("$@")
 # ---------------------------------------------
 # Validate preset name
 # ---------------------------------------------
-if [[ ! "$PRESET" =~ ^(Custom|Bandscope|Broadcast|Basic|RescueOps|Game|all)$ ]]; then
+if [[ ! "$PRESET" =~ ^(Custom|Bandscope|Broadcast|Basic|RescueOps|Game|All)$ ]]; then
   echo "❌ Unknown preset: '$PRESET'"
-  echo "Valid presets are: Custom, Bandscope, Broadcast, Basic, RescueOps, Game, all"
+  echo "Valid presets are: Custom, Bandscope, Broadcast, Basic, RescueOps, Game, All"
   exit 1
 fi
 
@@ -42,11 +43,26 @@ rm -rf build
 # ---------------------------------------------
 build_preset() {
   local preset="$1"
+  echo ""
   echo "=== 🚀 Building preset: ${preset} ==="
+  echo "---------------------------------------------"
   docker run --rm -it -v "$PWD":/src -w /src "$IMAGE" \
     bash -c "which arm-none-eabi-gcc && arm-none-eabi-gcc --version && \
              cmake --preset ${preset} ${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"} && \
              cmake --build --preset ${preset} -j"
+  echo "✅ Done: ${preset}"
 }
 
-build_preset "$PRESET"
+# ---------------------------------------------
+# Handle 'All' preset
+# ---------------------------------------------
+if [[ "$PRESET" == "All" ]]; then
+  PRESETS=(Bandscope Broadcast Basic RescueOps Game)
+  for p in "${PRESETS[@]}"; do
+    build_preset "$p"
+  done
+  echo ""
+  echo "🎉 All presets built successfully!"
+else
+  build_preset "$PRESET"
+fi
