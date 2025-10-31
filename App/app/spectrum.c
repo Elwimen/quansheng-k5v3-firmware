@@ -32,7 +32,7 @@
 #endif
 
 #ifdef ENABLE_FEAT_F4HWN_SPECTRUM
-#include "driver/eeprom.h"
+#include "driver/py25q16.h"
 #endif
 
 struct FrequencyBandInfo
@@ -121,8 +121,7 @@ uint16_t statuslineUpdateTimer = 0;
 static void LoadSettings()
 {
     uint8_t Data[8] = {0};
-    // 1FF0..0x1FF7
-    EEPROM_ReadBuffer(0x1FF0, Data, 8);
+    PY25Q16_ReadBuffer(0x00c000, Data, sizeof(Data));
 
     settings.scanStepIndex = ((Data[3] & 0xF0) >> 4);
 
@@ -150,11 +149,11 @@ static void SaveSettings()
 {
     uint8_t Data[8] = {0};
     // 1FF0..0x1FF7
-    EEPROM_ReadBuffer(0x1FF0, Data, 8);
+    PY25Q16_ReadBuffer(0x00c000, Data, sizeof(Data));
 
     Data[3] = (settings.scanStepIndex << 4) | (settings.stepsCount << 2) | settings.listenBw;
 
-    EEPROM_WriteBuffer(0x1FF0, Data);
+    PY25Q16_WriteBuffer(0x00c000, Data, sizeof(Data), true);
 }
 #endif
 
@@ -273,7 +272,7 @@ static void GUI_DisplaySmallest(const char *pString, uint8_t x, uint8_t y,
 KEY_Code_t GetKey()
 {
     KEY_Code_t btn = KEYBOARD_Poll();
-    if (btn == KEY_INVALID && !GPIO_CheckBit(&GPIOC->DATA, GPIOC_PIN_PTT))
+    if (btn == KEY_INVALID && GPIO_IsPttPressed())
     {
         btn = KEY_PTT;
     }
