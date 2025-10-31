@@ -1151,13 +1151,21 @@ static void OnKeyDown(uint8_t key)
 #ifdef ENABLE_SCAN_RANGES
         if (!gScanRangeStart)
 #endif
+#ifdef ENABLE_NAVIG_LEFT_RIGHT
+            UpdateCurrentFreq(false);
+#else
             UpdateCurrentFreq(true);
+#endif
         break;
     case KEY_DOWN:
 #ifdef ENABLE_SCAN_RANGES
         if (!gScanRangeStart)
 #endif
+#ifdef ENABLE_NAVIG_LEFT_RIGHT
+            UpdateCurrentFreq(true);
+#else
             UpdateCurrentFreq(false);
+#endif
         break;
     case KEY_SIDE1:
         Blacklist();
@@ -1274,19 +1282,36 @@ void OnKeyDownStill(KEY_Code_t key)
         break;
     case KEY_UP:
         if (menuState)
-        {
-            SetRegMenuValue(menuState, true);
-            break;
-        }
-        UpdateCurrentFreqStill(true);
-        break;
-    case KEY_DOWN:
-        if (menuState)
+
+#ifdef ENABLE_NAVIG_LEFT_RIGHT
         {
             SetRegMenuValue(menuState, false);
             break;
         }
         UpdateCurrentFreqStill(false);
+#else
+        {
+            SetRegMenuValue(menuState, true);
+            break;
+        }
+        UpdateCurrentFreqStill(true);
+#endif
+        break;
+    case KEY_DOWN:
+        if (menuState)
+#ifdef ENABLE_NAVIG_LEFT_RIGHT
+        {
+            SetRegMenuValue(menuState, true);
+            break;
+        }
+        UpdateCurrentFreqStill(true);
+#else
+        {
+            SetRegMenuValue(menuState, false);
+            break;
+        }
+        UpdateCurrentFreqStill(false);
+#endif
         break;
     case KEY_STAR:
         UpdateRssiTriggerLevel(true);
