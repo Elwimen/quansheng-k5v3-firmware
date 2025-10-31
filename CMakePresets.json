@@ -95,7 +95,6 @@
                 "ENABLE_FEAT_F4HWN_GAME": false,
                 "ENABLE_FEAT_F4HWN_PMR": true,
                 "ENABLE_FEAT_F4HWN_GMRS_FRS_MURS": true,
-                "ENABLE_NOAA": false,
                 "ENABLE_FEAT_F4HWN_RESCUE_OPS": false,
                 "EDITION_STRING": "Bandscope",
                 "TARGET": "f4hwn.bandscope"
@@ -113,7 +112,6 @@
                 "ENABLE_FEAT_F4HWN_GAME": false,
                 "ENABLE_FEAT_F4HWN_PMR": true,
                 "ENABLE_FEAT_F4HWN_GMRS_FRS_MURS": true,
-                "ENABLE_NOAA": false,
                 "ENABLE_FEAT_F4HWN_RESCUE_OPS": false,
                 "EDITION_STRING": "Broadcast",
                 "TARGET": "f4hwn.broadcast"
@@ -132,7 +130,6 @@
                 "ENABLE_FEAT_F4HWN_SPECTRUM": false,
                 "ENABLE_FEAT_F4HWN_PMR": true,
                 "ENABLE_FEAT_F4HWN_GMRS_FRS_MURS": true,
-                "ENABLE_NOAA": false,
                 "ENABLE_AUDIO_BAR": false,
                 "ENABLE_FEAT_F4HWN_RESUME_STATE": false,
                 "ENABLE_FEAT_F4HWN_CHARGING_C": false,
@@ -174,10 +171,27 @@
                 "ENABLE_FEAT_F4HWN_GAME": true,
                 "ENABLE_FEAT_F4HWN_PMR": true,
                 "ENABLE_FEAT_F4HWN_GMRS_FRS_MURS": true,
-                "ENABLE_NOAA": false,
                 "ENABLE_FEAT_F4HWN_RESCUE_OPS": false,
                 "EDITION_STRING": "Game",
                 "TARGET": "f4hwn.game"
+            }
+        },
+        {
+            "name": "Fusion",
+            "inherits": "default",
+            "cacheVariables": {
+                "ENABLE_SPECTRUM": true,
+                "ENABLE_FMRADIO": true,
+                "ENABLE_VOX": true,
+                "ENABLE_AIRCOPY": true,
+                "ENABLE_FEAT_F4HWN_SCREENSHOT": true,
+                "ENABLE_FEAT_F4HWN_GAME": true,
+                "ENABLE_FEAT_F4HWN_PMR": true,
+                "ENABLE_FEAT_F4HWN_GMRS_FRS_MURS": true,
+                "ENABLE_FEAT_F4HWN_RESCUE_OPS": true,
+                "ENABLE_SWD": true,
+                "EDITION_STRING": "Fusion",
+                "TARGET": "f4hwn.fusion"
             }
         }
     ],
@@ -205,6 +219,10 @@
         {
             "name": "Game",
             "configurePreset": "Game"
+        },
+        {
+            "name": "Fusion",
+            "configurePreset": "Fusion"
         }
     ]
 }
