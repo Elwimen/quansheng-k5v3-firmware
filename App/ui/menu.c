@@ -31,6 +31,11 @@
 #include "../helper/battery.h"
 #include "../misc.h"
 #include "../settings.h"
+
+#ifdef ENABLE_FEAT_F4HWN
+    #include "../version.h"
+#endif
+
 #include "helper.h"
 #include "inputbox.h"
 #include "menu.h"
