@@ -489,7 +489,7 @@ void BK4819_SetCDCSSCodeWord(uint32_t CodeWord)
     // Enable Auto CTCSS Bw Mode
     // CTCSS/CDCSS Tx Gain1 Tuning = 51
     //
-    BK4819_WriteRegister(BK4819_REG_51, 8020);
+    BK4819_WriteRegister(BK4819_REG_51, 0xA033);
         // BK4819_REG_51_ENABLE_CxCSS         |
         // BK4819_REG_51_GPIO6_PIN2_NORMAL    |
         // BK4819_REG_51_TX_CDCSS_POSITIVE    |
