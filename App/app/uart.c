@@ -29,7 +29,7 @@
 #include "driver/backlight.h"
 #include "driver/bk4819.h"
 #include "driver/crc.h"
-#include "driver/py25q16.h"
+#include "driver/eeprom.h"
 #include "driver/gpio.h"
 #include "driver/uart.h"
 #include "functions.h"
@@ -44,6 +44,8 @@
 #define UNUSED(x) (void)(x)
 
 #define DMA_INDEX(x, y) (((x) + (y)) % sizeof(UART_DMA_Buffer))
+
+#define DMA_CHANNEL LL_DMA_CHANNEL_2
 
 typedef struct {
     uint16_t ID;
@@ -162,7 +164,8 @@ static union
 
 static uint32_t Timestamp;
 static uint16_t gUART_WriteIndex;
-static bool     bIsEncrypted = true;
+// static bool     bIsEncrypted = true;
+#define bIsEncrypted true
 
 static void SendReply(void *pReply, uint16_t Size)
 {
@@ -285,7 +288,7 @@ static void CMD_051B(const uint8_t *pBuffer)
 
     if (!bLocked)
     {
-        PY25Q16_ReadBuffer(pCmd->Offset, Reply.Data.Data, pCmd->Size);
+        EEPROM_ReadBuffer(pCmd->Offset, Reply.Data.Data, pCmd->Size);
     }
     
     SendReply(&Reply, pCmd->Size + 8);
@@ -314,7 +317,7 @@ static void CMD_051D(const uint8_t *pBuffer)
     Reply.Header.Size = sizeof(Reply.Data);
     Reply.Data.Offset = pCmd->Offset;
 
-    bIsLocked = bHasCustomAesKey ? gIsLocked : bHasCustomAesKey;
+    bIsLocked = bHasCustomAesKey ? gIsLocked : false;
 
     if (!bIsLocked)
     {
@@ -329,8 +332,7 @@ static void CMD_051D(const uint8_t *pBuffer)
 
             if ((Offset < 0x0E98 || Offset >= 0x0EA0) || !bIsInLockScreen || pCmd->bAllowPassword)
             {    
-                // EEPROM_WriteBuffer(Offset, &pCmd->Data[i * 8U]);
-                // TODO: To be implemented
+                EEPROM_WriteBuffer(Offset, &pCmd->Data[i * 8U]);
             }
         }
 
@@ -498,7 +500,7 @@ bool UART_IsCommandAvailable(void)
     uint16_t Size;
     uint16_t Crc;
     uint16_t CommandLength;
-    uint16_t DmaLength = sizeof(UART_DMA_Buffer) - LL_DMA_GetDataLength(DMA1, LL_DMA_CHANNEL_2);
+    uint16_t DmaLength = sizeof(UART_DMA_Buffer) - LL_DMA_GetDataLength(DMA1, DMA_CHANNEL);
 
     while (1)
     {
@@ -566,11 +568,11 @@ bool UART_IsCommandAvailable(void)
 
     gUART_WriteIndex = TailIndex;
 
-    if (UART_Command.Header.ID == 0x0514)
-        bIsEncrypted = false;
+    // if (UART_Command.Header.ID == 0x0514)
+    //     bIsEncrypted = false;
 
-    if (UART_Command.Header.ID == 0x6902)
-        bIsEncrypted = true;
+    // if (UART_Command.Header.ID == 0x6902)
+    //     bIsEncrypted = true;
 
     if (bIsEncrypted)
     {

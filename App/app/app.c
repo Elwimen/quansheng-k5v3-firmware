@@ -39,6 +39,7 @@
 #include "app/scanner.h"
 #ifdef ENABLE_UART
     #include "app/uart.h"
+    #include "scheduler.h"
 #endif
 #include "py32f0xx.h"
 #include "audio.h"
@@ -1364,9 +1365,11 @@ void APP_TimeSlice10ms(void)
 
 #ifdef ENABLE_UART
     if (UART_IsCommandAvailable()) {
-        __disable_irq();
+        // __disable_irq();
+        SCHEDULER_Disable();
         UART_HandleCommand();
-        __enable_irq();
+        // __enable_irq();
+        SCHEDULER_Enable();
     }
 #endif
 
