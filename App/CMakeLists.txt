@@ -85,7 +85,10 @@ endif()
 target_compile_definitions(App INTERFACE SQL_TONE=${SQL_TONE})
 
 if(ENABLE_AIRCOPY OR ENABLE_UART)
-    target_sources(App INTERFACE driver/crc.c)
+    target_sources(App INTERFACE 
+        driver/crc.c
+        driver/eeprom_compat.c
+    )
 endif()
 
 # ---- STOCK QUANSHENG FEATURES ----
