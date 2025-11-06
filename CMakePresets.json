@@ -74,11 +74,8 @@
         },
         {
             "name": "Custom",
-            "inherits": "Broadcast",
+            "inherits": "default",
             "cacheVariables": {
-                "ENABLE_VOICE": false,
-                "ENABLE_SWD": true,
-                "ENABLE_AIRCOPY": false,
                 "EDITION_STRING": "Custom",
                 "TARGET": "f4hwn.custom"
             }
