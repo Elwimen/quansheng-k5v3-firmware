@@ -35,31 +35,33 @@ typedef struct
     uint16_t Size;
 } AddrMapping_t;
 
+#define _MK_MAPPING(PY25Q16_Addr, EEPROM_From, EEPROM_To) {PY25Q16_Addr, EEPROM_From, EEPROM_To - EEPROM_From}
+
 static const AddrMapping_t ADDR_MAPPINGS[] = {
     // Sorted by EEPROM addr
-    {0x000000, 0x0000, 0x0c80},           //
-    {0x001000, 0x0c80, 0x0d60 - 0x0c80},  //
-    {0x002000, 0x0d60, 0x0e30 - 0x0d60},  //
-    {HOLE_ADDR, 0x0e30, 0x0e40 - 0x0e30}, //
-    {0x003000, 0x0e40, 0x0e68 - 0x0e40},  //
-    {HOLE_ADDR, 0x0e68, 0x0e70 - 0x0e68}, //
-    {0x004000, 0x0e70, 0x0e80 - 0x0e70},  //
-    {0x005000, 0x0e80, 0x0e88 - 0x0e80},  //
-    {0x006000, 0x0e88, 0x0e90 - 0x0e88},  //
-    {0x007000, 0x0e90, 0x0ee0 - 0x0e90},  //
-    {0x008000, 0x0ee0, 0x0f18 - 0x0ee0},  //
-    {0x009000, 0x0f18, 0x0f20 - 0x0f18},  //
-    {HOLE_ADDR, 0x0f20, 0x0f30 - 0x0f20}, //
-    {0x00a000, 0x0f30, 0x0f40 - 0x0f30},  //
-    {0x00b000, 0x0f40, 0x0f48 - 0x0f40},  //
-    {HOLE_ADDR, 0x0f48, 0x0f50 - 0x0f48}, //
-    {0x00e000, 0x0f50, 0x1bd0 - 0x0f50},  //
-    {HOLE_ADDR, 0x1bd0, 0x1c00 - 0x1bd0}, //
-    {0x00f000, 0x1c00, 0x1d00 - 0x1c00},  //
-    {HOLE_ADDR, 0x1d00, 0x1e00 - 0x1d00}, //
-    {0x010000, 0x1e00, 0x1f90 - 0x1e00},  //
-    {HOLE_ADDR, 0x1f90, 0x1ff0 - 0x1f90}, //
-    {0x00c000, 0x1ff0, 0x2000 - 0x1ff0},  //
+    _MK_MAPPING(0x000000, 0x0000, 0x0c80),  //
+    _MK_MAPPING(0x001000, 0x0c80, 0x0d60),  //
+    _MK_MAPPING(0x002000, 0x0d60, 0x0e30),  //
+    _MK_MAPPING(HOLE_ADDR, 0x0e30, 0x0e40), //
+    _MK_MAPPING(0x003000, 0x0e40, 0x0e68),  //
+    _MK_MAPPING(HOLE_ADDR, 0x0e68, 0x0e70), //
+    _MK_MAPPING(0x004000, 0x0e70, 0x0e80),  //
+    _MK_MAPPING(0x005000, 0x0e80, 0x0e88),  //
+    _MK_MAPPING(0x006000, 0x0e88, 0x0e90),  //
+    _MK_MAPPING(0x007000, 0x0e90, 0x0ee0),  //
+    _MK_MAPPING(0x008000, 0x0ee0, 0x0f18),  //
+    _MK_MAPPING(0x009000, 0x0f18, 0x0f20),  //
+    _MK_MAPPING(HOLE_ADDR, 0x0f20, 0x0f30), //
+    _MK_MAPPING(0x00a000, 0x0f30, 0x0f40),  //
+    _MK_MAPPING(0x00b000, 0x0f40, 0x0f48),  //
+    _MK_MAPPING(HOLE_ADDR, 0x0f48, 0x0f50), //
+    _MK_MAPPING(0x00e000, 0x0f50, 0x1bd0),  //
+    _MK_MAPPING(HOLE_ADDR, 0x1bd0, 0x1c00), //
+    _MK_MAPPING(0x00f000, 0x1c00, 0x1d00),  //
+    _MK_MAPPING(HOLE_ADDR, 0x1d00, 0x1e00), //
+    _MK_MAPPING(0x010000, 0x1e00, 0x1f90),  //
+    _MK_MAPPING(HOLE_ADDR, 0x1f90, 0x1ff0), //
+    _MK_MAPPING(0x00c000, 0x1ff0, 0x2000),  //
 };
 
 static void AddrTranslate(uint16_t EEPROM_Addr, uint16_t Size, uint32_t *PY25Q16_Addr_out, uint16_t *Size_out, bool *End_out);
@@ -71,7 +73,7 @@ void EEPROM_ReadBuffer(uint16_t Address, void *pBuffer, uint8_t Size)
         uint32_t PY_Addr;
         uint16_t PY_Size;
         AddrTranslate(Address, Size, &PY_Addr, &PY_Size, NULL);
-        if (HOLE_ADDR == PY_Addr)
+        if (PY_Addr >= HOLE_ADDR)
         {
             memset(pBuffer, 0xff, PY_Size);
         }
@@ -96,7 +98,7 @@ void EEPROM_WriteBuffer(uint16_t Address, const void *pBuffer)
         uint16_t PY_Size;
         bool AppendFlag;
         AddrTranslate(Address, Size, &PY_Addr, &PY_Size, &AppendFlag);
-        if (HOLE_ADDR != PY_Addr)
+        if (PY_Addr < HOLE_ADDR)
         {
             PY25Q16_WriteBuffer(PY_Addr, pBuffer, PY_Size, AppendFlag);
         }
@@ -130,7 +132,7 @@ HIT:
         Size = Rem;
     }
 
-    *PY25Q16_Addr_out = p->PY25Q16_Addr + Off;
+    *PY25Q16_Addr_out = HOLE_ADDR == p->PY25Q16_Addr ? HOLE_ADDR : (p->PY25Q16_Addr + Off);
     *Size_out = Size;
 
     if (End_out && HOLE_ADDR != p->PY25Q16_Addr)
