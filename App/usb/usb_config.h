@@ -86,7 +86,14 @@
 
 #define USBD_IRQHandler USB_IRQHandler
 
-void cdc_acm_init(void);
+typedef struct
+{
+    uint8_t *buf;
+    uint32_t size;
+    uint32_t *write_pointer;
+} cdc_acm_rx_buf_t;
+
+void cdc_acm_init(cdc_acm_rx_buf_t rx_buf);
 void cdc_acm_data_send_with_dtr(const uint8_t *buf, uint32_t size);
 
 
