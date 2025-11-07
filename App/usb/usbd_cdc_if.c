@@ -87,7 +87,7 @@ static const uint8_t cdc_descriptor[] = {
 };
 
 USB_MEM_ALIGNX uint8_t read_buffer[128];
-USB_MEM_ALIGNX uint8_t write_buffer[128] = { 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x30 };
+USB_MEM_ALIGNX uint8_t write_buffer[4];
 
 volatile bool ep_tx_busy_flag = false;
 
@@ -154,15 +154,36 @@ void usbd_cdc_acm_set_dtr(uint8_t intf, bool dtr)
     }
 }
 
-void cdc_acm_data_send_with_dtr_test(void)
+void cdc_acm_data_send_with_dtr(const uint8_t *buf, uint32_t size)
 {
-    if (dtr_enable) {
-        memset(&write_buffer[10], 'a', 118);
-        ep_tx_busy_flag = true;
-        usbd_ep_start_write(CDC_IN_EP, write_buffer, 128);
-        while (ep_tx_busy_flag) {
+    if (dtr_enable)
+    {
+        if (0 != size)
+        {
+            uint32_t size1 = ((uint32_t)buf) % 4;
+            if (0 != size1)
+            {
+                if (size < size1)
+                {
+                    size1 = size;
+                }
+                memcpy(write_buffer, buf, size1);
+                buf += size1;
+                size -= size1;
+
+                ep_tx_busy_flag = true;
+                usbd_ep_start_write(CDC_IN_EP, write_buffer, size1);
+                while (ep_tx_busy_flag)
+                    ;
+            }
+        }
+
+        if (0 != size)
+        {
+            ep_tx_busy_flag = true;
+            usbd_ep_start_write(CDC_IN_EP, buf, size);
+            while (ep_tx_busy_flag)
+                ;
         }
     }
 }
-
-
