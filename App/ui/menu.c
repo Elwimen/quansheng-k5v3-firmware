@@ -342,8 +342,10 @@ const char gSubMenu_BAT_TXT[][8] =
 
 const char gSubMenu_BATTYP[][9] =
 {
+    "1500mAh",
     "1600mAh",
     "2200mAh",
+    "2500mAh",
     "3500mAh"
 };
 

@@ -50,7 +50,18 @@ const uint16_t    lowBatteryPeriod = 30;
 
 volatile uint16_t gPowerSave_10ms;
 
-const uint16_t Voltage2PercentageTable[][7][3] = {
+const uint16_t Voltage2PercentageTable[][7][2] = {
+    // Estimated discharge curve for 1500 mAh battery (improve this)
+    [BATTERY_TYPE_1500_MAH] = {
+        {828, 100},  // Fully charged (measured ~8.28V)
+        {813, 97 },  // Top end
+        {758, 25 },  // Mid level
+        {726, 6  },  // Almost empty
+        {630, 0  },  // Fully discharged (conservative)
+        {0,   0  },
+        {0,   0  },
+    },
+
     [BATTERY_TYPE_1600_MAH] = {
         {828, 100},
         {814, 97 },
@@ -71,6 +82,17 @@ const uint16_t Voltage2PercentageTable[][7][3] = {
         {0,   0  },
     },
 
+    // Estimated discharge curve for 2500 mAh battery (improve this)
+    [BATTERY_TYPE_2500_MAH] = {
+        {839, 100},  // Fully charged (measured ~8.39V)
+        {818, 95 },  // Top end (slightly raised vs 816)
+        {745, 55 },  // Mid range
+        {703, 25 },  // Low level
+        {668, 5  },  // Almost empty
+        {623, 0  },  // Fully discharged (between 630 and 600)
+        {0,   0  },
+    },
+
     [BATTERY_TYPE_3500_MAH] = {
         {837, 100},
         {826, 95 },
@@ -82,23 +104,25 @@ const uint16_t Voltage2PercentageTable[][7][3] = {
     },
 };
 
+/* Useless (for compilator only)
 static_assert(
     (ARRAY_SIZE(Voltage2PercentageTable[BATTERY_TYPE_1600_MAH]) ==
     ARRAY_SIZE(Voltage2PercentageTable[BATTERY_TYPE_2200_MAH])) &&
     (ARRAY_SIZE(Voltage2PercentageTable[BATTERY_TYPE_2200_MAH]) ==
     ARRAY_SIZE(Voltage2PercentageTable[BATTERY_TYPE_3500_MAH]))
     );
+*/
 
 unsigned int BATTERY_VoltsToPercent(const unsigned int voltage_10mV)
 {
-    const uint16_t (*crv)[3] = Voltage2PercentageTable[gEeprom.BATTERY_TYPE];
+    const uint16_t (*crv)[2] = Voltage2PercentageTable[gEeprom.BATTERY_TYPE];
     const int mulipl = 1000;
     for (unsigned int i = 1; i < ARRAY_SIZE(Voltage2PercentageTable[BATTERY_TYPE_2200_MAH]); i++) {
         if (voltage_10mV > crv[i][0]) {
             const int a = (crv[i - 1][1] - crv[i][1]) * mulipl / (crv[i - 1][0] - crv[i][0]);
             const int b = crv[i][1] - a * crv[i][0] / mulipl;
             const int p = a * voltage_10mV / mulipl + b;
-            return MIN(p, 100);
+            return MIN(MAX(p, 0), 100);
         }
     }
 

@@ -362,13 +362,13 @@ int MENU_GetLimits(uint8_t menu_id, int32_t *pMin, int32_t *pMax)
         #endif
 
         case MENU_BATCAL:
-            *pMin = 1600;
-            *pMax = 2200;
+            *pMin = 1500;
+            *pMax = 3500;
             break;
 
         case MENU_BATTYP:
             //*pMin = 0;
-            *pMax = 2;
+            *pMax = 4;
             break;
 
         case MENU_F1SHRT:
