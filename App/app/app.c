@@ -898,6 +898,14 @@ void APP_Update(void)
     }
 #endif
 
+#ifdef ENABLE_USB
+    if (UART_IsCommandAvailable(UART_PORT_VCP)) {
+        // SCHEDULER_Disable();
+        UART_HandleCommand(UART_PORT_VCP);
+        // SCHEDULER_Enable();
+    }
+#endif
+
 #ifdef ENABLE_FEAT_F4HWN
     if (gCurrentFunction == FUNCTION_TRANSMIT && (gTxTimeoutReachedAlert || SerialConfigInProgress()))
     {
@@ -1365,17 +1373,9 @@ void APP_TimeSlice10ms(void)
 
 #ifdef ENABLE_UART
     if (UART_IsCommandAvailable(UART_PORT_UART)) {
-        SCHEDULER_Disable();
+        // SCHEDULER_Disable();
         UART_HandleCommand(UART_PORT_UART);
-        SCHEDULER_Enable();
-    }
-#endif
-
-#ifdef ENABLE_USB
-    if (UART_IsCommandAvailable(UART_PORT_VCP)) {
-        SCHEDULER_Disable();
-        UART_HandleCommand(UART_PORT_VCP);
-        SCHEDULER_Enable();
+        // SCHEDULER_Enable();
     }
 #endif
 

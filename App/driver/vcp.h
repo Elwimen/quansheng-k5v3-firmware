@@ -21,8 +21,10 @@
 #include <string.h>
 #include "usb_config.h"
 
-extern uint8_t VCP_RxBuf[256];
-extern uint32_t VCP_RxBufPointer;
+#define VCP_RX_BUF_SIZE 256
+
+extern uint8_t VCP_RxBuf[VCP_RX_BUF_SIZE];
+extern volatile uint32_t VCP_RxBufPointer;
 
 void VCP_Init();
 
@@ -37,6 +39,11 @@ static inline void VCP_SendStr(const char *Str)
     {
         cdc_acm_data_send_with_dtr((const uint8_t *)Str, strlen(Str));
     }
+}
+
+static inline void VCP_SendAsync(const uint8_t *Buf, uint32_t Size)
+{
+    cdc_acm_data_send_with_dtr_async(Buf, Size);
 }
 
 #endif // _DRIVER_VCP_H

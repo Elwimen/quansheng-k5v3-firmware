@@ -87,7 +87,7 @@ static const uint8_t cdc_descriptor[] = {
 };
 
 USB_MEM_ALIGNX uint8_t read_buffer[128];
-USB_MEM_ALIGNX uint8_t write_buffer[4];
+// USB_MEM_ALIGNX uint8_t write_buffer[4];
 
 static cdc_acm_rx_buf_t client_rx_buf = {0};
 
@@ -161,7 +161,8 @@ struct usbd_interface intf1;
 
 void cdc_acm_init(cdc_acm_rx_buf_t rx_buf)
 {
-    client_rx_buf = rx_buf;
+    // client_rx_buf = rx_buf;
+    memcpy(&client_rx_buf, &rx_buf, sizeof(cdc_acm_rx_buf_t));
     *client_rx_buf.write_pointer = 0;
 
     usbd_desc_register(cdc_descriptor);
@@ -185,34 +186,19 @@ void usbd_cdc_acm_set_dtr(uint8_t intf, bool dtr)
 
 void cdc_acm_data_send_with_dtr(const uint8_t *buf, uint32_t size)
 {
-    if (dtr_enable)
+    if (dtr_enable && 0 != size)
     {
-        if (0 != size)
-        {
-            uint32_t size1 = ((uint32_t)buf) % 4;
-            if (0 != size1)
-            {
-                if (size < size1)
-                {
-                    size1 = size;
-                }
-                memcpy(write_buffer, buf, size1);
-                buf += size1;
-                size -= size1;
+        ep_tx_busy_flag = true;
+        usbd_ep_start_write(CDC_IN_EP, buf, size);
+        while (ep_tx_busy_flag)
+            ;
+    }
+}
 
-                ep_tx_busy_flag = true;
-                usbd_ep_start_write(CDC_IN_EP, write_buffer, size1);
-                while (ep_tx_busy_flag)
-                    ;
-            }
-        }
-
-        if (0 != size)
-        {
-            ep_tx_busy_flag = true;
-            usbd_ep_start_write(CDC_IN_EP, buf, size);
-            while (ep_tx_busy_flag)
-                ;
-        }
+void cdc_acm_data_send_with_dtr_async(const uint8_t *buf, uint32_t size)
+{
+    if (0 != size)
+    {
+        usbd_ep_start_write(CDC_IN_EP, buf, size);
     }
 }

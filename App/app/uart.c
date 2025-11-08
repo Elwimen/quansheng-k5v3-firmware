@@ -57,6 +57,9 @@
     #define DMA_CHANNEL LL_DMA_CHANNEL_2
 #endif
 
+// !! Make sure this is correct!
+#define MAX_REPLY_SIZE 144
+
 typedef struct {
     uint16_t ID;
     uint16_t Size;
@@ -187,8 +190,65 @@ typedef union
 // static bool     bIsEncrypted = true;
 #define bIsEncrypted true
 
+#ifdef ENABLE_USB
+static void SendReply_VCP(void *pReply, uint16_t Size)
+{
+    static uint8_t VCP_ReplyBuf[MAX_REPLY_SIZE + sizeof(Header_t) + sizeof(Footer_t)];
+
+    // !!
+    if (Size > MAX_REPLY_SIZE)
+    {
+        return;
+    }
+
+    memcpy(VCP_ReplyBuf + sizeof(Header_t), pReply, Size);
+
+    Header_t *pHeader = (Header_t *)VCP_ReplyBuf;
+    Footer_t *pFooter = (Footer_t *)(VCP_ReplyBuf + sizeof(Header_t) + Size);
+    pReply = VCP_ReplyBuf + sizeof(Header_t);
+
+    if (bIsEncrypted)
+    {
+        uint8_t     *pBytes = (uint8_t *)pReply;
+        unsigned int i;
+        for (i = 0; i < Size; i++)
+            pBytes[i] ^= Obfuscation[i % 16];
+    }
+
+    pHeader->ID = 0xCDAB;
+    pHeader->Size = Size;
+
+    // VCP_Send((uint8_t *)&Header, sizeof(Header));
+    // VCP_Send(pReply, Size);
+   
+    if (bIsEncrypted)
+    {
+        pFooter->Padding[0] = Obfuscation[(Size + 0) % 16] ^ 0xFF;
+        pFooter->Padding[1] = Obfuscation[(Size + 1) % 16] ^ 0xFF;
+    }
+    else
+    {
+        pFooter->Padding[0] = 0xFF;
+        pFooter->Padding[1] = 0xFF;
+    }
+    pFooter->ID = 0xBADC;
+
+    // VCP_Send((uint8_t *)&Footer, sizeof(Footer));
+
+    VCP_SendAsync(VCP_ReplyBuf, sizeof(Header_t) + Size + sizeof(Footer_t));
+}
+#endif // ENABLE_USB
+
 static void SendReply(uint32_t Port, void *pReply, uint16_t Size)
 {
+#if defined(ENABLE_USB)
+    if (Port == UART_PORT_VCP)
+    {
+        SendReply_VCP(pReply, Size);
+        return;
+    }
+#endif
+
     Header_t Header;
     Footer_t Footer;
 
@@ -203,21 +263,8 @@ static void SendReply(uint32_t Port, void *pReply, uint16_t Size)
     Header.ID = 0xCDAB;
     Header.Size = Size;
 
-    if(0) {}
-#if defined(ENABLE_UART)
-    else if (Port == UART_PORT_UART)
-    {
-        UART_Send(&Header, sizeof(Header));
-        UART_Send(pReply, Size);
-    }
-#endif
-#if defined(ENABLE_USB)
-    else if (Port == UART_PORT_VCP)
-    {
-        VCP_Send((uint8_t *)&Header, sizeof(Header));
-        VCP_Send(pReply, Size);
-    }
-#endif
+    UART_Send(&Header, sizeof(Header));
+    UART_Send(pReply, Size);
 
     if (bIsEncrypted)
     {
@@ -231,20 +278,7 @@ static void SendReply(uint32_t Port, void *pReply, uint16_t Size)
     }
     Footer.ID = 0xBADC;
 
-    if(0) {}
-#if defined(ENABLE_UART)
-    else if (Port == UART_PORT_UART)
-    {
-        UART_Send(&Footer, sizeof(Footer));
-    }
-#endif
-#if defined(ENABLE_USB)
-    else if (Port == UART_PORT_VCP)
-    {
-        VCP_Send((uint8_t *)&Footer, sizeof(Footer));
-    }
-#endif
-
+    UART_Send(&Footer, sizeof(Footer));
 }
 
 static void SendVersion(uint32_t Port)
