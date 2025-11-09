@@ -173,7 +173,7 @@ typedef union
         Header_t Header;
         uint8_t Data[252];
     };
-} UART_Command_t;
+} UART_Command_t __attribute__ ((aligned (4)));
 
 
 #if defined(ENABLE_UART)
