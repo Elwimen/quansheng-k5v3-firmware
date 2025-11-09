@@ -85,7 +85,7 @@ static inline uint32_t SDA_ReadInput()
     return GPIO_IsInputPinSet(PIN_SDA) ? 1 : 0;
 }
 
-__inline uint16_t scale_freq(const uint16_t freq)
+static inline uint16_t scale_freq(const uint16_t freq)
 {
 //  return (((uint32_t)freq * 1032444u) + 50000u) / 100000u;   // with rounding
     return (((uint32_t)freq * 1353245u) + (1u << 16)) >> 17;   // with rounding
