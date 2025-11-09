@@ -340,13 +340,13 @@ const char gSubMenu_BAT_TXT[][8] =
     "PERCENT"
 };
 
-const char gSubMenu_BATTYP[][9] =
+const char gSubMenu_BATTYP[][12] =
 {
-    "1500mAh",
-    "1600mAh",
-    "2200mAh",
-    "2500mAh",
-    "3500mAh"
+    "1600mAh K5",
+    "2200mAh K5",
+    "3500mAh K5",
+    "1500mAh K1",
+    "2500mAh K1"
 };
 
 #ifndef ENABLE_FEAT_F4HWN

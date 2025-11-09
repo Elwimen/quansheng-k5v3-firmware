@@ -51,17 +51,6 @@ const uint16_t    lowBatteryPeriod = 30;
 volatile uint16_t gPowerSave_10ms;
 
 const uint16_t Voltage2PercentageTable[][7][2] = {
-    // Estimated discharge curve for 1500 mAh battery (improve this)
-    [BATTERY_TYPE_1500_MAH] = {
-        {828, 100},  // Fully charged (measured ~8.28V)
-        {813, 97 },  // Top end
-        {758, 25 },  // Mid level
-        {726, 6  },  // Almost empty
-        {630, 0  },  // Fully discharged (conservative)
-        {0,   0  },
-        {0,   0  },
-    },
-
     [BATTERY_TYPE_1600_MAH] = {
         {828, 100},
         {814, 97 },
@@ -82,17 +71,6 @@ const uint16_t Voltage2PercentageTable[][7][2] = {
         {0,   0  },
     },
 
-    // Estimated discharge curve for 2500 mAh battery (improve this)
-    [BATTERY_TYPE_2500_MAH] = {
-        {839, 100},  // Fully charged (measured ~8.39V)
-        {818, 95 },  // Top end (slightly raised vs 816)
-        {745, 55 },  // Mid range
-        {703, 25 },  // Low level
-        {668, 5  },  // Almost empty
-        {623, 0  },  // Fully discharged (between 630 and 600)
-        {0,   0  },
-    },
-
     [BATTERY_TYPE_3500_MAH] = {
         {837, 100},
         {826, 95 },
@@ -100,6 +78,28 @@ const uint16_t Voltage2PercentageTable[][7][2] = {
         {700, 25 },
         {620, 5  },
         {600, 0  },
+        {0,   0  },
+    },
+
+    // Estimated discharge curve for 1500 mAh K1 battery (improve this)
+    [BATTERY_TYPE_1500_MAH] = {
+        {828, 100},  // Fully charged (measured ~8.28V)
+        {813, 97 },  // Top end
+        {758, 25 },  // Mid level
+        {726, 6  },  // Almost empty
+        {630, 0  },  // Fully discharged (conservative)
+        {0,   0  },
+        {0,   0  },
+    },
+
+    // Estimated discharge curve for 2500 mAh K1 battery (improve this)
+    [BATTERY_TYPE_2500_MAH] = {
+        {839, 100},  // Fully charged (measured ~8.39V)
+        {818, 95 },  // Top end (slightly raised vs 816)
+        {745, 55 },  // Mid range
+        {703, 25 },  // Low level
+        {668, 5  },  // Almost empty
+        {623, 0  },  // Fully discharged (between 630 and 600)
         {0,   0  },
     },
 };
