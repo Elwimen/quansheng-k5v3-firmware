@@ -33,8 +33,8 @@ Special thanks to Jean-Cyrille F6IWW (2 times), Fabrice 14RC123, David F4BPP, Ol
 * [My Features](#main-features)
 * [Main Features from Egzumer](#main-features-from-egzumer)
 * [Manual](#manual)
-* [Compiling and Building from Docker](#Compiling-and-Building-from-Docker)
-* 
+* [Compiling and Building from Docker](#compiling-and-Building-from-docker)
+* [Flashing the Firmware with UVTools2](#flashing-the-firmware-with-uvtools2)
 * [Credits](#credits)
 * [Other sources of information](#other-sources-of-information)
 * [License](#license)
