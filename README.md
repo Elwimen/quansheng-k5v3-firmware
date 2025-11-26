@@ -297,22 +297,34 @@ It works on Chrome, Chromium and Edge (desktop versions), and does not require i
 
 ## Steps to flash the firmware
 
-- Open [UVTools2](https://armel.github.io/uvtools2/) in your browser.
+- Open UVTools2 and select [flash](https://armel.github.io/uvtools2/?mode=flash) mode.
 - Connect your radio to your computer using a compatible USB programming cable (USB-C or Baofeng/Kenwood like double jack USB cable).
-- Make sure your radio is in DFU mode (flash mode).
-- Select the firmware .bin file. 
-- Click on Flash Firmware, then select the serial port associated with your radio.
+- Make sure your radio is in **DFU mode (flash mode)**.
+- Select the firmware .bin file on your computer. 
+- Click on `Flash Firmware`, then select the serial port associated with your radio.
 - The progress bar will guide you through the flashing steps.
 
 Once finished, your radio restart with the new firmware.
 
 ## Steps to dump or restore calibration data
 
-[UVTools2](https://armel.github.io/uvtools2/) can also backup and restore calibration data, which is highly recommended.
+[UVTools2](https://armel.github.io/uvtools2/) can also dump and restore calibration data, which is highly recommended. It’s best to create a dump right after installing F4HWN firmware, and to restore it before installing another firmware (or when returning to the stock firmware, for example).
 
-- Make sure your radio is in normal mode.
-- Select Dump Calib to dump calibration data
-- Select Restore Calib to restore calibration data
+### Dump
+
+- Open UVTools2 in [dump](https://armel.github.io/uvtools2/?mode=dump) mode (or click the Dump Calib tab).
+- Power on your radio in **normal mode**.
+- Click `Dump Calibration Data`.
+
+When the process is complete, click `Download calibration.dat` to save the file to your computer.
+
+### Restore
+
+- Open UVTools2 in [restore](https://armel.github.io/uvtools2/?mode=restore) mode (or click the Restore Calib tab).
+- Power on your radio in **normal mode**.
+- Select your calibration.dat file on your computer.
+
+Click `Restore Calibration Data` and wait until the process fully completes.
 
 ## Other sources of information
 
