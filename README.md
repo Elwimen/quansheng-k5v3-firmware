@@ -2,11 +2,11 @@
 
 ![Alt](https://repobeats.axiom.co/api/embed/947813147857755cef60a960d13734044b3b2c22.svg "Repobeats analytics image")
 
-# Open re-implementation of the Quansheng UV-K5/K6/5R v2.1.27 firmware
+# F4HWN firmware port for the UV-K1 and UV-K5 V3 using the PY32F071 MCU
 
-This repository is a fork of [Egzumer custom firmware](https://github.com/egzumer/uv-k5-firmware-custom), who was a merge of [OneOfEleven custom firmware](https://github.com/OneOfEleven/uv-k5-firmware-custom) with [fagci spectrum analizer](https://github.com/fagci/uv-k5-firmware-fagci-mod/tree/refactor) plus my few changes.
+This repository is a fork of the [F4HWN custom firmware](https://github.com/armel/uv-k5-firmware-custom), who was a fork of [Egzumer custom firmware](https://github.com/egzumer/uv-k5-firmware-custom). It extends the work done for the UV-K5 V1, based on the DP32G030 MCU, and adapts it to the newer UV-K1 and UV-K5 V3 built around the PY32F071 MCU. It is the result of the joint work of [@muzkr](https://github.com/muzkr) and [@armel](https://github.com/armel).
 
-All is a cloned and customized version of DualTachyon's open firmware found [here](https://github.com/DualTachyon/uv-k5-firmware) ... a cool achievement !
+A big thanks to DualTachyon, who paved the way by releasing the very first open-source [firmware](https://github.com/DualTachyon/uv-k5-firmware) for the UV-K5 V1. None of this would have been possible without that initial work !
 
 > [!NOTE]
 > EN - About Chirp, as many others firmwares, you need to use a dedicated driver available on [this repository](https://github.com/armel/uv-k5-chirp-driver). 
@@ -20,9 +20,9 @@ Anyway, have fun.
 > _FR - CE FIRMWARE N'A PAS DE VÉRITABLE CERVEAU. VEUILLEZ UTILISER LE VÔTRE. Utilisez ce firmware à vos risques et périls. Il n'y a absolument aucune garantie qu'il fonctionnera d'une manière ou d'une autre sur votre (vos) radio(s), il peut même bousiller votre (vos) radio(s), dans ce cas, vous devrez acheter une autre radio. Quoi qu'il en soit, amusez-vous bien._
 
 > [!CAUTION]
-> EN - I recommend to backup your eeprom with [k5prog](https://github.com/sq5bpf/k5prog) before playing with alternative firmwares. It's a good reflex to have. 
+> EN - I recommend to backup your calibration data with [uvtools2](https://armel.github.io/uvtools2/) just after flashing this firmware. It's a good reflex to have. 
 >
-> _FR - Je recommande de sauvegarder votre eeprom avec [k5prog](https://github.com/sq5bpf/k5prog) avant de jouer avec des firmwares alternatifs. C'est un bon réflexe à avoir._
+> _FR - Je recommande de sauvegarder vos données de calibration avec [uvtools2](https://armel.github.io/uvtools2/) juste après avoir flashé ce firmware. C'est un bon réflexe à avoir._
 
 # Donations
 
@@ -33,13 +33,11 @@ Special thanks to Jean-Cyrille F6IWW (2 times), Fabrice 14RC123, David F4BPP, Ol
 * [My Features](#main-features)
 * [Main Features from Egzumer](#main-features-from-egzumer)
 * [Manual](#manual)
-* [Radio Performance](#radio-performance)
-* [Compiler](#compiler)
-* [Building](#building)
+* [Compiling and Building from Docker](#Compiling-and-Building-from-Docker)
+* 
 * [Credits](#credits)
 * [Other sources of information](#other-sources-of-information)
 * [License](#license)
-* [Example changes/updates](#example-changesupdates)
 
 ## Main features and improvements from F4HWN:
 
@@ -207,80 +205,112 @@ On the other hand, FM RX audio will/should be fine.
 
 But, they are nice toys for the price, fun to play with.
 
-## Compiler
+## Compiling and Building from Docker
 
-arm-none-eabi GCC version 10.3.1 is recommended, which is the current version on Ubuntu 22.04.03 LTS.
-Other versions may generate a flash file that is too big.
-You can get an appropriate version from: https://developer.arm.com/downloads/-/gnu-rm
+This project provides a Docker-based build system to compile all firmware editions for the UV-K1 and UV-K5 V3. Everything is handled through the `compile-with-docker.sh` helper script.
 
-clang may be used but isn't fully supported. Resulting binaries may also be bigger.
-You can get it from: https://releases.llvm.org/download.html
+All build outputs are generated inside the `build/<Preset>` directory, according to the CMake presets defined in `CMakePresets.json`.
 
-## Building
+### Prerequisites
 
-### Github Codespace build method
+- Docker installed on your system
+- Bash environment (Linux, macOS, WSL, Git Bash on Windows)
 
-This is the least demanding option as you don't have to install enything on your computer. All you need is Github account.
+### Build Script Overview
 
-1. Go to https://github.com/armel/uv-k5-firmware-custom
-1. Click green `Code` button
-1. Change tab from `Local` to `Codespace`
-1. Click green `Create codespace on main` button
+The script `compile-with-docker.sh` performs the following actions:
 
-<img src="images/Code_Space_1.png" width=700 />
+1. Builds the Docker image (`uvk1-uvk5v3`) if it does not already exist.
+2. Removes any previous `build` directory to ensure a clean configuration.
+3. Runs CMake using the selected preset inside the Docker container.
+4. Builds the firmware and outputs `.elf`, `.bin` and `.hex` files for the chosen edition.
 
-5. Open `Makefile`, edit build options and save changes
-1. If necessary, open `compile-with-docker.sh`, edit build versions and save changes
-1. Run in terminal window
-    - `./compile-with-docker.sh bandscope` to compile bandscope version
-    - `./compile-with-docker.sh broadcast` to compile broadcast version
-    - `./compile-with-docker.sh voxless` to compile voxless version
-    - `./compile-with-docker.sh all` to compile all versions 
-    - `./compile-with-docker.sh custom` to compile only with Makefile build options   
-1. Open folder `compiled-firmware`
-1. Right click `firmware.packed.bin`
-1. Click `Download`, now you should have a firmware on your computer that you can proceed to flash on your radio. You can use [online flasher](https://egzumer.github.io/uvtools)
+### Usage
 
-<img src="images/Code_Space_2.png" width=700 />
+```bash
+./compile-with-docker.sh <Preset> [extra CMake options]
+```
 
-### Docker build method
+### Available Presets
 
-If you have docker installed you can use [compile-with-docker.bat](./compile-with-docker.bat) (Windows) or [compile-with-docker.sh](./compile-with-docker.sh) (Linux/Mac), the output files are created in `compiled-firmware` folder. This method gives significantly smaller binaries, I've seen differences up to 1kb, so it can fit more functionalities this way. The challenge can be (or not) installing docker itself. 
+- **Custom**
+- **Bandscope**
+- **Broadcast**
+- **Basic**
+- **RescueOps**
+- **Game**
+- **Fusion**
+- **All** (builds all editions sequentially)
 
-> [!TIP]
-> On Linux/Mac, you may need to uncomment and customize the DOCKER_NETWORK environment variable at the beginning of the [compile-with-docker.sh](./compile-with-docker.sh) script. Note: this can introduce security risks by removing network isolation. However, if you encounter issues and are using a specific network environment (with a proxy or a firewall), this may help.
+### Examples
 
-### Windows environment build method
+Build a single edition:
 
-1. Open windows command line and run:
-    ```
-    winget install -e -h git.git Python.Python.3.8 GnuWin32.Make
-    winget install -e -h Arm.GnuArmEmbeddedToolchain -v "10 2021.10"
-    ```
-2. Close command line, open a new one and run:
-    ```
-    pip install --user --upgrade pip
-    pip install crcmod
-    mkdir c:\projects & cd /D c:/projects
-    git clone https://github.com/armel/uv-k5-firmware-custom.git
-    ```
-3. From now on you can build the firmware by going to `c:\projects\uv-k5-firmware-custom` and running `win_make.bat` or by running a command line:
-    ```
-    cd /D c:\projects\uv-k5-firmware-custom
-    win_make.bat
-    ```
-4. To reset the repository and pull new changes run (!!! it will delete all your changes !!!):
-    ```
-    cd /D c:\projects\uv-k5-firmware-custom
-    git reset --hard & git clean -fd & git pull
-    ```
+```bash
+./compile-with-docker.sh Fusion
+./compile-with-docker.sh Bandscope
+./compile-with-docker.sh Broadcast
+```
 
-I've left some notes in the win_make.bat file to maybe help with stuff.
+Build everything:
+
+```bash
+./compile-with-docker.sh All
+```
+
+### Passing Additional CMake Options
+
+You can pass extra configuration options after the preset name.  
+These are forwarded directly to `cmake --preset` inside the container.
+
+Examples:
+
+```bash
+./compile-with-docker.sh Bandscope -DENABLE_SPECTRUM=ON
+./compile-with-docker.sh Broadcast -DENABLE_FEAT_F4HWN_GAME=ON -DENABLE_NOAA=ON
+./compile-with-docker.sh Bandscope -DSQL_TONE=600
+```
+
+### Notes
+
+- The first run may take a few minutes while Docker builds the base image.
+- Running with `All` will build every firmware variant in sequence.
+- Each build runs inside Docker, so your host environment remains clean.
+
+## Flashing the Firmware with UVTools2
+
+You can flash the UV-K5 V3 and UV-K1 directly from your web browser using the cross-platform WebSerial-based [UVTools2](https://armel.github.io/uvtools2/).
+
+It works on Chrome, Chromium and Edge (desktop versions), and does not require installing any driver or software on your computer.
+
+## Steps to flash the firmware
+
+- Open [UVTools2](https://armel.github.io/uvtools2/) in your browser.
+- Connect your radio to your computer using a compatible USB programming cable (USB-C or Baofeng/Kenwood like double jack USB cable).
+- Make sure your radio is in DFU mode (flash mode).
+- Select the firmware .bin file. 
+- Click on Flash Firmware, then select the serial port associated with your radio.
+- The progress bar will guide you through the flashing steps.
+
+Once finished, your radio restart with the new firmware.
+
+## Steps to dump or restore calibration data
+
+[UVTools2](https://armel.github.io/uvtools2/) can also backup and restore calibration data, which is highly recommended.
+
+- Make sure your radio is in normal mode.
+- Select Dump Calib to dump calibration data
+- Select Restore Calib to restore calibration data
+
+## Other sources of information
+
+- [k1-teardown](https://github.com/armel/k1-teardown) 
 
 ## Credits
 
 Many thanks to various people:
 
+* [Muzkr](https://github.com/muzkr)
 * [Egzumer](https://github.com/egzumer)
 * [OneOfEleven](https://github.com/OneOfEleven)
 * [DualTachyon](https://github.com/DualTachyon)
@@ -295,11 +325,6 @@ Many thanks to various people:
 * [OneOfEleven](https://github.com/OneOfEleven)
 * @d1ced95
 * and others I forget
-
-## Other sources of information
-
-[ludwich66 - Quansheng UV-K5 Wiki](https://github.com/ludwich66/Quansheng_UV-K5_Wiki/wiki)<br>
-[amnemonic - tools and sources of information](https://github.com/amnemonic/Quansheng_UV-K5_Firmware)
 
 ## License
 
@@ -317,26 +342,3 @@ You may obtain a copy of the License at
     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     See the License for the specific language governing permissions and
     limitations under the License.
-
-## Example changes/updates
-
-Here are a few photos.
-
-|![Main Only and Dual RX Respond](https://github.com/armel/uv-k5-firmware-custom-feat-F4HWN/blob/main/photos/IMG_3291.png)|
-|:--:|
-| Main Only and Dual RX Respond |
-
-
-|![Main Only and Dual RX Respond (invert mode)](https://github.com/armel/uv-k5-firmware-custom-feat-F4HWN/blob/main/photos/IMG_3290.png)|
-|:--:|
-| Main Only and Dual RX Respond (invert mode) |
-
-
-|![Some new menu entries](https://github.com/armel/uv-k5-firmware-custom-feat-F4HWN/blob/main/photos/IMG_3292.png)|
-|:--:|
-| Some new menu entries |
-
-
-|![Main Only and Spectrum Analyzer](https://github.com/armel/uv-k5-firmware-custom-feat-F4HWN/blob/main/photos/IMG_3293.png)|
-|:--:|
-| Main Only and Spectrum Analyzer |
