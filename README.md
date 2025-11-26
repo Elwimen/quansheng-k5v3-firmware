@@ -297,7 +297,7 @@ It works on Chrome, Chromium and Edge (desktop versions), and does not require i
 
 ## Steps to flash the firmware
 
-- Open UVTools2 and select [flash](https://armel.github.io/uvtools2/?mode=flash) mode.
+- Open UVTools2 in [flash](https://armel.github.io/uvtools2/?mode=flash) mode (or click the Flash Firmware tab).
 - Connect your radio to your computer using a compatible USB programming cable (USB-C or Baofeng/Kenwood like double jack USB cable).
 - Make sure your radio is in **DFU mode (flash mode)**.
 - Select the firmware .bin file on your computer. 
