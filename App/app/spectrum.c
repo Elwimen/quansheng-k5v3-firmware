@@ -406,11 +406,24 @@ uint16_t GetStepsCount()
 #ifdef ENABLE_SCAN_RANGES
     if (gScanRangeStart)
     {
-        return (gScanRangeStop - gScanRangeStart) / GetScanStep();
+        uint32_t range = gScanRangeStop - gScanRangeStart;
+        uint16_t step = GetScanStep();
+        return (range / step) + 1;  // +1 to include up limit
     }
 #endif
     return 128 >> settings.stepsCount;
 }
+
+#ifdef ENABLE_SCAN_RANGES
+static uint16_t GetStepsCountDisplay()
+{
+    if (gScanRangeStart)
+    {
+        return (gScanRangeStop - gScanRangeStart) / GetScanStep();
+    }
+    return GetStepsCount();
+}
+#endif
 
 uint32_t GetBW() { return GetStepsCount() * GetScanStep(); }
 uint32_t GetFStart()
@@ -418,7 +431,16 @@ uint32_t GetFStart()
     return IsCenterMode() ? currentFreq - (GetBW() >> 1) : currentFreq;
 }
 
-uint32_t GetFEnd() { return currentFreq + GetBW(); }
+uint32_t GetFEnd()
+{
+#ifdef ENABLE_SCAN_RANGES
+    if (gScanRangeStart)
+    {
+        return gScanRangeStop;
+    }
+#endif
+    return currentFreq + GetBW();
+}
 
 static void TuneToPeak()
 {
@@ -915,15 +937,38 @@ uint8_t Rssi2Y(uint16_t rssi)
         uint16_t steps = GetStepsCount();
         // max bars at 128 to correctly draw larger numbers of samples
         uint8_t bars = (steps > 128) ? 128 : steps;
-        // shift to center bar on freq marker
-        uint8_t shift_graph = 64 / steps + 1;
 
         uint8_t ox = 0;
         for (uint8_t i = 0; i < bars; ++i)
         {
             uint16_t rssi = rssiHistory[(bars>128) ? i >> settings.stepsCount : i];
-            // stretch bars to fill the screen width
-            uint8_t x = i * 128 / bars + shift_graph;
+            
+#ifdef ENABLE_SCAN_RANGES
+            uint8_t x;
+            if (gScanRangeStart && bars > 1)
+            {
+                // Total width units = (bars - 1) full bars + 2 half bars = bars
+                // First bar: half width, middle bars: full width, last bar: half width
+                // Scale: 128 pixels / (bars - 1) = pixels per full bar
+                uint16_t fullWidth = 128 * 2 / (bars - 1);  // x2 for precision
+                
+                if (i == 0)
+                {
+                    x = fullWidth / 4;  // half of half (because fullWidth is x2)
+                }
+                else
+                {
+                    // Position = half + (i-1) full bars + current bar
+                    x = fullWidth / 4 + (uint16_t)i * fullWidth / 2;
+                    if (i == bars - 1) x = 128;  // Last bar ends at screen edge
+                }
+            }
+            else
+#endif
+            {
+                uint8_t shift_graph = 64 / steps + 1;
+                x = i * 128 / bars + shift_graph;
+            }
 
             if (rssi != RSSI_MAX_VALUE)
             {
@@ -1043,7 +1088,16 @@ static void DrawNums()
 
     if (currentState == SPECTRUM)
     {
-        sprintf(String, "%ux", GetStepsCount());
+#ifdef ENABLE_SCAN_RANGES
+        if (gScanRangeStart)
+        {
+            sprintf(String, "%ux", GetStepsCountDisplay());
+        }
+        else
+#endif
+        {
+            sprintf(String, "%ux", GetStepsCount());
+        }
         GUI_DisplaySmallest(String, 0, 1, false, true);
         sprintf(String, "%u.%02uk", GetScanStep() / 100, GetScanStep() % 100);
         GUI_DisplaySmallest(String, 0, 7, false, true);
