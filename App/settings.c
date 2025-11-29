@@ -968,14 +968,8 @@ void SETTINGS_SaveChannel(uint8_t Channel, uint8_t VFO, const VFO_Info_t *pVFO, 
 
 void SETTINGS_SaveBatteryCalibration(const uint16_t * batteryCalibration)
 {
-    uint16_t buf[8];
-    memcpy(buf, batteryCalibration, 8);
-    // 0x1F48
-    PY25Q16_ReadBuffer(0x010000 + 0x148, buf + 4, 8);
-    buf[0] = batteryCalibration[4];
-    buf[1] = batteryCalibration[5];
     // 0x1F40
-    PY25Q16_WriteBuffer(0x010000, buf, 0x10, false);
+    PY25Q16_WriteBuffer(0x010000 + 0x140, batteryCalibration, 12, false);
 }
 
 void SETTINGS_SaveChannelName(uint8_t channel, const char * name)
