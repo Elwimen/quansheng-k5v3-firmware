@@ -345,7 +345,7 @@ const char gSubMenu_BATTYP[][12] =
     "1600mAh K5",
     "2200mAh K5",
     "3500mAh K5",
-    "1500mAh K1",
+    "1400mAh K1",
     "2500mAh K1"
 };
 
