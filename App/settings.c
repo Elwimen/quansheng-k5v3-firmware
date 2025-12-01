@@ -572,6 +572,24 @@ void SETTINGS_FactoryReset(bool bIsAll)
             PY25Q16_SectorErase(0x00c000);
         #endif
     }
+
+    // Prevent reset to restart in RO mode...
+    #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
+        {
+            uint8_t buf[0x10];
+
+            // Bloc 0x0E70..0x0E7F -> offset 0x004000
+            PY25Q16_ReadBuffer(0x004000, buf, sizeof(buf));
+
+            // bit 1 = MENU_LOCK => on le force à 0
+            buf[4] &= (uint8_t)~0x02;
+
+            PY25Q16_WriteBuffer(0x004000, buf, sizeof(buf), true);
+
+            // cohérence RAM
+            gEeprom.MENU_LOCK = 0;
+        }
+    #endif
 }
 
 #ifdef ENABLE_FMRADIO
