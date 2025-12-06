@@ -108,7 +108,7 @@ If no errors appear, the bootloader has been successfully restored.
 - Reinstall the battery
 - Power on the radio on DFU mode
 
-The device should now start correctly on DFU mode again. You can then flash stock firmware, or the [F4HWN firmware for UV-K5 V1](https://github.com/armel/uv-k5-firmware-custom) (not the Fusion Edition).
+The device should now start correctly on DFU mode again. You can then flash stock firmware, or the [F4HWN firmware for UV-K5 V1](https://github.com/armel/uv-k5-firmware-custom) (not the Fusion 🔥 Edition).
 
 # Disclaimer
 
