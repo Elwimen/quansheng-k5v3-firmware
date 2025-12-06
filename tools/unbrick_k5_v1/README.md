@@ -68,6 +68,10 @@ Download the official build from:
 
 `openocd --version`
 
+## Download unbrick toolkit
+
+Download the unbrick toolkit archive and extract it on your PC.
+
 ## Unbrick procedure
 
 ### Connect the ST-LINK
