@@ -84,7 +84,7 @@ Download the official build from:
 
 ### Flash the bootloader
 
-From the unbrick_k5_v1 directory:
+From the `unbrick_k5_v1` directory:
 
 #### Option A — Use the helper script
 
