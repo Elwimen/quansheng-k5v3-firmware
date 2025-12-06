@@ -41,6 +41,8 @@ The UV-K5 V1 exposes a 4-pin SWD (Serial Wire Debug) interface:
 |GND |GND pad | GND |
 |3.3V |   VCC pad | 3.3V |
 
+<img width="750" height="500" alt="bottom" src="https://github.com/user-attachments/assets/381a9bc5-daac-4547-820e-a5c96c0bd2e1" />
+
 > [!WARNING]
 > Do not connect the battery while using the ST-LINK.
 The ST-LINK provides 3.3V to the board.
