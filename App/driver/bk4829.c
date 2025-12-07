@@ -713,7 +713,6 @@ void BK4819_SetFilterBandwidth(const BK4819_FilterBandwidth_t Bandwidth, const b
             val = 0x205C;
             break;
 
-        /*
         case BK4819_FILTER_BW_AM:   // 8.33kHz
             // if (weak_no_different) {
             //     // make the RX bandwidth the same with weak signals
@@ -724,7 +723,6 @@ void BK4819_SetFilterBandwidth(const BK4819_FilterBandwidth_t Bandwidth, const b
             // }
             val = 0x345C;
             break;
-        */
         default:
             val = 0x5C;
             break;

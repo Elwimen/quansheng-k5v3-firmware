@@ -699,21 +699,26 @@ void RADIO_SetupRegisters(bool switchToForeground)
 
     BK4819_ToggleGpioOut(BK4819_GPIO6_PIN2_GREEN, false);
 
-    switch (Bandwidth)
+    if (gRxVfo->Modulation == MODULATION_AM)
+        BK4819_SetFilterBandwidth(BK4819_FILTER_BW_AM, true);
+    else
     {
-        default:
-            Bandwidth = BK4819_FILTER_BW_WIDE;
-            [[fallthrough]];
-        case BK4819_FILTER_BW_WIDE:
-        case BK4819_FILTER_BW_NARROW:
-        case BK4819_FILTER_BW_NARROWER:
-            #ifdef ENABLE_AM_FIX
-//              BK4819_SetFilterBandwidth(Bandwidth, gRxVfo->Modulation == MODULATION_AM && gSetting_AM_fix);
-                BK4819_SetFilterBandwidth(Bandwidth, true);
-            #else
-                BK4819_SetFilterBandwidth(Bandwidth, false);
-            #endif
-            break;
+        switch (Bandwidth)
+        {
+            default:
+                Bandwidth = BK4819_FILTER_BW_WIDE;
+                [[fallthrough]];
+            case BK4819_FILTER_BW_WIDE:
+            case BK4819_FILTER_BW_NARROW:
+            case BK4819_FILTER_BW_NARROWER:
+                #ifdef ENABLE_AM_FIX
+    //              BK4819_SetFilterBandwidth(Bandwidth, gRxVfo->Modulation == MODULATION_AM && gSetting_AM_fix);
+                    BK4819_SetFilterBandwidth(Bandwidth, true);
+                #else
+                    BK4819_SetFilterBandwidth(Bandwidth, false);
+                #endif
+                break;
+        }
     }
 
     BK4819_ToggleGpioOut(BK4819_GPIO5_PIN1_RED, false);
@@ -1029,21 +1034,19 @@ void RADIO_SetModulation(ModulationMode_t modulation)
         uint16_t uVar1 = BK4819_ReadRegister(0x31);
         BK4819_WriteRegister(0x31,uVar1 & 0xfffffffe);
         BK4819_WriteRegister(0x42,0x6b5a);
-        BK4819_WriteRegister(0x43, 0x3028);
         BK4819_WriteRegister(0x2a,0x7400);
         BK4819_WriteRegister(0x2b,0);
         BK4819_WriteRegister(0x2f,0x9890);
-        //BK4819_WriteRegister(0x48, 0xb3a8); // set AF RX gain and DAC settings
     }
     else
     {
         uint16_t uVar1 = BK4819_ReadRegister(0x31);
         BK4819_WriteRegister(0x31,uVar1 | 1);
         BK4819_WriteRegister(0x42,0x6f5c);
-        BK4819_WriteRegister(0x43, 0x347c);
         BK4819_WriteRegister(0x2a,0x7434);
-        BK4819_WriteRegister(0x2b,0x600);
+        BK4819_WriteRegister(0x2b,0x300);
         BK4819_WriteRegister(0x2f,0x9990);
+        BK4819_SetFilterBandwidth(BK4819_FILTER_BW_AM, true);
     }
     
     BK4819_SetRegValue(afDacGainRegSpec, 0xF);
