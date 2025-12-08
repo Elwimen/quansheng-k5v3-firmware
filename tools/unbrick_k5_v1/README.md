@@ -70,7 +70,7 @@ Download the official build from:
 
 ## Download unbrick toolkit
 
-Download the [unbrick toolkit archive](https://github.com/user-attachments/files/24002834/unbrick_k5_v1.zip) and extract it on your PC.
+Download the [unbrick toolkit archive](https://github.com/user-attachments/files/24021884/unbrick_k5_v1.zip) and extract it on your PC.
 
 ## Unbrick procedure
 
