@@ -107,7 +107,7 @@ openocd -f ./interface/stlink.cfg -f ./target/dp32g030.cfg -c "init; reset halt;
 `
 
 > [!NOTE]
-> For Windows users, you need to run this command or run OpenOCD.exe as an Administrator
+> For Windows users, you must either run this command with administrator privileges or launch OpenOCD.exe as an Administrator.
 
 https://github.com/user-attachments/assets/a511fdb3-a3a3-4fe1-91cc-31e765221b22
 
