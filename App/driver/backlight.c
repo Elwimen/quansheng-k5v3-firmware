@@ -79,7 +79,7 @@ void BACKLIGHT_InitHardware()
                               | LL_DMA_MEMORY_INCREMENT     //
                               | LL_DMA_PDATAALIGN_WORD      //
                               | LL_DMA_MDATAALIGN_WORD      //
-                              | LL_DMA_PRIORITY_LOW         //
+                              | LL_DMA_PRIORITY_HIGH        //
     );
 
     LL_DMA_SetMemoryAddress(DMA1, DMA_CHANNEL, (uint32_t)dutyCycle);
