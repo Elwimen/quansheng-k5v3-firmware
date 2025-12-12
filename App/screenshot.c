@@ -19,21 +19,20 @@
 #include "screenshot.h"
 #include "misc.h"
 
+// RAM optimization: Only keep previousFrame static (1024 bytes)
+// Build currentFrame on-the-fly and send delta blocks immediately
+static uint8_t previousFrame[1024] = {0};
+static uint8_t forcedBlock = 0;
+static uint8_t keepAlive = 10;
+
 void getScreenShot(bool force)
 {
-    static uint8_t previousFrame[1024] = {0}; // Last transmitted frame
-    static uint8_t forcedBlock = 0;           // Block forced for refresh on each frame
-    static uint8_t keepAlive = 10;            // Keepalive counter
-
-    // Use a single buffer to reduce stack usage
-    static uint8_t currentFrame[1024];        // Current frame
-    static uint8_t deltaFrame[128 * 9];       // Delta frame buffer
+    static uint8_t currentFrame[1024];  // Reused static buffer
     uint16_t index = 0;
     uint8_t acc = 0;
     uint8_t bitCount = 0;
 
-    if (gUART_LockScreenshot > 0) // Lock screenshot if Chirp is in used
-    {
+    if (gUART_LockScreenshot > 0) {
         gUART_LockScreenshot--;
         return;
     }
@@ -44,13 +43,12 @@ void getScreenShot(bool force)
 
     if (keepAlive > 0) {
         if (--keepAlive == 0) return;
-    }
-    else
-    {
+    } else {
         return;
     }
 
-    // Build current frame from status line (first 8 lines)
+    // ==== Build currentFrame (exact same logic as original) ====
+    // Status line: 8 bit layers × 128 columns
     for (uint8_t b = 0; b < 8; b++) {
         for (uint8_t i = 0; i < 128; i++) {
             uint8_t bit = (gStatusLine[i] >> b) & 0x01;
@@ -63,7 +61,7 @@ void getScreenShot(bool force)
         }
     }
 
-    // Build remaining part of the frame (7 * 8 lines)
+    // Frame buffer: 7 lines × 8 bit layers × 128 columns
     for (uint8_t l = 0; l < 7; l++) {
         for (uint8_t b = 0; b < 8; b++) {
             for (uint8_t i = 0; i < 128; i++) {
@@ -84,22 +82,22 @@ void getScreenShot(bool force)
     if (index != 1024)
         return; // Frame size mismatch, abort
 
-    // Generate delta frame
+    // ==== Generate delta frame ====
     uint16_t deltaLen = 0;
+    uint8_t deltaFrame[128 * 9];  // Worst case: all 128 blocks changed
 
     for (uint8_t block = 0; block < 128; block++) {
         uint8_t *cur = &currentFrame[block * 8];
         uint8_t *prev = &previousFrame[block * 8];
 
-        bool changed    = memcmp(cur, prev, 8) != 0;
-        bool isForced   = (block == forcedBlock);
+        bool changed = memcmp(cur, prev, 8) != 0;
+        bool isForced = (block == forcedBlock);
         bool fullUpdate = force;
 
         if (changed || isForced || fullUpdate) {
             deltaFrame[deltaLen++] = block;
             memcpy(&deltaFrame[deltaLen], cur, 8);
             deltaLen += 8;
-
             memcpy(prev, cur, 8); // Update stored frame
         }
     }
@@ -109,7 +107,7 @@ void getScreenShot(bool force)
     if (deltaLen == 0)
         return; // No update needed
 
-    // Send the delta frame over UART
+    // ==== Send frame ====
     uint8_t header[5] = {
         0xAA, 0x55, 0x02,
         (uint8_t)(deltaLen >> 8),
