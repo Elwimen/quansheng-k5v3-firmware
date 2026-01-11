@@ -68,7 +68,7 @@ void UI_DisplayFM(void)
             }
         }
     } else if (gFM_AutoScan) {
-        sprintf(String, "A-SCAN(%u)", gFM_ChannelPosition + 1);
+        sprintf(String, "A-SCAN(%u)", gFM_ChannelPosition);
         pPrintStr = String;
     } else {
         pPrintStr = "M-SCAN";

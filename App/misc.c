@@ -131,7 +131,7 @@ enum BacklightOnRxTx_t gSetting_backlight_on_tx_rx;
     bool          gSetting_set_tmr = 0;
     bool          gSetting_set_ptt_session;
     #ifdef ENABLE_FEAT_F4HWN_DEBUG
-        uint8_t       gDebug;
+        uint16_t       gDebug;
     #endif
     uint8_t       gDW = 0;
     uint8_t       gCB = 0;
@@ -139,6 +139,8 @@ enum BacklightOnRxTx_t gSetting_backlight_on_tx_rx;
     uint8_t       crc[15] = { 0 };
     uint8_t       lErrorsDuringAirCopy = 0;
     uint8_t       gAircopyStep = 0;
+    uint8_t       gAircopyCurrentMapIndex = 0;
+    bool          gAirCopyBootMode = 0;
     #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
         bool          gPowerHigh = false;
         bool          gRemoveOffset = false;
@@ -164,7 +166,6 @@ uint16_t          gEEPROM_1F8A;
 uint16_t          gEEPROM_1F8C;
 
 ChannelAttributes_t gMR_ChannelAttributes[FREQ_CHANNEL_LAST + 1];
-bool                gMR_ChannelExclude[FREQ_CHANNEL_LAST + 1];
 
 volatile uint16_t gBatterySaveCountdown_10ms = battery_save_count_10ms;
 
@@ -234,7 +235,7 @@ bool              gFlagReconfigureVfos;
 uint8_t           gVfoConfigureMode;
 bool              gFlagResetVfos;
 bool              gRequestSaveVFO;
-uint8_t           gRequestSaveChannel;
+uint16_t          gRequestSaveChannel;
 bool              gRequestSaveSettings;
 #ifdef ENABLE_FMRADIO
     bool          gRequestSaveFM;
@@ -262,7 +263,7 @@ bool              g_SquelchLost;
 volatile uint16_t gFlashLightBlinkCounter;
 
 bool              gFlagEndTransmission;
-uint8_t           gNextMrChannel;
+uint16_t          gNextMrChannel;
 ReceptionMode_t   gRxReceptionMode;
 
 bool              gRxVfoIsActive;
@@ -280,7 +281,7 @@ uint8_t           gFSKWriteIndex;
 
 #ifdef ENABLE_NOAA
     bool          gIsNoaaMode;
-    uint8_t       gNoaaChannel;
+    uint16_t      gNoaaChannel;
 #endif
 
 bool              gUpdateDisplay;

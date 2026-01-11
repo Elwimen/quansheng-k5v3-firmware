@@ -70,7 +70,15 @@ void UI_DisplayAircopy(void)
 
     memset(String, 0, sizeof(String));
 
-    percent = (gAirCopyBlockNumber * 10000) / AIRCOPY_TOTAL_BLOCKS;
+    // Get the current map and calculate percentage based on its total blocks
+    const AIRCOPY_TransferMap_t *currentMap = AIRCOPY_GetCurrentMap();
+
+    uint16_t doneBlocks = gAirCopyBlockNumber + gErrorsDuringAirCopy;
+
+    if (doneBlocks > currentMap->total_blocks)
+        doneBlocks = currentMap->total_blocks;
+
+    percent = (doneBlocks * 10000) / currentMap->total_blocks;
 
     if (gAirCopyIsSendMode == 0) {
         sprintf(String, "RCV:%02u.%02u%% E:%d", percent / 100, percent % 100, gErrorsDuringAirCopy);
@@ -94,8 +102,24 @@ void UI_DisplayAircopy(void)
         gFrameBuffer[4][125] = 0x42;
         gFrameBuffer[4][126] = 0x3c;
     }
+    
+    // Draw memory selection
+    if(gAircopyState == AIRCOPY_READY)
+    {
+        doneBlocks = 0;
 
-    uint16_t doneBlocks = gAirCopyBlockNumber + gErrorsDuringAirCopy;
+        memset(gFrameBuffer[5], 0, 128);
+        memset(gFrameBuffer[6], 0, 128);
+
+        if(gAircopyCurrentMapIndex < AIRCOPY_NUM_BANKS) {   
+            sprintf(String, "MEM %03u - %03u%", (gAircopyCurrentMapIndex * 128) + 1, (gAircopyCurrentMapIndex + 1) * 128);
+        }
+        else
+        {
+            sprintf(String, "Settings");            
+        }
+        UI_PrintString(String, 2, 127, 5, 8);
+    }
 
     if (doneBlocks > 0)
     {
@@ -107,43 +131,29 @@ void UI_DisplayAircopy(void)
             lErrorsDuringAirCopy = gErrorsDuringAirCopy;
         }
 
-        // Project real blocks onto a fixed-width progress bar
+        const AIRCOPY_TransferMap_t *currentMap = AIRCOPY_GetCurrentMap();
+
+        uint16_t total = currentMap->total_blocks;
+        uint16_t done  = gAirCopyBlockNumber + gErrorsDuringAirCopy;
+        
+        if (done > total) done = total;
+
         for (uint8_t col = 0; col < AIRCOPY_BAR_WIDTH; col++)
         {
-            // Determine the range of blocks represented by this column
-            uint16_t block_start = (col * AIRCOPY_TOTAL_BLOCKS) / AIRCOPY_BAR_WIDTH;
-            uint16_t block_end   = ((col + 1) * AIRCOPY_TOTAL_BLOCKS) / AIRCOPY_BAR_WIDTH;
+            /* Map column [0..BAR_WIDTH-1] to block [0..total-1] */
+            uint16_t b = (uint16_t)((col * (uint32_t)total) / AIRCOPY_BAR_WIDTH);
 
-            bool has_data  = false;
-            bool has_error = false;
+            bool processed = (b < done);
+            bool error     = processed && get_bit(crc, b);
 
-            // Scan the block range mapped to this column
-            for (uint16_t b = block_start; b < block_end; b++)
-            {
-                if (b < doneBlocks)
-                    has_data = true;
-
-                if (get_bit(crc, b))
-                    has_error = true;
-            }
-
-            // Render the column
-            if (has_error)
-            {
-                // Error blocks are rendered as empty gaps
-                gFrameBuffer[4][col + 4] = 0x81;   // error
-            }
-            else if (has_data)
-            {
-                // Successfully transferred blocks
-                gFrameBuffer[4][col + 4] = 0xbd;   // full block
-            }
+            if (!processed)
+                gFrameBuffer[4][col + 4] = 0x81;   // not yet processed
+            else if (error)
+                gFrameBuffer[4][col + 4] = 0x81;   // error gap (intentional hole)
             else
-            {
-                // Not yet transferred
-                gFrameBuffer[4][col + 4] = 0x81;   // empty
-            }
+                gFrameBuffer[4][col + 4] = 0xBD;   // ok filled
         }
+
     }
 
     ST7565_BlitFullScreen();

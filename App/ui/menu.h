@@ -65,9 +65,7 @@ enum
 #endif
     MENU_SC_REV,
     MENU_AUTOLK,
-    MENU_S_ADD1,
-    MENU_S_ADD2,
-    MENU_S_ADD3,
+    MENU_LIST_CH,
     MENU_STE,
     MENU_RP_STE,
     MENU_MIC,
@@ -75,9 +73,9 @@ enum
     MENU_COMPAND,
     MENU_1_CALL,
     MENU_S_LIST,
-    MENU_SLIST1,
-    MENU_SLIST2,
-    MENU_SLIST3,
+    MENU_S_PRI,
+    MENU_S_PRI_CH_1,
+    MENU_S_PRI_CH_2,    
 #ifdef ENABLE_ALARM
     MENU_AL_MOD,
 #endif

@@ -121,7 +121,7 @@ uint16_t statuslineUpdateTimer = 0;
 static void LoadSettings()
 {
     uint8_t Data[8] = {0};
-    PY25Q16_ReadBuffer(0x00c000, Data, sizeof(Data));
+    PY25Q16_ReadBuffer(0x00A158, Data, sizeof(Data));
 
     settings.scanStepIndex = ((Data[3] & 0xF0) >> 4);
 
@@ -148,11 +148,11 @@ static void LoadSettings()
 static void SaveSettings()
 {
     uint8_t Data[8] = {0};
-    PY25Q16_ReadBuffer(0x00c000, Data, sizeof(Data));
+    PY25Q16_ReadBuffer(0x00A158, Data, sizeof(Data));
 
     Data[3] = (settings.scanStepIndex << 4) | (settings.stepsCount << 2) | settings.listenBw;
 
-    PY25Q16_WriteBuffer(0x00c000, Data, sizeof(Data), true);
+    PY25Q16_WriteBuffer(0x00A158, Data, sizeof(Data), false);
 }
 #endif
 

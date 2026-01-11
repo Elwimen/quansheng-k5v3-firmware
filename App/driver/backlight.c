@@ -31,7 +31,7 @@
     #include "misc.h"
 #endif
 
-#define PWM_FREQ 240
+#define PWM_FREQ 320
 #define DUTY_CYCLE_LEVELS 64
 
 #define DUTY_CYCLE_ON_VALUE GPIO_PIN_MASK(GPIO_PIN_BACKLIGHT)

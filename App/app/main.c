@@ -63,20 +63,21 @@ static void toggle_chan_scanlist(void)
         return;
     }
     
+    ChannelAttributes_t *att = &gMR_ChannelAttributes[gTxVfo->CHANNEL_SAVE];
+
     // Remove exclude
-    if(gMR_ChannelExclude[gTxVfo->CHANNEL_SAVE] == true)
+    if(att->exclude == true)
     {
-        gMR_ChannelExclude[gTxVfo->CHANNEL_SAVE] = false;
+        att->exclude = false;
         return;
     }
 
-    uint8_t scanTmp = gTxVfo->SCANLIST1_PARTICIPATION | (gTxVfo->SCANLIST2_PARTICIPATION << 1) | (gTxVfo->SCANLIST3_PARTICIPATION << 2);
+    uint8_t scanlist = gTxVfo->SCANLIST_PARTICIPATION;
 
-    scanTmp = (scanTmp++ < 7) ? scanTmp: 0;
+    if (scanlist > MR_CHANNELS_LIST + 1)
+        scanlist = 0;
 
-    gTxVfo->SCANLIST1_PARTICIPATION = (scanTmp >> 0) & 0x01;
-    gTxVfo->SCANLIST2_PARTICIPATION = (scanTmp >> 1) & 0x01;
-    gTxVfo->SCANLIST3_PARTICIPATION = (scanTmp >> 2) & 0x01;
+    gTxVfo->SCANLIST_PARTICIPATION = scanlist;
 
     SETTINGS_UpdateChannel(gTxVfo->CHANNEL_SAVE, gTxVfo, true, true, true);
 
@@ -348,8 +349,8 @@ void channelMove(uint16_t Channel)
         gAnotherVoiceID        = (VOICE_ID_t)Key;
     #endif
 
-    gEeprom.MrChannel[Vfo]     = (uint8_t)Channel;
-    gEeprom.ScreenChannel[Vfo] = (uint8_t)Channel;
+    gEeprom.MrChannel[Vfo]     = (uint16_t)Channel;
+    gEeprom.ScreenChannel[Vfo] = (uint16_t)Channel;
     //gRequestSaveVFO            = true;
     gVfoConfigureMode          = VFO_CONFIGURE_RELOAD;
 
@@ -433,7 +434,13 @@ static void MAIN_Key_DIGITS(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
 
         if (gScanStateDir != SCAN_OFF){
             switch(Key) {
-                case KEY_0...KEY_5:
+                case KEY_0:
+                    gEeprom.SCAN_LIST_DEFAULT = MR_CHANNELS_LIST + 1;
+                    #ifdef ENABLE_FEAT_F4HWN_RESUME_STATE
+                        SETTINGS_WriteCurrentState();
+                    #endif
+                    break;
+                case KEY_1...KEY_9:
                     gEeprom.SCAN_LIST_DEFAULT = Key;
                     #ifdef ENABLE_FEAT_F4HWN_RESUME_STATE
                         SETTINGS_WriteCurrentState();
@@ -673,12 +680,13 @@ static void MAIN_Key_MENU(bool bKeyPressed, bool bKeyHeld)
         if (bKeyPressed) { // long press MENU key
 
             #ifdef ENABLE_FEAT_F4HWN
-            // Exclude work with list 1, 2, 3 or all list
+            // Exclude channel
             if(gScanStateDir != SCAN_OFF)
             {
                 if(FUNCTION_IsRx() || gScanPauseDelayIn_10ms > 9)
                 {
-                    gMR_ChannelExclude[gTxVfo->CHANNEL_SAVE] = true;
+                    ChannelAttributes_t *att = &gMR_ChannelAttributes[lastFoundFrqOrChan];
+                    att->exclude = true;
 
                     gVfoConfigureMode = VFO_CONFIGURE;
                     gFlagResetVfos    = true;
@@ -855,7 +863,7 @@ static void MAIN_Key_UP_DOWN(bool bKeyPressed, bool bKeyHeld, int8_t Direction)
     gPowerHigh = false;
 #endif
 
-    uint8_t Channel = gEeprom.ScreenChannel[gEeprom.TX_VFO];
+    uint16_t Channel = gEeprom.ScreenChannel[gEeprom.TX_VFO];
 
     if (bKeyHeld || !bKeyPressed) { // key held or released
         if (gInputBoxIndex > 0)
@@ -885,7 +893,7 @@ static void MAIN_Key_UP_DOWN(bool bKeyPressed, bool bKeyHeld, int8_t Direction)
         if (!IS_NOAA_CHANNEL(Channel))
 #endif
         {
-            uint8_t Next;
+            uint16_t Next;
             if (IS_FREQ_CHANNEL(Channel)) { // step/down in frequency
                 const uint32_t frequency = APP_SetFrequencyByStep(gTxVfo, Direction);
 
@@ -901,7 +909,7 @@ static void MAIN_Key_UP_DOWN(bool bKeyPressed, bool bKeyHeld, int8_t Direction)
             }
 
             Next = RADIO_FindNextChannel(Channel + Direction, Direction, false, 0);
-            if (Next == 0xFF)
+            if (Next == 0xFFFF)
                 return;
             if (Channel == Next)
                 return;
