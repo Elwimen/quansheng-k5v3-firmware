@@ -58,31 +58,29 @@ bool RADIO_CheckValidChannel(uint16_t channel, bool checkScanList, uint8_t scanL
     // return true if the channel appears valid
     if (!IS_MR_CHANNEL(channel))
         return false;
-
     const ChannelAttributes_t att = gMR_ChannelAttributes[channel];
-
     if (checkScanList && att.exclude == true)
         return false;
-
     if (att.band > BAND7_470MHz)
         return false;
-
     //if (!checkScanList || scanList > 4)
     if (!checkScanList || scanList > MR_CHANNELS_LIST)
         return true;
-
     if ((scanList == 0) || (scanList != att.scanlist)) {
         return false;
     }
-
-    //return true;
-
-    // I don't understand what this code is for...
     
-    const uint16_t PriorityCh1 = gEeprom.SCANLIST_PRIORITY_CH[0];
-    const uint16_t PriorityCh2 = gEeprom.SCANLIST_PRIORITY_CH[1];
-
-    return PriorityCh1 != channel && PriorityCh2 != channel;
+    // Exclude priority channels ONLY if SCAN_LIST_ENABLED[0] is active
+    // Otherwise, treat them as normal channels in the list
+    if (gEeprom.SCAN_LIST_ENABLED[0])
+    {
+        const uint16_t PriorityCh1 = gEeprom.SCANLIST_PRIORITY_CH[0];
+        const uint16_t PriorityCh2 = gEeprom.SCANLIST_PRIORITY_CH[1];
+        if (PriorityCh1 == channel || PriorityCh2 == channel)
+            return false;  // Excluded because it's a priority channel and they are enabled
+    }
+    
+    return true;
 }
 
 uint16_t RADIO_FindNextChannel(uint16_t Channel, int8_t Direction, bool bCheckScanList, uint8_t VFO)
