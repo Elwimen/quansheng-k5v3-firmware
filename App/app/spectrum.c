@@ -1432,7 +1432,7 @@ static void RenderStatus()
 static void RenderSpectrum()
 {
     DrawTicks();
-    DrawArrow(128u * peak.i / GetStepsCount());
+    DrawArrow(128u * peak.i / (GetStepsCount() - 1));
     DrawSpectrum();
     DrawRssiTriggerLevel();
     DrawF(peak.f);
