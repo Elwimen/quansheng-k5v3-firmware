@@ -1012,8 +1012,8 @@ void RADIO_SetModulation(ModulationMode_t modulation)
         BK4819_WriteRegister(0x2a,0x7434);
         BK4819_WriteRegister(0x2b,0x300);
         BK4819_WriteRegister(0x2f,0x9990);
-        BK4819_WriteRegister(0x54, 0x9775);
-        BK4819_WriteRegister(0x55, 0x32c6);
+        //BK4819_WriteRegister(0x54, 0x9775);
+        //BK4819_WriteRegister(0x55, 0x32c6);
         BK4819_SetFilterBandwidth(BK4819_FILTER_BW_AM, true);
     }
     
@@ -1021,7 +1021,8 @@ void RADIO_SetModulation(ModulationMode_t modulation)
     BK4819_WriteRegister(BK4819_REG_3D, modulation == MODULATION_USB ? 0 : 0x2AAB);
     BK4819_SetRegValue(afcDisableRegSpec, modulation != MODULATION_FM);
 
-    RADIO_SetupAGC(modulation == MODULATION_AM, false);
+    //RADIO_SetupAGC(modulation == MODULATION_AM, false);
+    RADIO_SetupAGC(false, false);
 }
 
 void RADIO_SetupAGC(bool listeningAM, bool disable)
