@@ -183,7 +183,8 @@ static uint16_t GetRegMenuValue(uint8_t st)
 
 void LockAGC()
 {
-    RADIO_SetupAGC(settings.modulationType == MODULATION_AM, lockAGC);
+    //RADIO_SetupAGC(settings.modulationType == MODULATION_AM, lockAGC);
+    RADIO_SetupAGC(false, lockAGC);
     lockAGC = true;
 }
 
@@ -504,7 +505,9 @@ static void ToggleRX(bool on)
     #endif
     isListening = on;
 
-    RADIO_SetupAGC(settings.modulationType == MODULATION_AM, lockAGC);
+    //RADIO_SetupAGC(settings.modulationType == MODULATION_AM, lockAGC);
+    RADIO_SetupAGC(false, lockAGC);
+
     BK4819_ToggleGpioOut(BK4819_GPIO6_PIN2_GREEN, on);
 
     ToggleAudio(on);

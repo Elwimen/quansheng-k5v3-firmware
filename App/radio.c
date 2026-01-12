@@ -852,7 +852,8 @@ void RADIO_SetupRegisters(bool switchToForeground)
     BK4819_EnableDTMF();
     InterruptMask |= BK4819_REG_3F_DTMF_5TONE_FOUND;
 
-    RADIO_SetupAGC(gRxVfo->Modulation == MODULATION_AM, false);
+    //RADIO_SetupAGC(gRxVfo->Modulation == MODULATION_AM, false);
+    RADIO_SetupAGC(false, false);
 
     // enable/disable BK4819 selected interrupts
     BK4819_WriteRegister(BK4819_REG_3F, InterruptMask);
