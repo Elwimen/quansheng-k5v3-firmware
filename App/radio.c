@@ -55,16 +55,16 @@ const char gModulationStr[MODULATION_UKNOWN][4] = {
 
 bool RADIO_CheckValidChannel(uint16_t channel, bool checkScanList, uint8_t scanList)
 {
+    const ChannelAttributes_t att = gMR_ChannelAttributes[channel];
+
     // return true if the channel appears valid
     if (!IS_MR_CHANNEL(channel))
         return false;
-    const ChannelAttributes_t att = gMR_ChannelAttributes[channel];
     if (checkScanList && att.exclude == true)
         return false;
     if (att.band > BAND7_470MHz)
         return false;
-    //if (!checkScanList || scanList > 4)
-    if (!checkScanList || scanList > MR_CHANNELS_LIST)
+    if (!checkScanList || (scanList > MR_CHANNELS_LIST && att.scanlist != 0))
         return true;
     if ((scanList == 0) || (scanList != att.scanlist)) {
         return false;

@@ -943,6 +943,14 @@ void UI_DisplayMenu(void)
             break;
 
         case MENU_LIST_CH:
+            if (gSubMenuSelection == MR_CHANNELS_LIST + 1)
+                strcpy(String, "ALL");
+            else if (gSubMenuSelection == 0)
+                strcpy(String, "OFF");
+            else
+                sprintf(String, "%u", gSubMenuSelection);
+            break;
+
         case MENU_S_LIST:
             if (gSubMenuSelection == MR_CHANNELS_LIST + 1)
                 strcpy(String, "ALL");
