@@ -74,6 +74,8 @@ static void toggle_chan_scanlist(void)
 
     uint8_t scanlist = gTxVfo->SCANLIST_PARTICIPATION;
 
+    scanlist++;
+
     if (scanlist > MR_CHANNELS_LIST + 1)
         scanlist = 0;
 
