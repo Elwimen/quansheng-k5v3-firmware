@@ -95,43 +95,37 @@ void UI_DisplayStatus()
         if (gScanStateDir != SCAN_OFF || SCANNER_IsScanning()) {
             if (IS_MR_CHANNEL(gNextMrChannel) && !SCANNER_IsScanning()) { // channel mode
 
-                    if(gEeprom.SCAN_LIST_DEFAULT == MR_CHANNELS_LIST + 1)
-                    {
-                        sprintf(str, "%s", "ALL");
-                        GUI_DisplaySmallest(str, 2, 1, true, true);
-                        for (uint8_t x = 0; x < 15; x++)
-                        {
-                            gStatusLine[x] ^= 0x7F;
-                        }
+                uint8_t end = 0;
+
+                if(gEeprom.SCAN_LIST_DEFAULT == MR_CHANNELS_LIST + 1)
+                {
+                    if(gEeprom.SCAN_LIST_ENABLED[0]==1) {
+                        sprintf(str, "%s+", "ALL");
+                        end = 19;
                     }
                     else
                     {
-                        uint8_t end = 0;
-                        if(gEeprom.SCAN_LIST_ENABLED[0]==1) {
-                            sprintf(str, "%02d+", gEeprom.SCAN_LIST_DEFAULT);
-                            end = 15;
-                        }
-                        else {
-                            sprintf(str, "%02d", gEeprom.SCAN_LIST_DEFAULT);
-                            end = 11;
-                        }
-                        GUI_DisplaySmallest(str, 2, 1, true, true);
-                        for (uint8_t x = 0; x < end; x++)
-                        {
-                            gStatusLine[x] ^= 0x7F;
-                        }
+                        sprintf(str, "%s", "ALL");
+                        end = 15;
                     }
-
-                /*
-                switch(gEeprom.SCAN_LIST_DEFAULT) {
-                    case MR_CHANNELS_LIST + 1:
-                        memcpy(line + 0, BITMAP_ScanListAll, sizeof(BITMAP_ScanListAll));
-                        break;
-                    default:
-                        sprintf(str, "%02d", gEeprom.SCAN_LIST_DEFAULT);
-                        UI_PrintStringSmallBufferNormal(str, line + 0);
                 }
-                */
+                else
+                {
+                    if(gEeprom.SCAN_LIST_ENABLED[0]==1) {
+                        sprintf(str, "%02d+", gEeprom.SCAN_LIST_DEFAULT);
+                        end = 15;
+                    }
+                    else {
+                        sprintf(str, "%02d", gEeprom.SCAN_LIST_DEFAULT);
+                        end = 11;
+                    }
+                }
+
+                GUI_DisplaySmallest(str, 2, 1, true, true);
+                for (uint8_t x = 0; x < end; x++)
+                {
+                    gStatusLine[x] ^= 0x7F;
+                }
             }
             else {  // frequency mode
                 memcpy(line + x + 1, gFontS, sizeof(gFontS));
