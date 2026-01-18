@@ -215,7 +215,7 @@ typedef struct {
     uint8_t               BACKLIGHT_TIME;
     uint8_t               SCAN_RESUME_MODE;
     uint8_t               SCAN_LIST_DEFAULT;
-    bool                  SCAN_LIST_ENABLED[3];
+    bool                  SCAN_LIST_ENABLED;
     uint16_t              SCANLIST_PRIORITY_CH[6];
 //#ifdef ENABLE_FEAT_F4HWN_RESUME_STATE // Fix me !!! What the hell is this?
     uint8_t               CURRENT_STATE;
@@ -241,7 +241,7 @@ typedef struct {
     uint8_t               KEY_2_LONG_PRESS_ACTION;
     uint8_t               MIC_SENSITIVITY;
     uint8_t               MIC_SENSITIVITY_TUNING;
-    uint8_t               CHAN_1_CALL;
+    uint16_t              CHAN_1_CALL;
 #ifdef ENABLE_DTMF_CALLING
     char                  ANI_DTMF_ID[8];
     char                  KILL_CODE[8];

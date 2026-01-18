@@ -721,7 +721,7 @@ void MENU_AcceptSetting(void)
             break;
 
         case MENU_S_PRI:
-            gEeprom.SCAN_LIST_ENABLED[0] = gSubMenuSelection;
+            gEeprom.SCAN_LIST_ENABLED = gSubMenuSelection;
             break;
 
         #ifdef ENABLE_ALARM
@@ -1208,7 +1208,7 @@ void MENU_ShowCurrentSetting(void)
             break;
 
         case MENU_S_PRI:
-            gSubMenuSelection = gEeprom.SCAN_LIST_ENABLED[0];
+            gSubMenuSelection = gEeprom.SCAN_LIST_ENABLED;
             break;
 
         case MENU_S_PRI_CH_1:

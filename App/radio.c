@@ -70,9 +70,9 @@ bool RADIO_CheckValidChannel(uint16_t channel, bool checkScanList, uint8_t scanL
         return false;
     }
     
-    // Exclude priority channels ONLY if SCAN_LIST_ENABLED[0] is active
+    // Exclude priority channels ONLY if SCAN_LIST_ENABLED is active
     // Otherwise, treat them as normal channels in the list
-    if (gEeprom.SCAN_LIST_ENABLED[0])
+    if (gEeprom.SCAN_LIST_ENABLED)
     {
         const uint16_t PriorityCh1 = gEeprom.SCANLIST_PRIORITY_CH[0];
         const uint16_t PriorityCh2 = gEeprom.SCANLIST_PRIORITY_CH[1];

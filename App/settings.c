@@ -35,7 +35,6 @@ void SETTINGS_InitEEPROM(void)
     uint8_t Data[16] = {0};
     // 0E70..0E77
     PY25Q16_ReadBuffer(0x00A000, Data, 8);
-    gEeprom.CHAN_1_CALL          = IS_MR_CHANNEL(Data[0]) ? Data[0] : MR_CHANNEL_FIRST;
     gEeprom.SQUELCH_LEVEL        = (Data[1] < 10) ? Data[1] : 1;
     gEeprom.TX_TIMEOUT_TIMER     = (Data[2] > 4 && Data[2] < 180) ? Data[2] : 11;
     #ifdef ENABLE_NOAA
@@ -255,36 +254,21 @@ gEeprom.FreqChannel[1]   = IS_FREQ_CHANNEL(Data16[5]) ? Data16[5] : (FREQ_CHANNE
 
     // 0F18..0F1F
     PY25Q16_ReadBuffer(0x00A130, Data, 8);
-    gEeprom.SCAN_LIST_DEFAULT = (Data[0] <= (MR_CHANNELS_LIST + 1)) ? Data[0] : 0;  // we now have 'all' channel scan option
 
-    // Fake data
-    /*
-    gEeprom.SCAN_LIST_ENABLED[0] = 0;
-    gEeprom.SCAN_LIST_ENABLED[1] = 0;
-    gEeprom.SCAN_LIST_ENABLED[2] = 0;
+    gEeprom.SCAN_LIST_DEFAULT = ((Data[0] & 0x7F) <= (MR_CHANNELS_LIST + 1)) ? (Data[0] & 0x7F) : 0;
+    gEeprom.SCAN_LIST_ENABLED = (Data[0] >> 7) & 0x01;
 
-    gEeprom.SCANLIST_PRIORITY_CH[0] =  0;
-    gEeprom.SCANLIST_PRIORITY_CH[1] =  2;
+    gEeprom.SCANLIST_PRIORITY_CH[0] =
+            (uint16_t)Data[1] |
+            ((uint16_t)Data[2] << 8);
 
-    gEeprom.SCANLIST_PRIORITY_CH[2] =  14;
-    gEeprom.SCANLIST_PRIORITY_CH[3] =  15;
+    gEeprom.SCANLIST_PRIORITY_CH[1] =
+            (uint16_t)Data[3] |
+            ((uint16_t)Data[4] << 8);
 
-    gEeprom.SCANLIST_PRIORITY_CH[4] =  40;
-    gEeprom.SCANLIST_PRIORITY_CH[5] =  41;
-    */
-
-    // Fix me probably after Chirp update...
-    for (unsigned int i = 0; i < 3; i++)
-    {
-        gEeprom.SCAN_LIST_ENABLED[i] = (Data[1] >> i) & 1;
-    }
-
-    for (uint8_t i = 0; i < 6; i++)
-    {
-        gEeprom.SCANLIST_PRIORITY_CH[i] =
-            (uint16_t)Data[2 + (i * 2)] |
-            ((uint16_t)Data[2 + (i * 2) + 1] << 8);
-    }
+    gEeprom.CHAN_1_CALL =
+            (uint16_t)Data[5] |
+            ((uint16_t)Data[6] << 8);
 
     // 0F40..0F47
     PY25Q16_ReadBuffer(0x00A150, Data, 8);
@@ -637,7 +621,6 @@ void SETTINGS_SaveSettings(void)
 
     // 0x0E70
     State = SecBuf;
-    State[0] = gEeprom.CHAN_1_CALL;
     State[1] = gEeprom.SQUELCH_LEVEL;
     State[2] = gEeprom.TX_TIMEOUT_TIMER;
     #ifdef ENABLE_NOAA
@@ -777,32 +760,24 @@ void SETTINGS_SaveSettings(void)
     // -------------------------
     // 0f18 - 0f20
 
-    memset(SecBuf, 0xff, 0x10);
+    memset(SecBuf, 0xff, 0x08);
 
     // 0x0F18
     State = SecBuf;
-    State[0] = gEeprom.SCAN_LIST_DEFAULT;
 
-    tmp = 0;
+    State[0] = (gEeprom.SCAN_LIST_DEFAULT & 0x7F)
+        | ((gEeprom.SCAN_LIST_ENABLED & 0x01) << 7);
 
-    if (gEeprom.SCAN_LIST_ENABLED[0] == 1)
-        tmp = tmp | (1 << 0);
-    if (gEeprom.SCAN_LIST_ENABLED[1] == 1)
-        tmp = tmp | (1 << 1);
-    if (gEeprom.SCAN_LIST_ENABLED[2] == 1)
-        tmp = tmp | (1 << 2);
+    State[1] = (uint8_t)(gEeprom.SCANLIST_PRIORITY_CH[0] & 0xFF);
+    State[2] = (uint8_t)(gEeprom.SCANLIST_PRIORITY_CH[0] >> 8);
 
-    State[1] = tmp;
-    
-    for (uint8_t i = 0; i < 6; i++)
-    {
-        uint16_t v = gEeprom.SCANLIST_PRIORITY_CH[i];
+    State[3] = (uint8_t)(gEeprom.SCANLIST_PRIORITY_CH[1] & 0xFF);
+    State[4] = (uint8_t)(gEeprom.SCANLIST_PRIORITY_CH[1] >> 8);
 
-        State[2 + (i * 2) + 0] = (uint8_t)(v & 0xFF);
-        State[2 + (i * 2) + 1] = (uint8_t)(v >> 8);
-    }
+    State[5] = (uint8_t)(gEeprom.CHAN_1_CALL & 0xFF);
+    State[6] = (uint8_t)(gEeprom.CHAN_1_CALL >> 8);
 
-    PY25Q16_WriteBuffer(0x00A130, SecBuf, 0x10, false);
+    PY25Q16_WriteBuffer(0x00A130, SecBuf, 0x08, false);
 
     // ---------------------
     // 0f40 - 0f48
