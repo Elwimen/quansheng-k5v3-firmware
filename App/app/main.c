@@ -468,10 +468,13 @@ static void MAIN_Key_DIGITS(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
 
                     if (Value > 0 && Value <= MR_CHANNELS_LIST)
                     {
-                        gEeprom.SCAN_LIST_DEFAULT = Value;
-                        #ifdef ENABLE_FEAT_F4HWN_RESUME_STATE
-                            SETTINGS_WriteCurrentState();
-                        #endif
+                        if(RADIO_CheckValidList(Value))
+                        {
+                            gEeprom.SCAN_LIST_DEFAULT = Value;
+                            #ifdef ENABLE_FEAT_F4HWN_RESUME_STATE
+                                SETTINGS_WriteCurrentState();
+                            #endif
+                        }
                         return;
                     }
 
@@ -493,10 +496,13 @@ static void MAIN_Key_DIGITS(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
                     }
                     else if (Value > 0 && Value <= MR_CHANNELS_LIST)
                     {
-                        gEeprom.SCAN_LIST_DEFAULT = Value;
-                        #ifdef ENABLE_FEAT_F4HWN_RESUME_STATE
-                            SETTINGS_WriteCurrentState();
-                        #endif
+                        if(RADIO_CheckValidList(Value))
+                        {
+                            gEeprom.SCAN_LIST_DEFAULT = Value;
+                            #ifdef ENABLE_FEAT_F4HWN_RESUME_STATE
+                                SETTINGS_WriteCurrentState();
+                            #endif
+                        }
                         return;
                     }
                     break;

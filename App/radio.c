@@ -53,6 +53,18 @@ const char gModulationStr[MODULATION_UKNOWN][4] = {
 #endif
 };
 
+bool RADIO_CheckValidList(uint8_t scanList)
+{
+    for (uint16_t i = 0; IS_MR_CHANNEL(i); i++) {
+        const ChannelAttributes_t att = gMR_ChannelAttributes[i];
+        if(att.scanlist == scanList && att.exclude == false)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool RADIO_CheckValidChannel(uint16_t channel, bool checkScanList, uint8_t scanList)
 {
     const ChannelAttributes_t att = gMR_ChannelAttributes[channel];
