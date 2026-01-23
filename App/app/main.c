@@ -455,57 +455,46 @@ static void MAIN_Key_DIGITS(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
             return;
             */
 
-            uint8_t Value;
-
             INPUTBOX_Append(Key);
 
-            switch (gInputBoxIndex)
+            /* Wait until exactly two digits are entered */
+            if (gInputBoxIndex < 2)
+                return;
+
+            /* Two digits entered */
+            gInputBoxIndex = 0;
+
+            uint8_t value = (gInputBox[0] * 10) + gInputBox[1];
+
+            /* 00 = ALL scan lists */
+            if (value == 0)
             {
-                case 2:
-                    gInputBoxIndex = 0;
+                gEeprom.SCAN_LIST_DEFAULT = MR_CHANNELS_LIST + 1;
+            #ifdef ENABLE_FEAT_F4HWN_RESUME_STATE
+                SETTINGS_WriteCurrentState();
+            #endif
+                return;
+            }
 
-                    Value = (gInputBox[0] * 10) + gInputBox[1];
+            /* 01 .. MR_CHANNELS_LIST */
+            if (value <= MR_CHANNELS_LIST)
+            {
+                if (RADIO_CheckValidList(value))
+                {
+                    /* Requested scan list is valid */
+                    gEeprom.SCAN_LIST_DEFAULT = value;
+                }
+                else
+                {
+                    /* Requested scan list is empty or invalid:
+                       jump to the next valid scan list */
+                    gEeprom.SCAN_LIST_DEFAULT = value;
+                    RADIO_NextValidList();
+                }
 
-                    if (Value > 0 && Value <= MR_CHANNELS_LIST)
-                    {
-                        if(RADIO_CheckValidList(Value))
-                        {
-                            gEeprom.SCAN_LIST_DEFAULT = Value;
-                            #ifdef ENABLE_FEAT_F4HWN_RESUME_STATE
-                                SETTINGS_WriteCurrentState();
-                            #endif
-                        }
-                        return;
-                    }
-
-                    if (Value <= MR_CHANNELS_LIST)
-                        break;
-
-                    gInputBox[0]   = gInputBox[1];
-                    gInputBoxIndex = 1;
-                    [[fallthrough]];
-                case 1:
-                    Value = gInputBox[0];
-                    if (Value == 0)
-                    {
-                        gEeprom.SCAN_LIST_DEFAULT = MR_CHANNELS_LIST + 1;
-                        #ifdef ENABLE_FEAT_F4HWN_RESUME_STATE
-                            SETTINGS_WriteCurrentState();
-                        #endif
-                        return;
-                    }
-                    else if (Value > 0 && Value <= MR_CHANNELS_LIST)
-                    {
-                        if(RADIO_CheckValidList(Value))
-                        {
-                            gEeprom.SCAN_LIST_DEFAULT = Value;
-                            #ifdef ENABLE_FEAT_F4HWN_RESUME_STATE
-                                SETTINGS_WriteCurrentState();
-                            #endif
-                        }
-                        return;
-                    }
-                    break;
+            #ifdef ENABLE_FEAT_F4HWN_RESUME_STATE
+                SETTINGS_WriteCurrentState();
+            #endif
             }
 
             gInputBoxIndex = 0;
