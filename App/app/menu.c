@@ -407,19 +407,19 @@ int MENU_GetLimits(uint8_t menu_id, int32_t *pMin, int32_t *pMax)
             //*pMin = 0;
             *pMax = ARRAY_SIZE(gSubMenu_SET_TOT) - 1;
             break;
-#ifdef ENABLE_FEAT_F4HWN_CTR
+        #ifdef ENABLE_FEAT_F4HWN_CTR
         case MENU_SET_CTR:
             *pMin = 1;
             *pMax = 15;
             break;
-#endif
+        #endif
         case MENU_TX_LOCK:
-#ifdef ENABLE_FEAT_F4HWN_INV
+        #ifdef ENABLE_FEAT_F4HWN_INV
         case MENU_SET_INV:
             //*pMin = 0;
             *pMax = ARRAY_SIZE(gSubMenu_OFF_ON) - 1;
             break;
-#endif
+        #endif
         case MENU_SET_LCK:
             //*pMin = 0;
             *pMax = ARRAY_SIZE(gSubMenu_SET_LCK) - 1;
@@ -429,6 +429,12 @@ int MENU_GetLimits(uint8_t menu_id, int32_t *pMin, int32_t *pMax)
             //*pMin = 0;
             *pMax = ARRAY_SIZE(gSubMenu_SET_MET) - 1;
             break;
+        #ifdef ENABLE_FEAT_F4HWN_AUDIO
+        case MENU_SET_AUD:
+            //*pMin = 0;
+            *pMax = ARRAY_SIZE(gSubMenu_SET_AUD) - 1;
+            break;
+        #endif
         #ifdef ENABLE_FEAT_F4HWN_NARROWER
             case MENU_SET_NFM:
                 //*pMin = 0;
@@ -939,11 +945,11 @@ void MENU_AcceptSetting(void)
         case MENU_SET_EOT:
             gSetting_set_eot = gSubMenuSelection;
             break;
-#ifdef ENABLE_FEAT_F4HWN_CTR
+        #ifdef ENABLE_FEAT_F4HWN_CTR
         case MENU_SET_CTR:
             gSetting_set_ctr = gSubMenuSelection;
             break;
-#endif
+        #endif
         case MENU_SET_INV:
             gSetting_set_inv = gSubMenuSelection;
             break;
@@ -956,6 +962,12 @@ void MENU_AcceptSetting(void)
         case MENU_SET_GUI:
             gSetting_set_gui = gSubMenuSelection;
             break;
+        #ifdef ENABLE_FEAT_F4HWN_AUDIO
+        case MENU_SET_AUD:
+            gSetting_set_audio = gSubMenuSelection;
+            RADIO_SetModulation(gRxVfo->Modulation);
+            break;
+        #endif
         #ifdef ENABLE_FEAT_F4HWN_NARROWER
             case MENU_SET_NFM:
                 gSetting_set_nfm = gSubMenuSelection;
@@ -1388,11 +1400,11 @@ void MENU_ShowCurrentSetting(void)
         case MENU_SET_EOT:
             gSubMenuSelection = gSetting_set_eot;
             break;
-#ifdef ENABLE_FEAT_F4HWN_CTR
+        #ifdef ENABLE_FEAT_F4HWN_CTR
         case MENU_SET_CTR:
             gSubMenuSelection = gSetting_set_ctr;
             break;
-#endif
+        #endif
         case MENU_SET_INV:
             gSubMenuSelection = gSetting_set_inv;
             break;
@@ -1405,6 +1417,11 @@ void MENU_ShowCurrentSetting(void)
         case MENU_SET_GUI:
             gSubMenuSelection = gSetting_set_gui;
             break;
+        #ifdef ENABLE_FEAT_F4HWN_AUDIO
+        case MENU_SET_AUD:
+            gSubMenuSelection = gSetting_set_audio;
+            break;
+        #endif
         #ifdef ENABLE_FEAT_F4HWN_NARROWER
             case MENU_SET_NFM:
                 gSubMenuSelection = gSetting_set_nfm;

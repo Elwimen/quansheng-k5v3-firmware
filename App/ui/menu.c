@@ -147,6 +147,9 @@ const t_menu_item MenuList[] =
     {"SetLck",      MENU_SET_LCK       },
     {"SetMet",      MENU_SET_MET       },
     {"SetGUI",      MENU_SET_GUI       },
+#ifdef ENABLE_FEAT_F4HWN_AUDIO    
+    {"SetRxA",      MENU_SET_AUD       },
+#endif
     {"SetTmr",      MENU_SET_TMR       },
 #ifdef ENABLE_FEAT_F4HWN_SLEEP
     {"SetOff",       MENU_SET_OFF      },
@@ -408,6 +411,17 @@ const char gSubMenu_SCRAMBLER[][7] =
         "TINY",
         "CLASSIC"
     };
+
+    #ifdef ENABLE_FEAT_F4HWN_AUDIO
+        const char gSubMenu_SET_AUD[][6] =
+        {
+            "FLAT",
+            "CLEAN",
+            "MID",
+            "BOOST",
+            "MAX"
+        };
+    #endif
 
     #ifdef ENABLE_FEAT_F4HWN_NARROWER
         const char gSubMenu_SET_NFM[][9] =
@@ -1160,6 +1174,12 @@ void UI_DisplayMenu(void)
         case MENU_SET_GUI:
             strcpy(String, gSubMenu_SET_MET[gSubMenuSelection]); // Same as SET_MET
             break;
+
+        #ifdef ENABLE_FEAT_F4HWN_AUDIO
+            case MENU_SET_AUD:
+                strcpy(String, gSubMenu_SET_AUD[gSubMenuSelection]);
+                break;
+        #endif
 
         #ifdef ENABLE_FEAT_F4HWN_NARROWER
             case MENU_SET_NFM:

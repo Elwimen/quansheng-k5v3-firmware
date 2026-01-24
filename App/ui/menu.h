@@ -150,6 +150,9 @@ enum
         MENU_NOAA_S,
     #endif
     MENU_SET_NAV,
+    #ifdef ENABLE_FEAT_F4HWN_AUDIO
+        MENU_SET_AUD,
+    #endif
 #endif
     MENU_BATCAL,  // battery voltage calibration
     MENU_F1SHRT,
@@ -193,6 +196,9 @@ extern const char        gSubMenu_D_RSP[4][11];
     #endif
     #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
         extern const char gSubMenu_SET_KEY[][9];
+    #endif
+    #ifdef ENABLE_FEAT_F4HWN_AUDIO
+        extern const char    gSubMenu_SET_AUD[5][6];
     #endif
 #endif
 

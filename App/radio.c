@@ -53,6 +53,40 @@ const char gModulationStr[MODULATION_UKNOWN][4] = {
 #endif
 };
 
+#ifdef ENABLE_FEAT_F4HWN_AUDIO
+    static void AUDIO_ApplyProfile(uint8_t profile)
+    {
+        switch (profile)
+        {
+            default:
+            case 0: // FLAT
+                BK4819_WriteRegister(0x54, 0x9009);
+                BK4819_WriteRegister(0x55, 0x3200);
+                break;
+
+            case 1: // CLEAN
+                BK4819_WriteRegister(0x54, 0x9009);
+                BK4819_WriteRegister(0x55, 0x33A9);
+                break;
+
+            case 2: // MID
+                BK4819_WriteRegister(0x54, 0x9009);
+                BK4819_WriteRegister(0x55, 0x3600);
+                break;
+
+            case 3: // BOOST
+                BK4819_WriteRegister(0x54, 0x8546);
+                BK4819_WriteRegister(0x55, 0x3AF0);
+                break;
+
+            case 4: // MAX
+                BK4819_WriteRegister(0x54, 0x8566);
+                BK4819_WriteRegister(0x55, 0x3D00);
+                break;
+        }
+    }
+#endif
+
 bool RADIO_CheckValidList(uint8_t scanList)
 {
     if(scanList == MR_CHANNELS_LIST + 1)
@@ -1060,8 +1094,14 @@ void RADIO_SetModulation(ModulationMode_t modulation)
         BK4819_WriteRegister(0x2a,0x7400);
         BK4819_WriteRegister(0x2b,0);
         BK4819_WriteRegister(0x2f,0x9890);
-        BK4819_WriteRegister(0x54, 0x9009);
-        BK4819_WriteRegister(0x55, 0x31a9);
+        //BK4819_WriteRegister(0x54, 0x9009);
+        //BK4819_WriteRegister(0x55, 0x31a9);
+        #ifdef ENABLE_FEAT_F4HWN_AUDIO
+            AUDIO_ApplyProfile(gSetting_set_audio);
+        #else
+            BK4819_WriteRegister(0x54, 0x9009);
+            BK4819_WriteRegister(0x55, 0x31a9);
+        #endif
     }
     else
     {
@@ -1073,6 +1113,10 @@ void RADIO_SetModulation(ModulationMode_t modulation)
         BK4819_WriteRegister(0x2f,0x9990);
         //BK4819_WriteRegister(0x54, 0x9775);
         //BK4819_WriteRegister(0x55, 0x32c6);
+
+        BK4819_WriteRegister(0x54, 0x8846);
+        BK4819_WriteRegister(0x55, 0x38C0);
+
         BK4819_SetFilterBandwidth(BK4819_FILTER_BW_AM, true);
     }
     
