@@ -260,7 +260,10 @@ gEeprom.FreqChannel[1]   = IS_FREQ_CHANNEL(Data16[5]) ? Data16[5] : (FREQ_CHANNE
     // 0F18..0F1F
     PY25Q16_ReadBuffer(0x00A130, Data, 8);
 
-    gEeprom.SCAN_LIST_DEFAULT = ((Data[0] & 0x7F) <= (MR_CHANNELS_LIST + 1)) ? (Data[0] & 0x7F) : 0;
+    gEeprom.SCAN_LIST_DEFAULT =
+            (((Data[0] & 0x7F) >= 1) && ((Data[0] & 0x7F) <= (MR_CHANNELS_LIST + 1)))
+                ? (Data[0] & 0x7F)
+                : 1;
     gEeprom.SCAN_LIST_ENABLED = (Data[0] >> 7) & 0x01;
 
     gEeprom.SCANLIST_PRIORITY_CH[0] =
