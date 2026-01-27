@@ -138,7 +138,7 @@ bool RADIO_CheckValidChannel(uint16_t channel, bool checkScanList, uint8_t scanL
         return false;
     if (att->band > BAND7_470MHz)
         return false;
-    if (!checkScanList || (scanList > MR_CHANNELS_LIST && att->scanlist != 0))
+    if (!checkScanList || (scanList > MR_CHANNELS_LIST && att->scanlist != 0) || (scanList > 0 && att->scanlist == MR_CHANNELS_LIST + 1))
         return true;
     if ((scanList == 0) || (scanList != att->scanlist)) {
         return false;
