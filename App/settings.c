@@ -558,6 +558,13 @@ void SETTINGS_FactoryReset(bool bIsAll)
 
         Data8[4] &= (uint8_t)~0x01;
         Data8[4] &= (uint8_t)~0x02;
+
+        // SET_KEY to 0
+        Data8[4] &= (uint8_t)~0x3C;  // Clear bits 2-5 (SET_KEY)
+
+        // SET_NAV to false
+        Data8[4] &= (uint8_t)~0x40;  // Clear bit 6 (SET_NAV) for UV-K1 by default
+
         #ifdef ENABLE_FEAT_F4HWN_RESET_VFO
             Data8[7] = (1 & 0x01);
         #endif
@@ -580,9 +587,12 @@ void SETTINGS_FactoryReset(bool bIsAll)
         gEeprom.FreqChannel[0]   = FREQ_CHANNEL_FIRST + BAND3_137MHz;
         gEeprom.FreqChannel[1]   = FREQ_CHANNEL_FIRST + BAND6_400MHz;
         
-        SETTINGS_SaveVfoIndices();
         SETTINGS_SaveChannel(FREQ_CHANNEL_FIRST + BAND3_137MHz, 0, &gEeprom.VfoInfo[0], 2);
         SETTINGS_SaveChannel(FREQ_CHANNEL_FIRST + BAND6_400MHz, 1, &gEeprom.VfoInfo[1], 2);
+
+        gVfoStateChanged = true;
+        gScheduleVfoSave = true;
+        SETTINGS_SaveVfoIndicesFlush();
     #endif
 }
 
