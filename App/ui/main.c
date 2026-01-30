@@ -790,7 +790,11 @@ void UI_DisplayMain(void)
                     if(gRxVfo->Modulation == MODULATION_AM)
                         GUI_DisplaySmallest("AIR", 10, RxLine == 0 ? 1 : 33, false, true);
                     else {
-                        strcpy(String, gSubMenu_SET_AUD[gSetting_set_audio]);
+                        #ifdef ENABLE_FEAT_F4HWN_AUDIO
+                            strcpy(String, gSubMenu_SET_AUD[gSetting_set_audio]);
+                        #else
+                            strcpy(String, "RX");
+                        #endif
                         GUI_DisplaySmallest(String, 10, RxLine == 0 ? 1 : 33, false, true);
                     }
 
