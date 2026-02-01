@@ -404,6 +404,7 @@ void channelMoveSwitch(void) {
         }
 
         channelMove(Channel - 1);
+        SETTINGS_SaveVfoIndices();
     }
 }
 
