@@ -168,13 +168,13 @@ const uint8_t BITMAP_Antenna[5] =
 
 const uint8_t BITMAP_VFO_Lock[7] =
 {
-    0b01111100,
-    0b01000110,
-    0b01000101,
-    0b01000101,
-    0b01000101,
-    0b01000110,
-    0b01111100,
+    0b00111100,
+    0b00100110,
+    0b00100101,
+    0b00100101,
+    0b00100101,
+    0b00100110,
+    0b00111100,
 };
 
 const uint8_t BITMAP_VFO_Default[7] =
