@@ -46,7 +46,7 @@ void SETTINGS_InitEEPROM(void)
         if (strncmp(storedVersion, VERSION_STRING_2, sizeof(storedVersion)) != 0)
         {
             // Different version: new install or firmware update
-            
+
             // 1. Write new version to EEPROM
             char newVersion[16] = {0};
             strncpy(newVersion, VERSION_STRING_2, sizeof(newVersion));
@@ -64,12 +64,30 @@ void SETTINGS_InitEEPROM(void)
             PY25Q16_WriteBuffer(0x00A000, configByte, sizeof(configByte), false);
 
             // 3. Reset display inversion (SET_INV = 0)
-            uint8_t displayByte[8] = {0};
-            PY25Q16_ReadBuffer(0x00A158, displayByte, sizeof(displayByte));
+            char logoLines[32];
+            PY25Q16_ReadBuffer(0x00A0C8, logoLines, sizeof(logoLines));
 
-            displayByte[5] &= (uint8_t)~0x10;  // Clear bit 4 (SET_INV)
+            bool needsWrite = false;
 
-            PY25Q16_WriteBuffer(0x00A158, displayByte, sizeof(displayByte), false);
+            for (int line = 0; line < 2; line++) {
+                int offset = line * 16;
+                
+                for (int i = 0; i < 16; i++) {
+                    char c = logoLines[offset + i];
+                    if (c == 0) {
+                        break;
+                    }
+                    if (c < 0x20 || c > 0x7E) {
+                        memset(logoLines + offset, 0, 16);
+                        needsWrite = true;
+                        break;
+                    }
+                }
+            }
+
+            if (needsWrite) {
+                PY25Q16_WriteBuffer(0x00A0C8, logoLines, sizeof(logoLines), false);
+            }
         }
     }
 
