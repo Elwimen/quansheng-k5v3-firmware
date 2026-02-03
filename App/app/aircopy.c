@@ -88,7 +88,7 @@ DECLARE_AIRCOPY_BANK(1)
 // For settings only
 
 static const AIRCOPY_Segment_t AIRCOPY_Segments_Settings[] = {
-    { 0xA000, 0xA160, AIRCOPY_WRITE_BYTES },
+    { 0xA000, 0xA170, AIRCOPY_WRITE_BYTES },
 };
 
 static const AIRCOPY_TransferMap_t AIRCOPY_Map_Settings = {

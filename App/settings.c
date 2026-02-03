@@ -33,6 +33,46 @@ EEPROM_Config_t gEeprom = { 0 };
 void SETTINGS_InitEEPROM(void)
 {
     uint8_t Data[16] = {0};
+
+    //
+    // Version check
+    // Read stored version from EEPROM and compare with VERSION_STRING_2
+    // 
+    {
+        char storedVersion[16] = {0};
+        PY25Q16_ReadBuffer(0x00A160, storedVersion, sizeof(storedVersion));
+
+        // Compare with current version
+        if (strncmp(storedVersion, VERSION_STRING_2, sizeof(storedVersion)) != 0)
+        {
+            // Different version: new install or firmware update
+            
+            // 1. Write new version to EEPROM
+            char newVersion[16] = {0};
+            strncpy(newVersion, VERSION_STRING_2, sizeof(newVersion));
+            PY25Q16_WriteBuffer(0x00A160, newVersion, sizeof(newVersion), false);
+
+            // 2. Reset sensitive parameters (MENU_LOCK, etc.)
+            uint8_t configByte[8] = {0};
+            PY25Q16_ReadBuffer(0x00A000, configByte, sizeof(configByte));
+
+            configByte[4] &= (uint8_t)~0x01;  // KEY_LOCK = 0
+            configByte[4] &= (uint8_t)~0x02;  // MENU_LOCK = 0
+            configByte[4] &= (uint8_t)~0x3C;  // SET_KEY = 0
+            configByte[4] &= (uint8_t)~0x40;  // SET_NAV = 0
+
+            PY25Q16_WriteBuffer(0x00A000, configByte, sizeof(configByte), false);
+
+            // 3. Reset display inversion (SET_INV = 0)
+            uint8_t displayByte[8] = {0};
+            PY25Q16_ReadBuffer(0x00A158, displayByte, sizeof(displayByte));
+
+            displayByte[5] &= (uint8_t)~0x10;  // Clear bit 4 (SET_INV)
+
+            PY25Q16_WriteBuffer(0x00A158, displayByte, sizeof(displayByte), false);
+        }
+    }
+
     // 0E70..0E77
     PY25Q16_ReadBuffer(0x00A000, Data, 8);
     #ifdef ENABLE_FEAT_F4HWN_AUDIO
