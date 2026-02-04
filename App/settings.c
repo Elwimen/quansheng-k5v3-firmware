@@ -64,6 +64,15 @@ void SETTINGS_InitEEPROM(void)
             PY25Q16_WriteBuffer(0x00A000, configByte, sizeof(configByte), false);
 
             // 3. Reset display inversion (SET_INV = 0)
+            uint8_t displayByte[8] = {0};
+            PY25Q16_ReadBuffer(0x00A158, displayByte, sizeof(displayByte));
+
+            displayByte[5] &= (uint8_t)~0x10;  // Clear bit 4 (SET_INV)
+
+            PY25Q16_WriteBuffer(0x00A158, displayByte, sizeof(displayByte), false);
+
+            // 4. Reset logo lines (clear to null for strlen() == 0)
+
             char logoLines[32];
             PY25Q16_ReadBuffer(0x00A0C8, logoLines, sizeof(logoLines));
 
