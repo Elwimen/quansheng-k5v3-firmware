@@ -103,8 +103,8 @@ RegisterSpec registerSpecs[] = {
     {},
     {"LNAs", BK4819_REG_13, 8, 0b11, 1},
     {"LNA", BK4819_REG_13, 5, 0b111, 1},
-    {"VGA", BK4819_REG_13, 0, 0b111, 1},
-    {"BPF", BK4819_REG_3D, 0, 0xFFFF, 0x2aaa},
+    {"PGA", BK4819_REG_13, 0, 0b111, 1},
+    //{"BPF", BK4819_REG_3D, 0, 0xFFFF, 0x2aaa},
     // {"MIX", 0x13, 3, 0b11, 1}, // TODO: hidden
 };
 
@@ -112,7 +112,7 @@ RegisterSpec registerSpecs[] = {
 const int8_t LNAsOptions[] = {-19, -16, -11, 0};
 const int8_t LNAOptions[] = {-24, -19, -14, -9, -6, -4, -2, 0};
 const int8_t VGAOptions[] = {-33, -27, -21, -15, -9, -6, -3, 0};
-const char *BPFOptions[] = {"8.46", "7.25", "6.35", "5.64", "5.08", "4.62", "4.23"};
+//const char *BPFOptions[] = {"8.46", "7.25", "6.35", "5.64", "5.08", "4.62", "4.23"};
 #endif
 
 uint16_t statuslineUpdateTimer = 0;
@@ -1185,6 +1185,8 @@ static void DrawArrow(uint8_t x)
 
 static void OnKeyDown(uint8_t key)
 {
+    bool nav = (gEeprom.SET_NAV != 0);
+
     switch (key)
     {
     case KEY_3:
@@ -1209,10 +1211,7 @@ static void OnKeyDown(uint8_t key)
 #ifdef ENABLE_SCAN_RANGES
         if (!gScanRangeStart) {
 #endif
-        if(gEeprom.SET_NAV == 0)
-            UpdateCurrentFreq(false);
-        else
-            UpdateCurrentFreq(true);
+        UpdateCurrentFreq(nav);
 #ifdef ENABLE_SCAN_RANGES
         }
 #endif
@@ -1221,10 +1220,7 @@ static void OnKeyDown(uint8_t key)
 #ifdef ENABLE_SCAN_RANGES
         if (!gScanRangeStart) {
 #endif
-        if(gEeprom.SET_NAV == 0)
-            UpdateCurrentFreq(true);
-        else
-            UpdateCurrentFreq(false);
+        UpdateCurrentFreq(!nav);
 #ifdef ENABLE_SCAN_RANGES
         }
 #endif
@@ -1334,6 +1330,8 @@ static void OnKeyDownFreqInput(uint8_t key)
 
 void OnKeyDownStill(KEY_Code_t key)
 {
+    bool nav = (gEeprom.SET_NAV != 0);
+
     switch (key)
     {
     case KEY_3:
@@ -1344,19 +1342,17 @@ void OnKeyDownStill(KEY_Code_t key)
         break;
     case KEY_UP:
         if (menuState) {
-            bool nav = (gEeprom.SET_NAV != 0);
-
             SetRegMenuValue(menuState, nav);
-            UpdateCurrentFreqStill(nav);
+            break;
         }
+        UpdateCurrentFreqStill(nav);
         break;
     case KEY_DOWN:
         if (menuState) {
-            bool nav = (gEeprom.SET_NAV != 0);
-
             SetRegMenuValue(menuState, !nav);
-            UpdateCurrentFreqStill(!nav);
+            break;
         }
+        UpdateCurrentFreqStill(!nav);
         break;
     case KEY_STAR:
         UpdateRssiTriggerLevel(true);
@@ -1475,9 +1471,9 @@ static void RenderStill()
     uint8_t offset = PAD_LEFT;
     uint8_t row = 4;
 
-    for (int i = 0, idx = 1; idx <= 4; ++i, ++idx)
+    for (int i = 0, idx = 1; idx <= 3; ++i, ++idx)
     {
-        if (idx == 5)
+        if (idx == 4)
         {
             row += 2;
             i = 0;
@@ -1508,10 +1504,12 @@ static void RenderStill()
         {
             sprintf(String, "%ddB", VGAOptions[GetRegMenuValue(idx)]);
         }
+        /*
         else if(idx == 4)
         {
             sprintf(String, "%skHz", BPFOptions[(GetRegMenuValue(idx) / 0x2aaa)]);
         }
+        */
 #else
         sprintf(String, "%u", GetRegMenuValue(idx));
 #endif
