@@ -60,16 +60,6 @@ center_line_t center_line = CENTER_LINE_NONE;
     }
 #endif
 
-const int8_t dBmCorrTable[7] = {
-            -15, // band 1
-            -16, // band 2
-            -10, // band 3
-            -4, // band 4
-            -7, // band 5
-            -6, // band 6
-             -1  // band 7
-        };
-
 const char *VfoStateStr[] = {
        [VFO_STATE_NORMAL]="",
        [VFO_STATE_BUSY]="BUSY",
@@ -338,38 +328,21 @@ void DisplayRSSIBar(const bool now)
 #endif
         + dBmCorrTable[gRxVfo->Band];
 
-    rssi_dBm = -rssi_dBm;
+    // S9 = -93 dBm, S0 = -141 dBm (IARU standard)
+    const int16_t s9_dBm = -93;
+    const int16_t s0_dBm = -141;
 
-    // VHF band 2 & 3 strong signal correction
-    if((gRxVfo->Band == 1 ||  gRxVfo->Band == 2) && rssi_dBm < 93) {  // Band 2 & 3, signal > S9
-        if(rssi_dBm <= 63) {
-            rssi_dBm -= 4;
-        }
-        else if(rssi_dBm <= 73) {
-            rssi_dBm -= 3;
-        }
-        else if(rssi_dBm <= 85) {
-            rssi_dBm -= 1;
-        }
-    }
-    // UHF band 6 strong signal correction
-    else if(gRxVfo->Band == 5 && rssi_dBm < 93) {  // Band 6, signal > S9)
-        rssi_dBm -= 2;
-    }
-
-    if(rssi_dBm > 141) rssi_dBm = 141;
-    if(rssi_dBm < 53) rssi_dBm = 53;
-
-    uint8_t s_level = 0;
-    uint8_t overS9dBm = 0;
+    uint8_t s_level    = 0;
+    uint8_t overS9dBm  = 0;
     uint8_t overS9Bars = 0;
 
-    if(rssi_dBm >= 93) {
-        s_level = map(rssi_dBm, 141, 93, 1, 9);
-    }
-    else {
-        s_level = 9;
-        overS9dBm = map(rssi_dBm, 93, 53, 0, 40);
+    if (rssi_dBm <= s9_dBm) {
+        // Signal <= S9 : map between S0 and S9
+        s_level = map(rssi_dBm, s0_dBm, s9_dBm, 0, 9);
+    } else {
+        // Signal > S9 : compute over-S9
+        s_level    = 9;
+        overS9dBm  = map(rssi_dBm, s9_dBm, s9_dBm + 40, 0, 40);
         overS9Bars = map(overS9dBm, 0, 40, 0, 4);
     }
 #else
@@ -390,12 +363,12 @@ void DisplayRSSIBar(const bool now)
 #ifdef ENABLE_FEAT_F4HWN
     if (gSetting_set_gui)
     {
-        sprintf(str, "%3d", -rssi_dBm);
+        sprintf(str, "%3d", rssi_dBm);
         UI_PrintStringSmallNormal(str, LCD_WIDTH + 8, 0, line - 1);
     }
     else
     {
-        sprintf(str, "% 4d %s", -rssi_dBm, "dBm");
+        sprintf(str, "% 4d %s", rssi_dBm, "dBm");
         if(isMainOnly())
             GUI_DisplaySmallest(str, 2, 41, false, true);
         else

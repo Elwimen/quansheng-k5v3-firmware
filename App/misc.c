@@ -149,6 +149,7 @@ enum BacklightOnRxTx_t gSetting_backlight_on_tx_rx;
         bool          gPowerHigh = false;
         bool          gRemoveOffset = false;
     #endif
+    int8_t dBmCorrTable[7] = {-15, -16, -10, -4, -7, -6, -1};
 #endif
 
 #ifdef ENABLE_AUDIO_BAR

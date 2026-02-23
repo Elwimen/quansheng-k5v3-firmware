@@ -59,7 +59,7 @@ void SETTINGS_InitEEPROM(void)
             configByte[4] &= (uint8_t)~0x01;  // KEY_LOCK = 0
             configByte[4] &= (uint8_t)~0x02;  // MENU_LOCK = 0
             configByte[4] &= (uint8_t)~0x3C;  // SET_KEY = 0
-            configByte[4] &= (uint8_t)~0x40;  // SET_NAV = 0
+            //configByte[4] &= (uint8_t)~0x40;  // SET_NAV = 0
 
             PY25Q16_WriteBuffer(0x00A000, configByte, sizeof(configByte), false);
 
@@ -97,6 +97,12 @@ void SETTINGS_InitEEPROM(void)
             if (needsWrite) {
                 PY25Q16_WriteBuffer(0x00A0C8, logoLines, sizeof(logoLines), false);
             }
+
+            // 5. Reset dBmCorrTable
+            int8_t buf[7];
+            for (uint8_t i = 0; i < 7; i++)
+                buf[i] = dBmCorrTable[i];  // values from misc.c
+            PY25Q16_WriteBuffer(0x00A0B9, buf, 7, false);
         }
     }
 
@@ -240,13 +246,10 @@ gEeprom.FreqChannel[1]   = IS_FREQ_CHANNEL(Data16[5]) ? Data16[5] : (FREQ_CHANNE
     gEeprom.VOICE_PROMPT = (Data[0] < 3) ? Data[0] : VOICE_PROMPT_ENGLISH;
     #endif
     #ifdef ENABLE_RSSI_BAR
-        if((Data[1] < 200 && Data[1] > 90) && (Data[2] < Data[1]-9 && Data[1] < 160  && Data[2] > 50)) {
-            gEeprom.S0_LEVEL = Data[1];
-            gEeprom.S9_LEVEL = Data[2];
-        }
-        else {
-            gEeprom.S0_LEVEL = 130;
-            gEeprom.S9_LEVEL = 76;
+        for (uint8_t i = 0; i < 7; i++) {
+            int8_t val = (int8_t)Data[i + 1];
+            if (val >= -64 && val <= 64)
+                dBmCorrTable[i] = val;
         }
     #endif
 
