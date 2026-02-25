@@ -80,14 +80,20 @@ bool VCP_ScreenshotPing(void)
     static ParseState_t state    = STATE_IDLE;
 
     bool     connected = false;
-    uint32_t write_ptr = VCP_RxBufPointer;
+    uint32_t write_ptr = VCP_RxBufPointer;  // snapshot once — ISR may update concurrently
 
-    while (read_ptr != write_ptr)
+    // Cap bytes processed per call to VCP_RX_BUF_SIZE.
+    // Prevents unbounded loop if the ISR write pointer laps read_ptr
+    // (buffer overflow / corrupted state), which would freeze the firmware.
+    uint32_t processed = 0;
+
+    while (read_ptr != write_ptr && processed < VCP_RX_BUF_SIZE)
     {
         uint8_t b = VCP_RxBuf[read_ptr];
         read_ptr++;
         if (read_ptr >= VCP_RX_BUF_SIZE)
             read_ptr = 0;
+        processed++;
 
         switch (state)
         {
