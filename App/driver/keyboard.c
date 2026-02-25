@@ -28,22 +28,37 @@ uint16_t   gDebounceCounter = 0;
 bool       gWasFKeyPressed  = false;
 
 #ifdef ENABLE_FEAT_F4HWN_SCREENSHOT
-// Number of consecutive KEYBOARD_Poll() calls that return the injected key.
-// Must exceed key_debounce_10ms (typically 2) to pass the debounce gate in app.c.
-// After HOLD polls the key is cleared, which triggers a natural release cycle.
-#define SERIAL_KEY_HOLD_POLLS 5
+// Short press: hold key for SERIAL_KEY_SHORT_POLLS calls.
+// Must exceed key_debounce_10ms (2) to trigger ProcessKey(key, true, false).
+#define SERIAL_KEY_SHORT_POLLS  5
+
+// Long press: hold key for SERIAL_KEY_LONG_POLLS calls.
+// Must exceed key_repeat_delay_10ms (40) to trigger ProcessKey(key, true, true).
+#define SERIAL_KEY_LONG_POLLS   45
 
 volatile KEY_Code_t gKeyFromSerial      = KEY_INVALID;
 static   uint8_t    gSerialKeyHoldCount = 0;
+static   uint8_t    gSerialKeyLong      = 0;  // 0 = short press, 1 = long press
 
-// Inject a key received from serial (UART or VCP).
-// keyCode is the raw packet byte; validated against KEY_Code_e range before use.
+// Inject a short press from serial (UART or VCP).
 // KEY_PTT is explicitly blocked — PTT release cannot be guaranteed over serial.
 void KEYBOARD_InjectKey(uint8_t keyCode)
 {
     if (keyCode < KEY_INVALID && keyCode != KEY_PTT) {
         gKeyFromSerial      = (KEY_Code_t)keyCode;
         gSerialKeyHoldCount = 0;
+        gSerialKeyLong      = 0;
+    }
+}
+
+// Inject a long press from serial (UART or VCP).
+// KEY_PTT is explicitly blocked — PTT release cannot be guaranteed over serial.
+void KEYBOARD_InjectKeyLong(uint8_t keyCode)
+{
+    if (keyCode < KEY_INVALID && keyCode != KEY_PTT) {
+        gKeyFromSerial      = (KEY_Code_t)keyCode;
+        gSerialKeyHoldCount = 0;
+        gSerialKeyLong      = 1;
     }
 }
 #endif
@@ -100,15 +115,19 @@ static const KEY_Code_t keyboard[5][4] = {
 KEY_Code_t KEYBOARD_Poll(void)
 {
 #ifdef ENABLE_FEAT_F4HWN_SCREENSHOT
-    // Serial-injected key: hold it for SERIAL_KEY_HOLD_POLLS consecutive calls
-    // so the debounce counter in app.c has time to reach key_debounce_10ms.
-    // Once the hold count is exhausted we clear it — the next call returns
-    // KEY_INVALID, which triggers the release path in app.c naturally.
+    // Serial-injected key: hold it for SHORT or LONG polls depending on press type,
+    // so the debounce counter in app.c reaches the right threshold:
+    //   - Short: key_debounce_10ms (2)  → ProcessKey(key, true, false)
+    //   - Long:  key_repeat_delay_10ms (40) → ProcessKey(key, true, true)
+    // Once the hold count is exhausted we clear it — next call returns KEY_INVALID,
+    // which triggers the release path in app.c naturally.
     if (gKeyFromSerial != KEY_INVALID) {
-        KEY_Code_t injected = gKeyFromSerial;
-        if (++gSerialKeyHoldCount >= SERIAL_KEY_HOLD_POLLS) {
+        KEY_Code_t injected  = gKeyFromSerial;
+        uint8_t    threshold = gSerialKeyLong ? SERIAL_KEY_LONG_POLLS : SERIAL_KEY_SHORT_POLLS;
+        if (++gSerialKeyHoldCount >= threshold) {
             gKeyFromSerial      = KEY_INVALID;
             gSerialKeyHoldCount = 0;
+            gSerialKeyLong      = 0;
         }
         return injected;
     }

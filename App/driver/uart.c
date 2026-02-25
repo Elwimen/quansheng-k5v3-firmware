@@ -25,8 +25,9 @@
 
 #ifdef ENABLE_FEAT_F4HWN_SCREENSHOT
 #include "driver/keyboard.h"
-// Packet type for serial key injection (K5Viewer → radio)
-#define UART_TYPE_KEY 0x03
+// Packet types for serial key injection (K5Viewer → radio)
+#define UART_TYPE_KEY       0x03
+#define UART_TYPE_KEY_LONG  0x04
 #endif
 
 #define USARTx USART1
@@ -165,15 +166,17 @@ void UART_LogSend(const void *pBuffer, uint32_t Size)
                 connected = true;
             }
             else if (b == 0xAA) {
-                // Possible start of a key packet: 0xAA 0x55 0x03 <keycode>
-                // Check if the next 3 bytes are available and match
+                // Possible start of a key packet: 0xAA 0x55 <type> <keycode>
+                // type 0x03 = short press, 0x04 = long press
                 size_t i1 = (i + 1) % sizeof(UART_DMA_Buffer);
                 size_t i2 = (i + 2) % sizeof(UART_DMA_Buffer);
                 size_t i3 = (i + 3) % sizeof(UART_DMA_Buffer);
 
                 if (UART_DMA_Buffer[i1] == 0x55 &&
-                    UART_DMA_Buffer[i2] == UART_TYPE_KEY)
+                    (UART_DMA_Buffer[i2] == UART_TYPE_KEY ||
+                     UART_DMA_Buffer[i2] == UART_TYPE_KEY_LONG))
                 {
+                    uint8_t type    = UART_DMA_Buffer[i2];
                     uint8_t keyCode = UART_DMA_Buffer[i3];
 
                     // Consume all 4 bytes
@@ -182,7 +185,11 @@ void UART_LogSend(const void *pBuffer, uint32_t Size)
                     UART_DMA_Buffer[i2] = 0x00;
                     UART_DMA_Buffer[i3] = 0x00;
 
-                    KEYBOARD_InjectKey(keyCode);
+                    if (type == UART_TYPE_KEY_LONG)
+                        KEYBOARD_InjectKeyLong(keyCode);
+                    else
+                        KEYBOARD_InjectKey(keyCode);
+
                     connected = true;
                 }
             }

@@ -52,13 +52,13 @@ extern bool       gWasFKeyPressed;
 
 #ifdef ENABLE_FEAT_F4HWN_SCREENSHOT
 // Serial-injected key (written by UART/VCP parser, consumed by KEYBOARD_Poll).
-// Held for SERIAL_KEY_HOLD_POLLS calls to satisfy the debounce logic in app.c.
 extern volatile KEY_Code_t gKeyFromSerial;
 
-// Inject a key received from serial (UART or VCP), bypasses physical matrix.
-// keyCode is the raw byte from the serial packet — validated against KEY_Code_e range.
-// KEY_PTT is explicitly blocked — PTT release cannot be guaranteed over serial.
+// Inject a short press received from serial (UART or VCP).
 void KEYBOARD_InjectKey(uint8_t keyCode);
+
+// Inject a long press received from serial (UART or VCP).
+void KEYBOARD_InjectKeyLong(uint8_t keyCode);
 #endif
 
 KEY_Code_t KEYBOARD_Poll(void);
