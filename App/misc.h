@@ -148,7 +148,7 @@ extern const uint16_t        scan_pause_delay_in_7_10ms;
 //extern const uint16_t        gMax_bat_v;
 //extern const uint16_t        gMin_bat_v;
 
-extern const uint8_t         gMicGain_dB2[5];
+extern const uint8_t         gMicGain_dB2[9];
 
 #ifndef ENABLE_FEAT_F4HWN
 extern bool                  gSetting_350TX;
