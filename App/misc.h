@@ -197,7 +197,7 @@ extern enum BacklightOnRxTx_t gSetting_backlight_on_tx_rx;
     extern bool               gSetting_set_tmr;
     extern bool               gSetting_set_ptt_session;
     #ifdef ENABLE_FEAT_F4HWN_DEBUG
-        extern uint16_t            gDebug;
+        extern int16_t        gDebug;
     #endif
     extern uint8_t            gDW;
     extern uint8_t            gCB;

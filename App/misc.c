@@ -135,7 +135,7 @@ enum BacklightOnRxTx_t gSetting_backlight_on_tx_rx;
     bool          gSetting_set_tmr = 0;
     bool          gSetting_set_ptt_session;
     #ifdef ENABLE_FEAT_F4HWN_DEBUG
-        uint16_t       gDebug;
+        int16_t   gDebug;
     #endif
     uint8_t       gDW = 0;
     uint8_t       gCB = 0;
