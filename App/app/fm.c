@@ -182,65 +182,38 @@ void FM_PlayAndUpdate(void)
 
 int FM_CheckFrequencyLock(uint16_t Frequency, uint16_t LowerLimit)
 {
-    int ret = -1;
-
     const uint16_t Test2 = BK1080_ReadRegister(BK1080_REG_07);
 
     // This is supposed to be a signed value, but above function is unsigned
     const uint16_t Deviation = BK1080_REG_07_GET_FREQD(Test2);
-
-    if (BK1080_REG_07_GET_SNR(Test2) <= 2) {
-        BK1080_FrequencyDeviation = Deviation;
-        BK1080_BaseFrequency      = Frequency;
-
-        return ret;
-    }
-
     const uint16_t Status = BK1080_ReadRegister(BK1080_REG_10);
 
-    if ((Status & BK1080_REG_10_MASK_AFCRL) != BK1080_REG_10_AFCRL_NOT_RAILED || BK1080_REG_10_GET_RSSI(Status) < 10) {
-        BK1080_FrequencyDeviation = Deviation;
-        BK1080_BaseFrequency      = Frequency;
+    BK1080_FrequencyDeviation = Deviation;
+    BK1080_BaseFrequency = Frequency;
 
-        return ret;
-    }
+    if (BK1080_REG_07_GET_SNR(Test2) <= 2)
+        return -1;
+
+    if ((Status & BK1080_REG_10_MASK_AFCRL) != BK1080_REG_10_AFCRL_NOT_RAILED || BK1080_REG_10_GET_RSSI(Status) < 10)
+        return -1;
 
     //if (Deviation > -281 && Deviation < 280)
-    if (Deviation >= 280 && Deviation <= 3815) {
-        BK1080_FrequencyDeviation = Deviation;
-        BK1080_BaseFrequency      = Frequency;
-
-        return ret;
-    }
-
+    if (Deviation >= 280 && Deviation <= 3815)
+        return -1;
+    
     // not BLE(less than or equal)
     if (Frequency > LowerLimit && (Frequency - BK1080_BaseFrequency) == 1) {
-        if (BK1080_FrequencyDeviation & 0x800 || (BK1080_FrequencyDeviation < 20))
-        {
-            BK1080_FrequencyDeviation = Deviation;
-            BK1080_BaseFrequency      = Frequency;
-
-            return ret;
-        }
+        if ((BK1080_FrequencyDeviation & 0x800) || (BK1080_FrequencyDeviation < 20))
+            return -1;
     }
 
     // not BLT(less than)
-
     if (Frequency >= LowerLimit && (BK1080_BaseFrequency - Frequency) == 1) {
         if ((BK1080_FrequencyDeviation & 0x800) == 0 || (BK1080_FrequencyDeviation > 4075))
-        {
-            BK1080_FrequencyDeviation = Deviation;
-            BK1080_BaseFrequency      = Frequency;
-
-            return ret;
-        }
+            return -1;
     }
 
-    ret = 0;
-    BK1080_FrequencyDeviation = Deviation;
-    BK1080_BaseFrequency      = Frequency;
-
-    return ret;
+    return 0;
 }
 
 static void Key_DIGITS(KEY_Code_t Key, uint8_t state)
@@ -501,6 +474,10 @@ static void Key_UP_DOWN(uint8_t state, int8_t Step)
         return;
     }
 
+    if (!gEeprom.SET_NAV) {
+        Step = -Step;
+    }
+
     if (gAskToSave) {
         gRequestDisplayScreen = DISPLAY_FM;
         gFM_ChannelPosition   = NUMBER_AddWithWraparound(gFM_ChannelPosition, Step, 0, FM_CHANNELS_MAX - 1);
@@ -561,16 +538,8 @@ void FM_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
             Key_MENU(state);
             break;
         case KEY_UP:
-            if(gEeprom.SET_NAV == 0)
-                Key_UP_DOWN(state, -1);
-            else
-                Key_UP_DOWN(state, 1);
-            break;
         case KEY_DOWN:
-            if(gEeprom.SET_NAV == 0)
-                Key_UP_DOWN(state, 1);
-            else
-                Key_UP_DOWN(state, -1);
+            Key_UP_DOWN(state, Key == KEY_UP ? 1 : -1);
             break;
         case KEY_EXIT:
             Key_EXIT(state);
