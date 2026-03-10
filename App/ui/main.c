@@ -1007,9 +1007,11 @@ void UI_DisplayMain(void)
                     
                     GUI_DisplaySmallest(displayStr, xDisplay, line == 0 ? 1 : 33, false, true);
 
-                    for (uint8_t x = xStart; x < 128; x++) {
+                    gFrameBuffer[line][xStart] ^= 0x3E;
+                    for (uint8_t x = xStart + 1; x < 127; x++) {
                         gFrameBuffer[line][x] ^= 0x7F;
                     }
+                    gFrameBuffer[line][127] ^= 0x3E;
                 }
 
                 #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
