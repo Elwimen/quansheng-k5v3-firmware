@@ -1358,9 +1358,9 @@ void APP_TimeSlice10ms(void)
 {
     gNextTimeslice = false;
 
-    if (gScheduleVfoSave) {
-        SETTINGS_SaveVfoIndicesFlush();
-    }
+    SETTINGS_SaveVfoIndicesFlush();
+
+    BACKLIGHT_Update();
 
     gFlashLightBlinkCounter++;
 
