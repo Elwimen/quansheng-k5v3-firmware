@@ -787,11 +787,13 @@ static void ToggleBacklight()
     settings.backlightState = !settings.backlightState;
     if (settings.backlightState)
     {
-        BACKLIGHT_TurnOn();
+        // BACKLIGHT_TurnOn();
+        BACKLIGHT_SetBrightness(gEeprom.BACKLIGHT_MAX);
     }
     else
     {
-        BACKLIGHT_TurnOff();
+        // BACKLIGHT_TurnOff();
+        BACKLIGHT_SetBrightness(gEeprom.BACKLIGHT_MIN);
     }
 }
 
@@ -1665,16 +1667,17 @@ static void UpdateListening()
 
 static void Tick()
 {
-#ifdef ENABLE_AM_FIX
     if (gNextTimeslice)
     {
         gNextTimeslice = false;
+#ifdef ENABLE_AM_FIX
         if (settings.modulationType == MODULATION_AM && !lockAGC)
         {
             AM_fix_10ms(vfo); // allow AM_Fix to apply its AGC action
         }
-    }
 #endif
+        BACKLIGHT_Update();
+    }
 
 #ifdef ENABLE_SCAN_RANGES
     if (gNextTimeslice_500ms)
@@ -1742,6 +1745,8 @@ static void Tick()
 
 void APP_RunSpectrum()
 {
+    settings.backlightState = gEeprom.BACKLIGHT_TIME == 0 ? false : true;
+
     // TX here coz it always? set to active VFO
     vfo = gEeprom.TX_VFO;
 #ifdef ENABLE_FEAT_F4HWN_SPECTRUM
@@ -1804,4 +1809,6 @@ void APP_RunSpectrum()
     {
         Tick();
     }
+
+    BACKLIGHT_TurnOn();
 }

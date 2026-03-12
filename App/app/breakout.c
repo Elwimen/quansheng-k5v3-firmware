@@ -461,6 +461,9 @@ void APP_RunBreakout(void) {
         // Init led
         BK4819_ToggleGpioOut(BK4819_GPIO6_PIN2_GREEN, false);
 
+        // Finish the brightness fade if it is in progress
+        BACKLIGHT_UpdateTickless();
+
         // Init game
         UI_DisplayClear();
         reset();
