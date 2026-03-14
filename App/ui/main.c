@@ -1522,7 +1522,7 @@ void UI_DisplayMain(void)
         if (rx || gCurrentFunction == FUNCTION_FOREGROUND || gCurrentFunction == FUNCTION_POWER_SAVE)
         {
             #if 1
-                if (gSetting_live_DTMF_decoder && gDTMF_RX_live[0] != 0)
+                if (gSetting_live_DTMF_decoder && gDTMF_RX_live[0] != 0 && gKeypadLocked == 0)
                 {   // show live DTMF decode
                     const unsigned int len = strlen(gDTMF_RX_live);
                     const unsigned int idx = (len > (17 - 5)) ? len - (17 - 5) : 0;  // limit to last 'n' chars
