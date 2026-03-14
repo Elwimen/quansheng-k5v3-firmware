@@ -416,38 +416,32 @@ static KEY_Code_t GetKey()
 // HandleUserInput 
 static bool HandleUserInput()
 {
-    // Store previous key state
     kbd.prev = kbd.current;
-    
-    // Get the current key
     kbd.current = GetKey();
-    
-    // Detect valid key press continuation (same key still pressed)
-    if (kbd.current != KEY_INVALID && kbd.current == kbd.prev)
-    {
-        kbd.counter = 1;
 
-        OnKeyDown(kbd.current);
-        
-        // Special handling for MENU key
-        if(kbd.current == KEY_MENU)
-        {
-            kbd.counter = 0;
-            SYSTEM_DelayMs(250);
-        }
-    }
-    else
+    if (kbd.current == KEY_INVALID)
+        return true;
+
+    // Movement keys: dispatch on every tick while held
+    if (kbd.current == KEY_UP   || kbd.current == KEY_DOWN ||
+        kbd.current == KEY_4    || kbd.current == KEY_0)
     {
-        kbd.counter = 0;
+        OnKeyDown(kbd.current);
+        return true;
     }
-    
+
+    // Action keys (MENU, EXIT): dispatch only on rising edge
+    if (kbd.current != kbd.prev)
+    {
+        OnKeyDown(kbd.current);
+    }
+
     return true;
 }
 
 // Tick
 static void Tick()
 {
-    HandleUserInput();
     HandleUserInput();
 }
 
@@ -481,11 +475,6 @@ void APP_RunBreakout(void) {
                 if(swap == 0)
                 {
                     blockAnim = (blockAnim + 1) % 4;
-
-                    // For screenshot
-                    #ifdef ENABLE_FEAT_F4HWN_SCREENSHOT
-                        SCREENSHOT_Update(false);
-                    #endif
                 }
                 
                 swap = (swap + 1) % 4;
@@ -508,5 +497,12 @@ void APP_RunBreakout(void) {
 
             ST7565_BlitStatusLine();  // Blank status line
             ST7565_BlitFullScreen();
+
+            #ifdef ENABLE_FEAT_F4HWN_SCREENSHOT
+                if(isPaused || swap == 0)
+                {
+                    SCREENSHOT_Update(false);
+                }
+            #endif
         }
 }
