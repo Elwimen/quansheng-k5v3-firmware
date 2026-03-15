@@ -27,6 +27,7 @@
 static uint8_t previousFrame[1024] = {0};
 static uint8_t forcedBlock = 0;
 static uint8_t keepAlive = 10;
+static bool    wasConnected = false;
 
 void SCREENSHOT_ParseInput(void)
 {
@@ -74,9 +75,19 @@ void SCREENSHOT_Update(bool force)
     }
 
     if (keepAlive > 0) {
-        if (--keepAlive == 0) return;
+        if (--keepAlive == 0) {
+            // Connection just lost → reset state for next reconnection
+            wasConnected = false;
+            return;
+        }
     } else {
         return;
+    }
+
+    // Connection is alive — detect reconnection and force full frame
+    if (!wasConnected) {
+        force = true;
+        wasConnected = true;
     }
 
     // ==== BUILD FRAME ONCE ====
