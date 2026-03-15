@@ -416,6 +416,12 @@ static KEY_Code_t GetKey()
 // HandleUserInput 
 static bool HandleUserInput()
 {
+#ifdef ENABLE_FEAT_F4HWN_SCREENSHOT
+    // Parse incoming packets on every tick so serial keys are never missed,
+    // regardless of whether the screen needs redrawing.
+    SCREENSHOT_ParseInput();
+#endif
+
     kbd.prev = kbd.current;
     kbd.current = GetKey();
 

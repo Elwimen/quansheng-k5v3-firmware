@@ -892,6 +892,12 @@ static void HandleVox(void)
 
 void APP_Update(void)
 {
+#ifdef ENABLE_FEAT_F4HWN_SCREENSHOT
+    // Parse incoming packets on every tick so serial keys are never missed,
+    // regardless of whether the screen needs redrawing.
+    SCREENSHOT_ParseInput();
+#endif
+
 #ifdef ENABLE_VOICE
     if (gFlagPlayQueuedVoice) {
             AUDIO_PlayQueuedVoice();
