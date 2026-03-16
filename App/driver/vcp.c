@@ -87,7 +87,7 @@ bool VCP_ScreenshotPing(void)
             // Clear the last 4 bytes after reading - prevents the button from
             // being pressed automatically after a certain amount of time.
             for (uint8_t i = 1; i <= 4; i++) {
-                VCP_RxBuf[(write_ptr - i) & 0xFF] = 0x00;
+                VCP_RxBuf[(read_ptr - i) & 0xFF] = 0x00;
             }
 
             connected = true;
