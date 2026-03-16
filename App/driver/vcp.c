@@ -78,17 +78,20 @@ bool VCP_ScreenshotPing(void)
     {
         uint8_t b = VCP_RxBuf[read_ptr];
 
-        // Clear the old byte after reading - prevents the button from being 
-        // pressed automatically after a certain amount of time.
-        VCP_RxBuf[read_ptr] = 0x00; 
-
         read_ptr++;
         if (read_ptr >= VCP_RX_BUF_SIZE)
             read_ptr = 0;
         processed++;
 
-        if(KEYBOARD_ProcessProtocolByte(&state, b))
+        if(KEYBOARD_ProcessProtocolByte(&state, b)) {
+            // Clear the last 4 bytes after reading - prevents the button from
+            // being pressed automatically after a certain amount of time.
+            for (uint8_t i = 1; i <= 4; i++) {
+                VCP_RxBuf[(write_ptr - i) & 0xFF] = 0x00;
+            }
+
             connected = true;
+        }
     }
 
     return connected;

@@ -34,11 +34,11 @@ void SCREENSHOT_ParseInput(void)
         return;
 
     if (UART_IsCableConnected()) {
-        keepAlive = 7;
+        keepAlive = 15;
         gUSB_ScreenshotEnabled = false;
     }
     else if (VCP_ScreenshotPing()) {
-        keepAlive = 7;
+        keepAlive = 15;
         gUSB_ScreenshotEnabled = true;
     }
 }
