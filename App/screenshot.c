@@ -26,7 +26,7 @@
 // - No currentFrame or deltaFrame static buffers
 static uint8_t previousFrame[1024] = {0};
 static uint8_t forcedBlock = 0;
-static uint8_t keepAlive = 0;
+static uint8_t keepAlive = 3;
 
 void SCREENSHOT_ParseInput(void)
 {
