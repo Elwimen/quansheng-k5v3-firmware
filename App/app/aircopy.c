@@ -172,6 +172,13 @@ static inline void AIRCOPY_CheckComplete(void)
     }
 }
 
+static inline void AIRCOPY_Obfuscation(void)
+{
+    for (unsigned int i = 0; i < 34; i++) {
+        g_FSK_Buffer[i + 1] ^= Obfuscation[i % 8];
+    }
+}
+
 // ============================================================================
 // Send/Receive Functions
 // ============================================================================
@@ -223,9 +230,7 @@ bool AIRCOPY_SendMessage(void)
 
     g_FSK_Buffer[34] = CRC_Calculate(&g_FSK_Buffer[1], 2 + 64);
 
-    for (unsigned int i = 0; i < 34; i++) {
-        g_FSK_Buffer[i + 1] ^= Obfuscation[i % 8];
-    }
+    AIRCOPY_Obfuscation();
 
     RADIO_SetTxParameters();
 
@@ -261,9 +266,7 @@ void AIRCOPY_StorePacket(void)
         return;
     }
 
-    for (unsigned int i = 0; i < 34; i++) {
-        g_FSK_Buffer[i + 1] ^= Obfuscation[i % 8];
-    }
+    AIRCOPY_Obfuscation();
 
     uint16_t Crc = CRC_Calculate(&g_FSK_Buffer[1], 2 + 64);
     if (g_FSK_Buffer[34] != Crc) {
@@ -273,25 +276,9 @@ void AIRCOPY_StorePacket(void)
     }
 
     uint16_t Offset = g_FSK_Buffer[1];
-    const AIRCOPY_TransferMap_t *map = AIRCOPY_GetCurrentMap();
-
-    // Validate offset is in the map
-    bool validOffset = false;
-    for (uint16_t i = 0; i < map->num_segments; i++) {
-        if (Offset >= map->segments[i].start_offset && Offset < map->segments[i].end_offset) {
-            validOffset = true;
-            break;
-        }
-    }
-
-    if (!validOffset) {
-        gErrorsDuringAirCopy++;
-        AIRCOPY_CheckComplete();
-        return;
-    }
 
     const AIRCOPY_Segment_t *seg = AIRCOPY_FindSegmentForOffset(Offset);
-
+    
     if (seg == NULL) {
         gErrorsDuringAirCopy++;
         AIRCOPY_CheckComplete();
