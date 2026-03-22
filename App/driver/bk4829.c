@@ -334,45 +334,9 @@ void BK4819_SetAGC(bool enable)
 
 void BK4819_InitAGC(bool amModulation)
 {
-    // REG_10, REG_11, REG_12 REG_13, REG_14
-    //
-    // Rx AGC Gain Table[]. (Index Max->Min is 3,2,1,0,-1)
-    //
-    // <15:10> ???
-    //
-    // <9:8>   LNA Gain Short
-    //         3 =   0dB  <<<       1o11                read from spectrum          reference manual
-    //         2 =                  -24dB               -19                          -11
-    //         1 =                  -30dB               -24                          -16
-    //         0 =                  -33dB               -28                          -19
-    //
-    // <7:5>   LNA Gain
-    //         7 =   0dB
-    //         6 =  -2dB
-    //         5 =  -4dB
-    //         4 =  -6dB
-    //         3 =  -9dB
-    //         2 = -14dB <<<
-    //         1 = -19dB
-    //         0 = -24dB
-    //
-    // <4:3>   MIXER Gain
-    //         3 =   0dB <<<
-    //         2 =  -3dB
-    //         1 =  -6dB
-    //         0 =  -8dB
-    //
-    // <2:0>   PGA Gain
-    //         7 =   0dB
-    //         6 =  -3dB <<<
-    //         5 =  -6dB
-    //         4 =  -9dB
-    //         3 = -15dB
-    //         2 = -21dB
-    //         1 = -27dB
-    //         0 = -33dB
-    //
 
+    /*
+    // Old strategy
     BK4819_WriteRegister(BK4819_REG_13, 0x03BE);  // 0x03BE / 000000 11 101 11 110 /  -7dB
     BK4819_WriteRegister(BK4819_REG_12, 0x037B);  // 0x037B / 000000 11 011 11 011 / -24dB
     BK4819_WriteRegister(BK4819_REG_11, 0x027B);  // 0x027B / 000000 10 011 11 011 / -43dB
@@ -387,7 +351,21 @@ void BK4819_InitAGC(bool amModulation)
     }
 
     BK4819_WriteRegister(BK4819_REG_7B, 0x8420);
+    */
 
+    // New strategy
+    // Keep the runtime AGC profile aligned with the stock BK4829 firmware
+    // until modulation-specific AGC changes are proven on hardware.
+
+    (void)amModulation;
+
+    BK4819_WriteRegister(BK4819_REG_10, 0x0318);
+    BK4819_WriteRegister(BK4819_REG_11, 0x033A);
+    BK4819_WriteRegister(BK4819_REG_12, 0x03DB);
+    BK4819_WriteRegister(BK4819_REG_13, 0x03DF);
+    BK4819_WriteRegister(BK4819_REG_14, 0x0210);
+    BK4819_WriteRegister(BK4819_REG_49, 0x2AB2);
+    BK4819_WriteRegister(BK4819_REG_7B, 0x73DC);
 }
 
 int8_t BK4819_GetRxGain_dB(void)

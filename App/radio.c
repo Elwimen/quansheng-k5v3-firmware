@@ -1128,13 +1128,16 @@ void RADIO_SetModulation(ModulationMode_t modulation)
         BK4819_WriteRegister(0x31,uVar1 | 1);
         BK4819_WriteRegister(0x42,0x6f5c);
         BK4819_WriteRegister(0x2a,0x7434);
-        BK4819_WriteRegister(0x2b,0x300);
+        BK4819_WriteRegister(0x2b,0x400);
         BK4819_WriteRegister(0x2f,0x9990);
         //BK4819_WriteRegister(0x54, 0x9775);
         //BK4819_WriteRegister(0x55, 0x32c6);
 
-        BK4819_WriteRegister(0x54, 0x8846);
-        BK4819_WriteRegister(0x55, 0x38C0);
+        //BK4819_WriteRegister(0x54, 0x8846);
+        //BK4819_WriteRegister(0x55, 0x38C0);
+
+        BK4819_WriteRegister(0x54, 0x9009);
+        BK4819_WriteRegister(0x55, 0x31a9);
 
         BK4819_SetFilterBandwidth(BK4819_FILTER_BW_AM, true);
     }
@@ -1149,7 +1152,7 @@ void RADIO_SetModulation(ModulationMode_t modulation)
 
 void RADIO_SetupAGC(bool listeningAM, bool disable)
 {
-    static uint8_t lastSettings;
+    static uint8_t lastSettings = 0xFF;
     uint8_t newSettings = (listeningAM << 1) | disable;
     if (lastSettings == newSettings)
         return;
