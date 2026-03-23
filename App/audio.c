@@ -177,11 +177,19 @@ void AUDIO_PlayBeep(BEEP_Type_t Beep)
     SYSTEM_DelayMs(5);
     BK4819_WriteRegister(BK4819_REG_71, ToneConfig);
 
+#ifdef ENABLE_FMRADIO
+    const bool isFmRadio = gFmRadioMode;
+    
+    if (isFmRadio)
+        SYSTEM_DelayMs(10);
+#endif
+
+
     if (gEnableSpeaker)
         AUDIO_AudioPathOn();
 
 #ifdef ENABLE_FMRADIO
-    if (gFmRadioMode)
+    if (isFmRadio)
         BK1080_Mute(false);
 #endif
 
