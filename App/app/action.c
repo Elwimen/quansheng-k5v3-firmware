@@ -550,16 +550,17 @@ void ACTION_Ptt(void)
 
 void ACTION_Wn(void)
 {
-    if (gRxVfo->Modulation == MODULATION_AM)
+    const bool isRx = FUNCTION_IsRx();
+    VFO_Info_t *pVfo = isRx ? gRxVfo : gTxVfo;
+
+    pVfo->CHANNEL_BANDWIDTH = !pVfo->CHANNEL_BANDWIDTH;
+
+    if (pVfo->Modulation == MODULATION_AM)
     {
         BK4819_SetFilterBandwidth(BK4819_FILTER_BW_AM, true);
         return;
     }
 
-    const bool isRx = FUNCTION_IsRx();
-
-    VFO_Info_t *pVfo = isRx ? gRxVfo : gTxVfo;
-    pVfo->CHANNEL_BANDWIDTH = !pVfo->CHANNEL_BANDWIDTH;
     uint8_t bw = pVfo->CHANNEL_BANDWIDTH;
 
     #ifdef ENABLE_FEAT_F4HWN_NARROWER
