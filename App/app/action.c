@@ -360,23 +360,6 @@ void ACTION_Handle(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
 
     // held or released after short press beyond this point
     
-#ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
-    if(gEeprom.MENU_LOCK) { // do not run these actions in RescueOps mode
-        switch (func) {
-            case ACTION_OPT_SCAN:
-            case ACTION_OPT_VFO_MR:
-    #ifdef ENABLE_FMRADIO
-            case ACTION_OPT_FM:
-    #endif
-                return;
-                break;
-
-            default:
-                break;
-        }
-    }
-#endif
-
 #ifdef ENABLE_FMRADIO
     if (gFmRadioMode) { // do not run these actions in FM radio mode
         switch (func) {

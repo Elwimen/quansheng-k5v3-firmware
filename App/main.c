@@ -129,7 +129,6 @@ void Main(void)
     if (BootMode == BOOT_MODE_RESCUE_OPS)
     {
         gEeprom.MENU_LOCK = !gEeprom.MENU_LOCK;
-        gEeprom.CURRENT_STATE = 0; // Don't resume is active...
         SETTINGS_SaveSettings();
     }
 
