@@ -1364,11 +1364,22 @@ void APP_TimeSlice10ms(void)
 
     if (gCurrentFunction == FUNCTION_TRANSMIT)
     {   // transmitting
-#ifdef ENABLE_AUDIO_BAR
+#if defined(ENABLE_AUDIO_BAR) && !defined(ENABLE_FEAT_F4HWN_AUDIO_SCOPE)
         if (gSetting_mic_bar && (gFlashLightBlinkCounter % (150 / 10)) == 0) // once every 150ms
             UI_DisplayAudioBar();
 #endif
     }
+
+#ifdef ENABLE_FEAT_F4HWN_AUDIO_SCOPE
+    // Sample audio amplitude every 30ms
+    if ((gFlashLightBlinkCounter % 3) == 0)
+        UI_AudioScope_AddSample();
+    // Refresh display every 30ms during TX only (FM RX has no usable audio register)
+    if ((gFlashLightBlinkCounter % 3) == 0 &&
+        gScreenToDisplay == DISPLAY_MAIN &&
+        gCurrentFunction == FUNCTION_TRANSMIT)
+        UI_DisplayAudioScope();
+#endif
 
     bool gUpdateDisplayCurrent = gUpdateDisplay;
     bool gUpdateStatusCurrent  = gUpdateStatus;

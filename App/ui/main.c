@@ -158,15 +158,17 @@ static void DrawLevelBar(uint8_t xpos, uint8_t line, uint8_t level, uint8_t bars
 #endif
 
 #ifdef ENABLE_AUDIO_BAR
-
 // Approximation of a logarithmic scale using integer arithmetic
-uint8_t log2_approx(unsigned int value) {
+static uint8_t log2_approx(unsigned int value) {
     uint8_t log = 0;
     while (value >>= 1) {
         log++;
     }
     return log;
 }
+#endif
+
+#ifdef ENABLE_AUDIO_BAR
 
 void UI_DisplayAudioBar(void)
 {
@@ -230,6 +232,92 @@ void UI_DisplayAudioBar(void)
     }
 }
 #endif
+
+#ifdef ENABLE_FEAT_F4HWN_AUDIO_SCOPE
+
+#define SCOPE_SAMPLES   42
+
+static uint16_t g_scope_buf[SCOPE_SAMPLES];
+static uint8_t  g_scope_write = 0;
+static uint16_t g_scope_floor = 0;  // persistent floor: snaps down fast, rises slowly
+
+void UI_AudioScope_AddSample(void)
+{
+    // REG_64 (VoiceAmplitudeOut) is only meaningful in TX (mic input).
+    // FM RX audio is frequency-encoded — no register gives the instantaneous waveform.
+    if (gCurrentFunction != FUNCTION_TRANSMIT)
+        return;
+
+    const uint16_t value = BK4819_GetVoiceAmplitudeOut();
+    g_scope_buf[g_scope_write] = value;
+    g_scope_write = (g_scope_write + 1) % SCOPE_SAMPLES;
+}
+
+void UI_DisplayAudioScope(void)
+{
+    if (gLowBattery && !gLowBatteryConfirmed)
+        return;
+
+#ifdef ENABLE_FEAT_F4HWN
+    RxBlinkLed = 0;
+    RxBlinkLedCounter = 0;
+    BK4819_ToggleGpioOut(BK4819_GPIO6_PIN2_GREEN, false);
+    const unsigned int line = isMainOnly() ? 5 : 3;
+#else
+    const unsigned int line = 3;
+#endif
+
+    if (gScreenToDisplay != DISPLAY_MAIN
+#ifdef ENABLE_DTMF_CALLING
+        || gDTMF_CallState != DTMF_CALL_STATE_NONE
+#endif
+        )
+        return;
+
+#if defined(ENABLE_ALARM) || defined(ENABLE_TX1750)
+    if (gAlarmState != ALARM_STATE_OFF)
+        return;
+#endif
+
+    uint8_t *p_line = gFrameBuffer[line];
+    memset(p_line, 0, LCD_WIDTH);
+
+    // Find min and max across current buffer
+    uint16_t min_val = g_scope_buf[0];
+    uint16_t max_val = g_scope_buf[0];
+    for (uint8_t i = 1; i < SCOPE_SAMPLES; i++) {
+        if (g_scope_buf[i] < min_val) min_val = g_scope_buf[i];
+        if (g_scope_buf[i] > max_val) max_val = g_scope_buf[i];
+    }
+
+    // Floor tracks buffer minimum with asymmetric IIR:
+    // - drops toward min smoothly (~500ms), avoiding instant-snap ghost
+    // - rises slowly (+2/frame ≈ +67/s) to handle loud constant voice
+    if (g_scope_floor > min_val)
+        g_scope_floor -= ((g_scope_floor - min_val) >> 3) + 1u;
+    else
+        g_scope_floor += 2u;
+
+    const uint16_t range = (max_val > g_scope_floor) ? (max_val - g_scope_floor) : 0;
+
+    for (uint8_t i = 0; i < SCOPE_SAMPLES; i++) {
+        const uint8_t  idx    = (g_scope_write + i) % SCOPE_SAMPLES;
+        uint8_t        height = 0;
+        if (range >= 50u) {
+            const uint16_t v = (g_scope_buf[idx] > g_scope_floor) ? (g_scope_buf[idx] - g_scope_floor) : 0u;
+            height = (uint8_t)((uint32_t)v * 7u / range);
+        }
+        // Filled column using bits 6..0 only (bit 7 always off to avoid overlap with text below)
+        // At silence (height 0): single pixel at bit 6 (baseline)
+        const uint8_t mask = (height > 0u) ? (uint8_t)((0x7Fu << (7u - height)) & 0x7Fu) : 0x40u;
+        // 2px column + 1px gap per sample
+        p_line[i * 3u]      |= mask;
+        p_line[i * 3u + 1u] |= mask;
+    }
+
+    ST7565_BlitLine(line);
+}
+#endif  // ENABLE_FEAT_F4HWN_AUDIO_SCOPE
 
 void DisplayRSSIBar(const bool now)
 {
@@ -1474,6 +1562,14 @@ void UI_DisplayMain(void)
 
         const bool rx = FUNCTION_IsRx();
 
+#ifdef ENABLE_FEAT_F4HWN_AUDIO_SCOPE
+        if (gCurrentFunction == FUNCTION_TRANSMIT) {
+            // Reserve the line so no other element overwrites it.
+            // Actual drawing is handled exclusively by the app.c timeslice.
+            center_line = CENTER_LINE_AUDIO_SCOPE;
+        }
+        else
+#endif
 #ifdef ENABLE_AUDIO_BAR
         if (gSetting_mic_bar && gCurrentFunction == FUNCTION_TRANSMIT) {
             center_line = CENTER_LINE_AUDIO_BAR;
