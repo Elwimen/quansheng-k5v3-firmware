@@ -1503,10 +1503,10 @@ void cancelUserInputModes(void)
 
     if (gWasFKeyPressed || gKeyInputCountdown > 0 || gInputBoxIndex > 0)
     {
-        gWasFKeyPressed     = false;
+        HideFKeyIcon();
+
         gInputBoxIndex      = 0;
         gKeyInputCountdown  = 0;
-        gUpdateStatus       = true;
         gUpdateDisplay      = true;
     }
 }
@@ -1528,7 +1528,7 @@ void APP_TimeSlice500ms(void)
         if (--gKeyInputCountdown == 0)
         {
 
-            if (IS_MR_CHANNEL(gTxVfo->CHANNEL_SAVE) && (gInputBoxIndex > 0 && gInputBoxIndex < 4))
+            if (IS_MR_CHANNEL(gTxVfo->CHANNEL_SAVE) && (gInputBoxIndex > 0 && gInputBoxIndex < 4) && (!gFmRadioMode))
             {
                 channelMoveSwitch();
 
@@ -1724,13 +1724,12 @@ void APP_TimeSlice500ms(void)
 */
             DTMF_clear_input_box();
 
-            gWasFKeyPressed  = false;
+            HideFKeyIcon();
             gInputBoxIndex   = 0;
 
             gAskToSave       = false;
             gAskToDelete     = false;
 
-            gUpdateStatus    = true;
             gUpdateDisplay   = true;
 
             GUI_DisplayType_t disp = DISPLAY_INVALID;
@@ -2022,8 +2021,7 @@ static void ProcessKey(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
     if (gWasFKeyPressed && (Key == KEY_PTT || Key == KEY_EXIT || Key == KEY_SIDE1 || Key == KEY_SIDE2)) { 
 #endif
         // cancel the F-key
-        gWasFKeyPressed = false;
-        gUpdateStatus   = true;
+        HideFKeyIcon();
     }
 
     if (bFlag) {
@@ -2140,6 +2138,7 @@ Skip:
         else
             flagSaveSettings = 1;
         gRequestSaveSettings = false;
+        gRequestSaveSquelch  = false;
         gUpdateStatus        = true;
     }
 

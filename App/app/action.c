@@ -290,6 +290,8 @@ void ACTION_SwitchDemodul(void)
 
 void ACTION_Handle(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
 {
+    HideFKeyIcon();
+
     if (gScreenToDisplay == DISPLAY_MAIN && gDTMF_InputMode){
          // entering DTMF code
 
@@ -357,6 +359,38 @@ void ACTION_Handle(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
     }
 
     // held or released after short press beyond this point
+    
+#ifdef ENABLE_FMRADIO
+    if (gFmRadioMode) { // do not run these actions in FM radio mode
+        switch (func) {
+            case ACTION_OPT_POWER:
+            case ACTION_OPT_MONITOR:
+            case ACTION_OPT_A_B:
+            case ACTION_OPT_VFO_MR:
+            case ACTION_OPT_SWITCH_DEMODUL:
+    #ifdef ENABLE_VOX
+            case ACTION_OPT_VOX:
+    #endif
+    #ifdef ENABLE_FEAT_F4HWN
+            case ACTION_OPT_RXMODE:
+            case ACTION_OPT_MAINONLY:
+            case ACTION_OPT_WN:
+        #ifdef ENABLE_FEAT_F4HWN_AUDIO
+            case ACTION_OPT_RXA:
+        #endif
+        #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
+            case ACTION_OPT_POWER_HIGH:
+            case ACTION_OPT_REMOVE_OFFSET:
+        #endif
+    #endif
+                gBeepToPlay = BEEP_500HZ_60MS_DOUBLE_BEEP_OPTIONAL;
+                return;
+
+            default:
+                break;
+        }
+    }
+#endif
 
     action_opt_table[func]();
 }
@@ -546,6 +580,8 @@ void ACTION_RxA(void)
 void ACTION_Ptt(void)
 {
     gSetting_set_ptt_session = !gSetting_set_ptt_session;
+
+    ACTION_Update();
 }
 
 void ACTION_Wn(void)

@@ -261,3 +261,8 @@ KEY_Code_t KEYBOARD_GetKey(void)
     }
     return btn;
 }
+
+void HideFKeyIcon(void) {
+    gWasFKeyPressed       = false;
+    gUpdateStatus         = true;
+}
