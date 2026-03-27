@@ -239,17 +239,19 @@ void UI_DisplayAudioBar(void)
 #define SCOPE_NOISE_GATE     50u  // minimum range below which the display shows baseline
 #define SCOPE_FLOOR_RISE     2u   // floor rise per frame (+100 units/s at 20ms/frame)
 #define SCOPE_FLOOR_DROP_SHR 3u   // floor drop IIR shift: drop by (floor-min) >> N per frame (~160ms to halve)
+#define SCOPE_VOLUME_MIN     200u // let's assume that the sound level in silence is 200
 
-static uint16_t g_scope_buf[SCOPE_SAMPLES];
-static uint8_t  g_scope_write      = 0;
-static uint16_t g_scope_floor      = 0;     // persistent floor: snaps down fast, rises slowly
-static uint8_t  g_scope_ready      = 0;     // number of valid samples since TX entry
-static bool     g_scope_floor_init = false; // floor initialised from real data yet?
-
-void UI_AudioScope_AddSample(void)
+void UI_DisplayAudioScope(void)
 {
+    static uint16_t g_scope_buf[SCOPE_SAMPLES];
+    static uint8_t  g_scope_write      = 0;
+    static uint16_t g_scope_floor      = SCOPE_VOLUME_MIN;     // persistent floor: snaps down fast, rises slowly
+    static uint8_t  g_scope_ready      = 0;                    // number of valid samples since TX entry
+
     // REG_64 (VoiceAmplitudeOut) is only meaningful in TX (mic input).
     // FM RX audio is frequency-encoded — no register gives the instantaneous waveform.
+
+// ------------------------------ Sample audio amplitude ------------------------------
 
     static bool s_was_tx = false;
 
@@ -258,42 +260,39 @@ void UI_AudioScope_AddSample(void)
         return;
     }
 
+    // This prevents a sudden spike on the bar caused by release the PTT button
+    if (!GPIO_IsPttPressed()
+#ifdef ENABLE_VOX
+    && !gEeprom.VOX_SWITCH
+#endif
+    )
+    return;
+
     if (!s_was_tx) {
         // TX entry: full reset so every new transmission starts from a clean state
-        memset(g_scope_buf, 0, sizeof(g_scope_buf));
+        for (uint8_t i = 0; i < SCOPE_SAMPLES; i++) g_scope_buf[i] = SCOPE_VOLUME_MIN;
         g_scope_write      = 0u;
-        g_scope_floor      = 0u;
-        g_scope_ready      = 0u;
-        g_scope_floor_init = false;
+        g_scope_floor      = SCOPE_VOLUME_MIN;
         s_was_tx           = true;
     }
 
     g_scope_buf[g_scope_write] = BK4819_GetVoiceAmplitudeOut();
+
+    // Let’s assume that values below 200 may be incorrect
+    // to avoid full-height bars that may appear on the first TX
+    if (g_scope_ready < SCOPE_SAMPLES) {
+        g_scope_ready++;
+        
+        if (g_scope_buf[g_scope_write] < SCOPE_VOLUME_MIN) 
+            g_scope_buf[g_scope_write] = SCOPE_VOLUME_MIN;
+    }
+
     g_scope_write = (g_scope_write + 1u) % SCOPE_SAMPLES;
 
-    if (g_scope_ready < SCOPE_SAMPLES)
-        g_scope_ready++;
-}
+// --------------------------------- Refresh display ---------------------------------
 
-void UI_DisplayAudioScope(void)
-{
     if (gLowBattery && !gLowBatteryConfirmed)
         return;
-
-    // Buffer not yet full: show a dotted baseline while samples warm up
-    if (g_scope_ready < SCOPE_SAMPLES) {
-#ifdef ENABLE_FEAT_F4HWN
-        const unsigned int line = isMainOnly() ? 5u : 3u;
-#else
-        const unsigned int line = 3u;
-#endif
-        uint8_t *p_line = gFrameBuffer[line];
-        memset(p_line, 0, LCD_WIDTH);
-        for (uint8_t x = 0u; x < LCD_WIDTH; x += 3u)
-            p_line[x] = 0x40u;  // one dot every 3px, aligned with column grid
-        ST7565_BlitLine(line);
-        return;
-    }
 
     if (gScreenToDisplay != DISPLAY_MAIN
 #ifdef ENABLE_DTMF_CALLING
@@ -327,13 +326,6 @@ void UI_DisplayAudioScope(void)
         if (g_scope_buf[i] > max_val) max_val = g_scope_buf[i];
     }
 
-    // First real display frame: seed the floor from the actual buffer minimum
-    // to avoid full-height bars caused by a floor at 0 far below the voice data.
-    if (!g_scope_floor_init) {
-        g_scope_floor      = min_val;
-        g_scope_floor_init = true;
-    }
-
     // Floor tracks buffer minimum with asymmetric IIR:
     // - drops toward min smoothly (SCOPE_FLOOR_DROP_SHR), avoiding instant-snap ghost
     // - rises slowly (SCOPE_FLOOR_RISE/frame) to handle loud constant voice
@@ -355,8 +347,11 @@ void UI_DisplayAudioScope(void)
         // At silence (height 0): single pixel at bit 6 (baseline)
         const uint8_t mask = (height > 0u) ? (uint8_t)((0x7Fu << (7u - height)) & 0x7Fu) : 0x40u;
         // 2px column + 1px gap per sample
-        p_line[i * 3u]      |= mask;
-        p_line[i * 3u + 1u] |= mask;
+
+        uint8_t *p_col = &p_line[i * 3u];
+        p_col[0] = mask;
+        p_col[1] = mask;
+
     }
 
     ST7565_BlitLine(line);
