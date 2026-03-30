@@ -480,7 +480,9 @@ void MENU_AcceptSetting(void)
         case MENU_SQL:
             gEeprom.SQUELCH_LEVEL = gSubMenuSelection;
             gVfoConfigureMode     = VFO_CONFIGURE;
-            gRequestSaveSquelch   = true;
+            #ifdef ENABLE_FEAT_F4HWN
+                gSquelchLevelOriginal = 10;
+            #endif
             break;
 
         case MENU_STEP:
