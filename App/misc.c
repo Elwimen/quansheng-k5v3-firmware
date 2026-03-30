@@ -250,7 +250,6 @@ bool              gFlagResetVfos;
 bool              gRequestSaveVFO;
 uint16_t          gRequestSaveChannel;
 bool              gRequestSaveSettings;
-bool              gRequestSaveSquelch;
 #ifdef ENABLE_FMRADIO
     bool          gRequestSaveFM;
 #endif
@@ -331,6 +330,7 @@ uint8_t           gIsLocked = 0xFF;
     bool          gMute = false;
     uint8_t       gBacklightTimeOriginal;
     uint8_t       gBacklightBrightnessOld;
+    uint8_t       gSquelchLevelOriginal = 10;
     uint8_t       gPttOnePushCounter = 0;
     uint32_t      gBlinkCounter = 0;
 
