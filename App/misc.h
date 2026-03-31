@@ -189,7 +189,8 @@ extern enum BacklightOnRxTx_t gSetting_backlight_on_tx_rx;
     extern bool               gSetting_set_met;
     extern bool               gSetting_set_gui;
     #ifdef ENABLE_FEAT_F4HWN_AUDIO
-        extern uint8_t            gSetting_set_audio;
+        extern uint8_t            gSetting_set_audio_fm;
+        extern uint8_t            gSetting_set_audio_am;
     #endif
     #ifdef ENABLE_FEAT_F4HWN_NARROWER
         extern bool               gSetting_set_nfm;

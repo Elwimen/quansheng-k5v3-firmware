@@ -897,17 +897,25 @@ void UI_DisplayMain(void)
                     // }
 
                     // if (RxBlink == 0 || RxBlink == 1) {
-                        if(gRxVfo->Modulation == MODULATION_AM)
-                            GUI_DisplaySmallest("AIR", 10, RxLine == 0 ? 1 : 33, false, true);
+                        if(gRxVfo->Modulation == MODULATION_AM) {
+                            #ifdef ENABLE_FEAT_F4HWN_AUDIO
+                                strcpy(String, gSubMenu_SET_AUD_AM[gSetting_set_audio_am]);
+                            #else
+                                strcpy(String, "AIR");
+                            #endif
+                        }
+                        else if (gRxVfo->Modulation == MODULATION_USB) {
+                            strcpy(String, "USB");
+                        }
                         else {
                             #ifdef ENABLE_FEAT_F4HWN_AUDIO
-                                strcpy(String, gSubMenu_SET_AUD[gSetting_set_audio]);
+                                strcpy(String, gSubMenu_SET_AUD_FM[gSetting_set_audio_fm]);
                             #else
                                 strcpy(String, "RX");
                             #endif
-                            GUI_DisplaySmallest(String, 10, RxLine == 0 ? 1 : 33, false, true);
                         }
 
+                        GUI_DisplaySmallest(String, 10, RxLine == 0 ? 1 : 33, false, true);
                         //UI_PrintStringSmallBold("RX", 8, 0, RxLine);
                     // }
 #else

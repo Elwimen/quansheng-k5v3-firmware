@@ -413,13 +413,20 @@ const char gSubMenu_SCRAMBLER[][7] =
     };
 
     #ifdef ENABLE_FEAT_F4HWN_AUDIO
-        const char gSubMenu_SET_AUD[][6] =
+        const char gSubMenu_SET_AUD_FM[][6] =
         {
             "FLAT",
             "CLEAN",
             "MID",
             "BOOST",
             "MAX"
+        };
+
+        const char gSubMenu_SET_AUD_AM[][6] =
+        {
+            "SHARP",
+            "STOCK",
+            "OPEN"
         };
     #endif
 
@@ -1194,7 +1201,18 @@ void UI_DisplayMenu(void)
 
         #ifdef ENABLE_FEAT_F4HWN_AUDIO
             case MENU_SET_AUD:
-                strcpy(String, gSubMenu_SET_AUD[gSubMenuSelection]);
+                if(gTxVfo->Modulation == MODULATION_AM) {
+                    strcpy(String, gSubMenu_SET_AUD_AM[gSubMenuSelection]);
+                    UI_PrintStringSmallNormal("AM", 114, 0, 0);
+                }
+                else if (gTxVfo->Modulation == MODULATION_USB) {
+                    strcpy(String, "USB");
+                    UI_PrintStringSmallNormal("USB", 108, 0, 0);
+                }
+                else {
+                    strcpy(String, gSubMenu_SET_AUD_FM[gSubMenuSelection]);
+                    UI_PrintStringSmallNormal("FM", 114, 0, 0);
+                }
                 break;
         #endif
 
@@ -1345,8 +1363,8 @@ void UI_DisplayMenu(void)
         || UI_MENU_GetCurrentMenuId() == MENU_D_LIST
 #endif
     ) {
-        sprintf(String, "%2d", gSubMenuSelection);
-        UI_PrintStringSmallNormal(String, 105, 0, 0);
+        sprintf(String, "%03d", gSubMenuSelection);
+        UI_PrintStringSmallNormal(String, 107, 0, 0);
     }
 
     if ((UI_MENU_GetCurrentMenuId() == MENU_RESET    ||
