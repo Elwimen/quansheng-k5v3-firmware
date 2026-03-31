@@ -71,31 +71,68 @@ const char gModulationStr[MODULATION_UKNOWN][4] = {
 
     static void AUDIO_ApplyFMProfile(uint8_t profile)
     {
-        switch (profile)
+        // switch (profile)
+        // {
+        //     default:
+        //     case 0: // FLAT
+        //         BK4819_WriteRegister(0x54, 0x9009);
+        //         BK4819_WriteRegister(0x55, 0x3200);
+        //         break;
+
+        //     case 1: // CLEAN
+        //         BK4819_WriteRegister(0x54, 0x9009);
+        //         BK4819_WriteRegister(0x55, 0x33A9);
+        //         break;
+
+        //     case 2: // MID
+        //         BK4819_WriteRegister(0x54, 0x9009);
+        //         BK4819_WriteRegister(0x55, 0x3600);
+        //         break;
+
+        //     case 3: // BOOST
+        //         BK4819_WriteRegister(0x54, 0x8546);
+        //         BK4819_WriteRegister(0x55, 0x3AF0);
+        //         break;
+
+        //     case 4: // MAX
+        //         BK4819_WriteRegister(0x54, 0x8566);
+        //         BK4819_WriteRegister(0x55, 0x3D00);
+        //         break;
+        // }
+
+        switch (profile) // BK4819_WriteRegister(0x54, 0x____);
         {
             default:
             case 0: // FLAT
-                BK4819_WriteRegister(0x54, 0x9009);
-                BK4819_WriteRegister(0x55, 0x3200);
-                break;
-
             case 1: // CLEAN
-                BK4819_WriteRegister(0x54, 0x9009);
-                BK4819_WriteRegister(0x55, 0x33A9);
-                break;
-
             case 2: // MID
                 BK4819_WriteRegister(0x54, 0x9009);
-                BK4819_WriteRegister(0x55, 0x3600);
                 break;
-
             case 3: // BOOST
                 BK4819_WriteRegister(0x54, 0x8546);
-                BK4819_WriteRegister(0x55, 0x3AF0);
                 break;
-
             case 4: // MAX
                 BK4819_WriteRegister(0x54, 0x8566);
+                break;
+            
+        }
+
+        switch (profile) // BK4819_WriteRegister(0x55, 0x3___);
+        {
+            default:
+            case 0: // FLAT
+                BK4819_WriteRegister(0x55, 0x3200);
+                break;
+            case 1: // CLEAN
+                BK4819_WriteRegister(0x55, 0x33A9);
+                break;
+            case 2: // MID
+                BK4819_WriteRegister(0x55, 0x3600);
+                break;
+            case 3: // BOOST
+                BK4819_WriteRegister(0x55, 0x3AF0);
+                break;
+            case 4: // MAX
                 BK4819_WriteRegister(0x55, 0x3D00);
                 break;
         }
@@ -103,31 +140,42 @@ const char gModulationStr[MODULATION_UKNOWN][4] = {
 
     static void AUDIO_ApplyAMProfile(uint8_t profile)
     {
-        switch (profile)
-        {
-            default:
-            case 0: // SHARP (ALPHA test profile) - Narrow IF filter (REG54 bits[14:8]=0, bits[7:0]=9), low IF gain (REG55 bits[11:8]=1, ref=169)
-                    // Selective and crisp, best adjacent channel rejection, may sound harsh on strong signals
-                BK4819_WriteRegister(0x2b, 0x0300);
-                BK4819_WriteRegister(0x2f, 0x9990);
-                BK4819_WriteRegister(0x54, 0x9009);
-                BK4819_WriteRegister(0x55, 0x31A9);
-                break;
-            case 1: // STOCK - Narrow IF filter (REG54 bits[14:8]=0, bits[7:0]=9), moderate IF gain (REG55 bits[11:8]=4, ref=180)
-                    // Selective filter with balanced gain, punchy and detailed, good compromise between rejection and sensitivity
-                BK4819_WriteRegister(0x2b, 0x0500);
-                BK4819_WriteRegister(0x2f, 0x9990);
-                BK4819_WriteRegister(0x54, 0x9009);
-                BK4819_WriteRegister(0x55, 0x31A9);
-                break;
-            case 2: // OPEN (BRAVO test profile) - Medium-wide IF filter (REG54 bits[14:8]=8, bits[7:0]=70), high IF gain (REG55 bits[11:8]=8, ref=192)
-                    // Wide and pleasant, better sensitivity on weak signals, may struggle with adjacent channel interference
-                BK4819_WriteRegister(0x2b, 0x0300);
-                BK4819_WriteRegister(0x2f, 0x9990);
-                BK4819_WriteRegister(0x54, 0x8846);
-                BK4819_WriteRegister(0x55, 0x38C0);
-                break;
-        }
+        // switch (profile)
+        // {
+        //     default:
+        //     case 0: // SHARP (ALPHA test profile) - Narrow IF filter (REG54 bits[14:8]=0, bits[7:0]=9), low IF gain (REG55 bits[11:8]=1, ref=169)
+        //             // Selective and crisp, best adjacent channel rejection, may sound harsh on strong signals
+        //         BK4819_WriteRegister(0x2b, 0x0300);
+        //         BK4819_WriteRegister(0x2f, 0x9990);
+        //         BK4819_WriteRegister(0x54, 0x9009);
+        //         BK4819_WriteRegister(0x55, 0x31A9);
+        //         break;
+        //     case 1: // STOCK - Narrow IF filter (REG54 bits[14:8]=0, bits[7:0]=9), moderate IF gain (REG55 bits[11:8]=4, ref=180)
+        //             // Selective filter with balanced gain, punchy and detailed, good compromise between rejection and sensitivity
+        //         BK4819_WriteRegister(0x2b, 0x0500);
+        //         BK4819_WriteRegister(0x2f, 0x9990);
+        //         BK4819_WriteRegister(0x54, 0x9009);
+        //         BK4819_WriteRegister(0x55, 0x31A9);
+        //         break;
+        //     case 2: // OPEN (BRAVO test profile) - Medium-wide IF filter (REG54 bits[14:8]=8, bits[7:0]=70), high IF gain (REG55 bits[11:8]=8, ref=192)
+        //             // Wide and pleasant, better sensitivity on weak signals, may struggle with adjacent channel interference
+        //         BK4819_WriteRegister(0x2b, 0x0300);
+        //         BK4819_WriteRegister(0x2f, 0x9990);
+        //         BK4819_WriteRegister(0x54, 0x8846);
+        //         BK4819_WriteRegister(0x55, 0x38C0);
+        //         break;
+        // }
+
+        if (profile == 1) BK4819_WriteRegister(0x2b, 0x0500);
+        else              BK4819_WriteRegister(0x2b, 0x0300);
+
+        BK4819_WriteRegister(0x2f, 0x9990);
+
+        if (profile == 2) BK4819_WriteRegister(0x54, 0x8846);
+        else              BK4819_WriteRegister(0x54, 0x9009);
+
+        if (profile == 2) BK4819_WriteRegister(0x55, 0x38C0);
+        else              BK4819_WriteRegister(0x55, 0x31A9);
     }
 
     static void AUDIO_ApplyUSBProfile(void)
@@ -252,6 +300,28 @@ void RADIO_InitInfo(VFO_Info_t *pInfo, const uint16_t ChannelSave, const uint32_
     RADIO_ConfigureSquelchAndOutputPower(pInfo);
 }
 
+void RADIO_ValidateAndSetCode(FREQ_Config_t *pFreq_Config, uint8_t tmp) {
+    switch (pFreq_Config->CodeType) {
+        default:
+        case CODE_TYPE_OFF:
+            pFreq_Config->CodeType = CODE_TYPE_OFF;
+            tmp = 0;
+            break;
+
+        case CODE_TYPE_CONTINUOUS_TONE:
+            if (tmp > (ARRAY_SIZE(CTCSS_Options) - 1))
+                tmp = 0;
+            break;
+
+        case CODE_TYPE_DIGITAL:
+        case CODE_TYPE_REVERSE_DIGITAL:
+            if (tmp > (ARRAY_SIZE(DCS_Options) - 1))
+                tmp = 0;
+            break;
+    }
+    pFreq_Config->Code = tmp;
+}
+
 void RADIO_ConfigureChannel(const unsigned int VFO, const unsigned int configure)
 {
     VFO_Info_t *pVfo = &gEeprom.VfoInfo[VFO];
@@ -325,7 +395,7 @@ void RADIO_ConfigureChannel(const unsigned int VFO, const unsigned int configure
     }
 
     pVfo->Band                    = band;
-    pVfo->SCANLIST_PARTICIPATION = bParticipation;
+    pVfo->SCANLIST_PARTICIPATION  = bParticipation;
     pVfo->CHANNEL_SAVE            = channel;
 
     uint32_t base;
@@ -370,49 +440,8 @@ void RADIO_ConfigureChannel(const unsigned int VFO, const unsigned int configure
         pVfo->freq_config_RX.CodeType = (data[2] >> 0) & 0x0F;
         pVfo->freq_config_TX.CodeType = (data[2] >> 4) & 0x0F;
 
-        tmp = data[0];
-        switch (pVfo->freq_config_RX.CodeType)
-        {
-            default:
-            case CODE_TYPE_OFF:
-                pVfo->freq_config_RX.CodeType = CODE_TYPE_OFF;
-                tmp = 0;
-                break;
-
-            case CODE_TYPE_CONTINUOUS_TONE:
-                if (tmp > (ARRAY_SIZE(CTCSS_Options) - 1))
-                    tmp = 0;
-                break;
-
-            case CODE_TYPE_DIGITAL:
-            case CODE_TYPE_REVERSE_DIGITAL:
-                if (tmp > (ARRAY_SIZE(DCS_Options) - 1))
-                    tmp = 0;
-                break;
-        }
-        pVfo->freq_config_RX.Code = tmp;
-
-        tmp = data[1];
-        switch (pVfo->freq_config_TX.CodeType)
-        {
-            default:
-            case CODE_TYPE_OFF:
-                pVfo->freq_config_TX.CodeType = CODE_TYPE_OFF;
-                tmp = 0;
-                break;
-
-            case CODE_TYPE_CONTINUOUS_TONE:
-                if (tmp > (ARRAY_SIZE(CTCSS_Options) - 1))
-                    tmp = 0;
-                break;
-
-            case CODE_TYPE_DIGITAL:
-            case CODE_TYPE_REVERSE_DIGITAL:
-                if (tmp > (ARRAY_SIZE(DCS_Options) - 1))
-                    tmp = 0;
-                break;
-        }
-        pVfo->freq_config_TX.Code = tmp;
+        RADIO_ValidateAndSetCode(&pVfo->freq_config_RX, data[0]);
+        RADIO_ValidateAndSetCode(&pVfo->freq_config_TX, data[1]);
 
         if (data[4] == 0xFF)
         {
@@ -1177,23 +1206,6 @@ void RADIO_SetModulation(ModulationMode_t modulation)
         }
 
         case MODULATION_USB:
-        {
-            uint16_t uVar1 = BK4819_ReadRegister(0x31);
-            BK4819_WriteRegister(0x31, uVar1 & 0xfffe); // AM Demodulation Disable
-            BK4819_WriteRegister(0x42, 0x6b5a);
-            BK4819_WriteRegister(0x2a, 0x7400);
-            BK4819_WriteRegister(0x2b, 0x0000);
-            BK4819_WriteRegister(0x2f, 0x9890);
-
-            #ifdef ENABLE_FEAT_F4HWN_AUDIO
-                AUDIO_ApplyUSBProfile();
-            #else
-                BK4819_WriteRegister(0x54, 0x9009);
-                BK4819_WriteRegister(0x55, 0x31a9);
-            #endif
-            break;
-        }
-
         case MODULATION_FM:
         default:
         {
@@ -1205,7 +1217,10 @@ void RADIO_SetModulation(ModulationMode_t modulation)
             BK4819_WriteRegister(0x2f, 0x9890);
 
             #ifdef ENABLE_FEAT_F4HWN_AUDIO
-                AUDIO_ApplyFMProfile(gSetting_set_audio_fm);
+                if (modulation == MODULATION_USB)
+                    AUDIO_ApplyUSBProfile();
+                else
+                    AUDIO_ApplyFMProfile(gSetting_set_audio_fm);
             #else
                 BK4819_WriteRegister(0x54, 0x9009);
                 BK4819_WriteRegister(0x55, 0x31a9);
@@ -1397,17 +1412,19 @@ void RADIO_PrepareTX(void)
 
 void RADIO_SendCssTail(void)
 {
-    switch (gCurrentVfo->pTX->CodeType) {
-    case CODE_TYPE_DIGITAL:
-    case CODE_TYPE_REVERSE_DIGITAL:
-        BK4819_PlayCDCSSTail();
-        break;
-    default:
-        BK4819_PlayCTCSSTail();
-        break;
-    }
+    if (gEeprom.TAIL_TONE_ELIMINATION) {
+        switch (gCurrentVfo->pTX->CodeType) {
+        case CODE_TYPE_DIGITAL:
+        case CODE_TYPE_REVERSE_DIGITAL:
+            BK4819_PlayCDCSSTail();
+            break;
+        default:
+            BK4819_PlayCTCSSTail();
+            break;
+        }
 
-    SYSTEM_DelayMs(200);
+        SYSTEM_DelayMs(200);
+    }
 }
 
 void RADIO_SendEndOfTransmission(void)
@@ -1416,8 +1433,7 @@ void RADIO_SendEndOfTransmission(void)
     DTMF_SendEndOfTransmission();
 
     // send the CTCSS/DCS tail tone - allows the receivers to mute the usual FM squelch tail/crash
-    if(gEeprom.TAIL_TONE_ELIMINATION)
-        RADIO_SendCssTail();
+    RADIO_SendCssTail();
     RADIO_SetupRegisters(false);
 }
 
@@ -1427,7 +1443,6 @@ void RADIO_PrepareCssTX(void)
 
     SYSTEM_DelayMs(200);
 
-    if(gEeprom.TAIL_TONE_ELIMINATION)
-        RADIO_SendCssTail();
+    RADIO_SendCssTail();
     RADIO_SetupRegisters(true);
 }
