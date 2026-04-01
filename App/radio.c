@@ -71,68 +71,31 @@ const char gModulationStr[MODULATION_UKNOWN][4] = {
 
     static void AUDIO_ApplyFMProfile(uint8_t profile)
     {
-        // switch (profile)
-        // {
-        //     default:
-        //     case 0: // FLAT
-        //         BK4819_WriteRegister(0x54, 0x9009);
-        //         BK4819_WriteRegister(0x55, 0x3200);
-        //         break;
-
-        //     case 1: // CLEAN
-        //         BK4819_WriteRegister(0x54, 0x9009);
-        //         BK4819_WriteRegister(0x55, 0x33A9);
-        //         break;
-
-        //     case 2: // MID
-        //         BK4819_WriteRegister(0x54, 0x9009);
-        //         BK4819_WriteRegister(0x55, 0x3600);
-        //         break;
-
-        //     case 3: // BOOST
-        //         BK4819_WriteRegister(0x54, 0x8546);
-        //         BK4819_WriteRegister(0x55, 0x3AF0);
-        //         break;
-
-        //     case 4: // MAX
-        //         BK4819_WriteRegister(0x54, 0x8566);
-        //         BK4819_WriteRegister(0x55, 0x3D00);
-        //         break;
-        // }
-
-        switch (profile) // BK4819_WriteRegister(0x54, 0x____);
+        switch (profile)
         {
             default:
             case 0: // FLAT
-            case 1: // CLEAN
-            case 2: // MID
                 BK4819_WriteRegister(0x54, 0x9009);
-                break;
-            case 3: // BOOST
-                BK4819_WriteRegister(0x54, 0x8546);
-                break;
-            case 4: // MAX
-                BK4819_WriteRegister(0x54, 0x8566);
-                break;
-            
-        }
-
-        switch (profile) // BK4819_WriteRegister(0x55, 0x3___);
-        {
-            default:
-            case 0: // FLAT
                 BK4819_WriteRegister(0x55, 0x3200);
                 break;
+
             case 1: // CLEAN
+                BK4819_WriteRegister(0x54, 0x9009);
                 BK4819_WriteRegister(0x55, 0x33A9);
                 break;
+
             case 2: // MID
+                BK4819_WriteRegister(0x54, 0x9009);
                 BK4819_WriteRegister(0x55, 0x3600);
                 break;
+
             case 3: // BOOST
+                BK4819_WriteRegister(0x54, 0x8546);
                 BK4819_WriteRegister(0x55, 0x3AF0);
                 break;
+
             case 4: // MAX
+                BK4819_WriteRegister(0x54, 0x8566);
                 BK4819_WriteRegister(0x55, 0x3D00);
                 break;
         }
@@ -140,42 +103,31 @@ const char gModulationStr[MODULATION_UKNOWN][4] = {
 
     static void AUDIO_ApplyAMProfile(uint8_t profile)
     {
-        // switch (profile)
-        // {
-        //     default:
-        //     case 0: // SHARP (ALPHA test profile) - Narrow IF filter (REG54 bits[14:8]=0, bits[7:0]=9), low IF gain (REG55 bits[11:8]=1, ref=169)
-        //             // Selective and crisp, best adjacent channel rejection, may sound harsh on strong signals
-        //         BK4819_WriteRegister(0x2b, 0x0300);
-        //         BK4819_WriteRegister(0x2f, 0x9990);
-        //         BK4819_WriteRegister(0x54, 0x9009);
-        //         BK4819_WriteRegister(0x55, 0x31A9);
-        //         break;
-        //     case 1: // STOCK - Narrow IF filter (REG54 bits[14:8]=0, bits[7:0]=9), moderate IF gain (REG55 bits[11:8]=4, ref=180)
-        //             // Selective filter with balanced gain, punchy and detailed, good compromise between rejection and sensitivity
-        //         BK4819_WriteRegister(0x2b, 0x0500);
-        //         BK4819_WriteRegister(0x2f, 0x9990);
-        //         BK4819_WriteRegister(0x54, 0x9009);
-        //         BK4819_WriteRegister(0x55, 0x31A9);
-        //         break;
-        //     case 2: // OPEN (BRAVO test profile) - Medium-wide IF filter (REG54 bits[14:8]=8, bits[7:0]=70), high IF gain (REG55 bits[11:8]=8, ref=192)
-        //             // Wide and pleasant, better sensitivity on weak signals, may struggle with adjacent channel interference
-        //         BK4819_WriteRegister(0x2b, 0x0300);
-        //         BK4819_WriteRegister(0x2f, 0x9990);
-        //         BK4819_WriteRegister(0x54, 0x8846);
-        //         BK4819_WriteRegister(0x55, 0x38C0);
-        //         break;
-        // }
-
-        if (profile == 1) BK4819_WriteRegister(0x2b, 0x0500);
-        else              BK4819_WriteRegister(0x2b, 0x0300);
-
-        BK4819_WriteRegister(0x2f, 0x9990);
-
-        if (profile == 2) BK4819_WriteRegister(0x54, 0x8846);
-        else              BK4819_WriteRegister(0x54, 0x9009);
-
-        if (profile == 2) BK4819_WriteRegister(0x55, 0x38C0);
-        else              BK4819_WriteRegister(0x55, 0x31A9);
+        switch (profile)
+        {
+            default:
+            case 0: // SHARP (ALPHA test profile) - Narrow IF filter (REG54 bits[14:8]=0, bits[7:0]=9), low IF gain (REG55 bits[11:8]=1, ref=169)
+                    // Selective and crisp, best adjacent channel rejection, may sound harsh on strong signals
+                BK4819_WriteRegister(0x2b, 0x0300);
+                BK4819_WriteRegister(0x2f, 0x9990);
+                BK4819_WriteRegister(0x54, 0x9009);
+                BK4819_WriteRegister(0x55, 0x31A9);
+                break;
+            case 1: // STOCK - Narrow IF filter (REG54 bits[14:8]=0, bits[7:0]=9), moderate IF gain (REG55 bits[11:8]=4, ref=180)
+                    // Selective filter with balanced gain, punchy and detailed, good compromise between rejection and sensitivity
+                BK4819_WriteRegister(0x2b, 0x0500);
+                BK4819_WriteRegister(0x2f, 0x9990);
+                BK4819_WriteRegister(0x54, 0x9009);
+                BK4819_WriteRegister(0x55, 0x31A9);
+                break;
+            case 2: // OPEN (BRAVO test profile) - Medium-wide IF filter (REG54 bits[14:8]=8, bits[7:0]=70), high IF gain (REG55 bits[11:8]=8, ref=192)
+                    // Wide and pleasant, better sensitivity on weak signals, may struggle with adjacent channel interference
+                BK4819_WriteRegister(0x2b, 0x0300);
+                BK4819_WriteRegister(0x2f, 0x9990);
+                BK4819_WriteRegister(0x54, 0x8846);
+                BK4819_WriteRegister(0x55, 0x38C0);
+                break;
+        }
     }
 
     static void AUDIO_ApplyUSBProfile(void)
