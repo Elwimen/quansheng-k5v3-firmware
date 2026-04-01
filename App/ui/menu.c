@@ -1195,7 +1195,7 @@ void UI_DisplayMenu(void)
                 }
                 else if (gTxVfo->Modulation == MODULATION_USB) {
                     strcpy(String, "USB");
-                    UI_PrintStringSmallNormal("USB", 108, 0, 0);
+                    UI_PrintStringSmallNormal("USB", 107, 0, 0);
                 }
                 else {
                     strcpy(String, gSubMenu_SET_AUD_FM[gSubMenuSelection]);
