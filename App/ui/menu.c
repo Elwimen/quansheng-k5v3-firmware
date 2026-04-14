@@ -27,6 +27,7 @@
 #include "../driver/eeprom.h"
 #include "../driver/st7565.h"
 #include "../external/printf/printf.h"
+#include "../font.h"
 #include "../frequencies.h"
 #include "../helper/battery.h"
 #include "../misc.h"
@@ -1351,8 +1352,31 @@ void UI_DisplayMenu(void)
         || UI_MENU_GetCurrentMenuId() == MENU_D_LIST
 #endif
     ) {
-        sprintf(String, "%03d", gSubMenuSelection);
-        UI_PrintStringSmallNormal(String, 107, 0, 0);
+        uint8_t text_x = 107;
+
+        if (UI_MENU_GetCurrentMenuId() == MENU_R_CTCS ||
+            UI_MENU_GetCurrentMenuId() == MENU_T_CTCS) {
+            const uint8_t approved_index =
+                (gSubMenuSelection > 0) ? DCS_GetCtcssApprovedIndex(gSubMenuSelection - 1) : 0xFF;
+
+            if (gSubMenuSelection == 0)
+                sprintf(String, "00 (00)");
+            else if (approved_index != 0xFF)
+                sprintf(String, "%02u (%02u)", (unsigned)gSubMenuSelection, approved_index + 1);
+            else
+                sprintf(String, "%02u (--)", (unsigned)gSubMenuSelection);
+
+            {
+                const uint8_t char_spacing = ARRAY_SIZE(gFontSmall[0]) + 1;
+                const size_t text_width = strlen(String) * char_spacing;
+
+                text_x = (text_width < LCD_WIDTH) ? (uint8_t)(LCD_WIDTH - text_width) : 0;
+            }
+        } else {
+            sprintf(String, "%03d", gSubMenuSelection);
+        }
+
+        UI_PrintStringSmallNormal(String, text_x, 0, 0);
     }
 
     if ((UI_MENU_GetCurrentMenuId() == MENU_RESET    ||
