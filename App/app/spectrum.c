@@ -90,7 +90,24 @@ SpectrumSettings settings = {.stepsCount = STEPS_64,
 uint32_t fMeasure = 0;
 uint32_t currentFreq, tempFreq;
 uint16_t rssiHistory[128];
-int vfo;
+
+// Peak hold: tracks the highest Y per column with timed decay
+static uint8_t  peakHoldY[128];       // Peak Y value per display column (0=top)
+static uint8_t  peakHoldAge[64];      // Shared decay timer (1 per 2 columns)
+#define PEAK_HOLD_DELAY  15           // Sweeps before decay starts
+#define PEAK_HOLD_INIT   0xFF         // "no peak" sentinel (same as SPECTRUM_TOPY_SKIP)
+
+// Cached REG_30 value for scan steps: avoids re-reading it on every SetFScan()
+// call (saves 1 SPI read per step = fewer SPI bus events = less SPI-induced audio interference).
+static uint16_t scanReg30 = 0;
+
+// EMA-smoothed RSSI for STILL display only (peak.rssi stays raw for trigger)
+static uint16_t rssiSmoothed = 0;
+
+// Sweeps remaining before auto-scaling of dbMax resumes (0 = auto)
+static uint8_t manualDbMaxTimer = 0;
+#define MANUAL_DBMAX_SWEEPS 15
+uint8_t vfo;
 uint8_t freqInputIndex = 0;
 uint8_t freqInputDotIndex = 0;
 KEY_Code_t freqInputArr[10];
@@ -124,25 +141,17 @@ static void LoadSettings()
     PY25Q16_ReadBuffer(0x00A158, Data, sizeof(Data));
 
     settings.scanStepIndex = ((Data[3] & 0xF0) >> 4);
-
     if (settings.scanStepIndex > 14)
-    {
         settings.scanStepIndex = S_STEP_25_0kHz;
-    }
 
     settings.stepsCount = ((Data[3] & 0x0F) & 0b1100) >> 2;
-
     if (settings.stepsCount > 3)
-    {
         settings.stepsCount = STEPS_64;
-    }
 
     settings.listenBw = ((Data[3] & 0x0F) & 0b0011);
-
     if (settings.listenBw > 2)
-    {
         settings.listenBw = BK4819_FILTER_BW_WIDE;
-    }
+
 }
 
 static void SaveSettings()
@@ -151,6 +160,7 @@ static void SaveSettings()
     PY25Q16_ReadBuffer(0x00A158, Data, sizeof(Data));
 
     Data[3] = (settings.scanStepIndex << 4) | (settings.stepsCount << 2) | settings.listenBw;
+
 
     PY25Q16_WriteBuffer(0x00A158, Data, sizeof(Data), false);
 }
@@ -226,17 +236,6 @@ static void PutPixelStatus(uint8_t x, uint8_t y, bool fill)
 }
 #endif
 
-static void DrawVLine(int sy, int ey, int nx, bool fill)
-{
-    for (int i = sy; i <= ey; i++)
-    {
-        if (i < 56 && nx < 128)
-        {
-            PutPixel(nx, i, fill);
-        }
-    }
-}
-
 #ifndef ENABLE_FEAT_F4HWN
 static void GUI_DisplaySmallest(const char *pString, uint8_t x, uint8_t y,
                                 bool statusbar, bool fill)
@@ -306,7 +305,7 @@ static const BK4819_REGISTER_t registers_to_save[] = {
     BK4819_REG_7E,
 };
 
-static uint16_t registers_stack[sizeof(registers_to_save)];
+static uint16_t registers_stack[ARRAY_SIZE(registers_to_save)];
 
 static void BackupRegisters()
 {
@@ -347,6 +346,22 @@ static void SetF(uint32_t f)
     uint16_t reg = BK4819_ReadRegister(BK4819_REG_30);
     BK4819_WriteRegister(BK4819_REG_30, 0);
     BK4819_WriteRegister(BK4819_REG_30, reg);
+}
+
+// Lightweight frequency-set used during scanning.
+// Skips the band-select GPIO writes (band does not change within a sweep)
+// and uses a cached REG_30 value (read once in InitScan) instead of reading
+// it on every step.  Reduces per-step SPI transactions from ~7 to 4,
+// cutting the SPI bus activity that causes SPI-induced audio interference.
+static void SetFScan(uint32_t f)
+{
+    // Refresh RF path only when crossing the VHF/UHF boundary (280 MHz)
+    if ((f < 28000000) != (fMeasure < 28000000))
+        BK4819_PickRXFilterPathBasedOnFrequency(f);
+    fMeasure = f;
+    BK4819_SetFrequency(f);
+    BK4819_WriteRegister(BK4819_REG_30, 0);
+    BK4819_WriteRegister(BK4819_REG_30, scanReg30);
 }
 
 // Spectrum related
@@ -456,12 +471,14 @@ uint8_t GetBWRegValueForScan()
 
 uint16_t GetRssi()
 {
-    // SYSTICK_DelayUs(800);
-    // testing autodelay based on Glitch value
-    while ((BK4819_ReadRegister(0x63) & 0b11111111) >= 255)
+    // Wait for glitch to settle below threshold (not just < 255)
+    uint8_t guard = 50;
+    while (guard-- && (BK4819_ReadRegister(0x63) & 0xFF) >= 200)
     {
-        SYSTICK_DelayUs(100);
+        SYSTICK_DelayUs(10);
     }
+    // Discard first read (AGC may still be transitioning), keep second
+    BK4819_GetRSSI();
     uint16_t rssi = BK4819_GetRSSI();
 #ifdef ENABLE_AM_FIX
     if (settings.modulationType == MODULATION_AM && gSetting_AM_fix)
@@ -508,7 +525,7 @@ static void ToggleRX(bool on)
     if (on)
     {
     #ifdef ENABLE_FEAT_F4HWN_SPECTRUM
-        listenT = 100;
+        listenT = 25;
         BK4819_WriteRegister(0x43, listenBWRegValues[settings.listenBw]);
         setTailFoundInterrupt();
     #else
@@ -528,6 +545,7 @@ static void ResetScanStats()
 {
     scanInfo.rssi = 0;
     scanInfo.rssiMax = 0;
+    scanInfo.rssiMin = RSSI_MAX_VALUE;
     scanInfo.iPeak = 0;
     scanInfo.fPeak = 0;
 }
@@ -535,11 +553,18 @@ static void ResetScanStats()
 static void InitScan()
 {
     ResetScanStats();
+    scanInfo.scanStep = GetScanStep();
+    scanInfo.measurementsCount = GetStepsCount();
     scanInfo.i = 0;
     scanInfo.f = GetFStart();
 
-    scanInfo.scanStep = GetScanStep();
-    scanInfo.measurementsCount = GetStepsCount();
+    // Cache the band-select LNA and REG_30 for the upcoming sweep.
+    // SetFScan() will use these cached values, saving 3 SPI ops per step.
+    // Mask bit 9 (AF DAC enable) so the cached value is always correct for
+    // scanning regardless of whether audio was on when InitScan() was called
+    // (RelaunchScan calls InitScan before ToggleRX(false)).
+    BK4819_PickRXFilterPathBasedOnFrequency(scanInfo.f);
+    scanReg30 = BK4819_ReadRegister(BK4819_REG_30) & ~(1u << 9);
 }
 
 static void ResetBlacklist()
@@ -565,6 +590,9 @@ static void RelaunchScan()
 #endif
     preventKeypress = true;
     scanInfo.rssiMin = RSSI_MAX_VALUE;
+    memset(peakHoldY,   PEAK_HOLD_INIT, sizeof(peakHoldY));
+    memset(peakHoldAge, 0,              sizeof(peakHoldAge));
+
 }
 
 static void UpdateScanInfo()
@@ -586,10 +614,39 @@ static void UpdateScanInfo()
 
 static void AutoTriggerLevel()
 {
+    // Track the NOISE FLOOR (rssiMin = quietest bin in the sweep), not the
+    // signal peak (rssiMax).  A squelch belongs just above the noise, so any
+    // real signal that clears the floor opens RX.  Using rssiMax would push
+    // the threshold above all signals and the squelch would never open.
+    if (scanInfo.rssiMin == RSSI_MAX_VALUE)
+        return; // no measurement yet
+
+    // Target: noise floor + 16 RSSI units (~8 dBm above noise)
+    uint16_t target = scanInfo.rssiMin + 16;
+
     if (settings.rssiTriggerLevel == RSSI_MAX_VALUE)
     {
-        settings.rssiTriggerLevel = clamp(scanInfo.rssiMax + 8, 0, RSSI_MAX_VALUE);
+        // Fresh calibration (first sweep, or after step change): jump directly.
+        settings.rssiTriggerLevel = target;
+        return;
     }
+
+    // Adaptive slew: follow noise floor changes with rate limiting.
+    // Faster convergence when the gap is large (e.g. after filter BW change).
+    int16_t diff = (int16_t)target - (int16_t)settings.rssiTriggerLevel;
+
+    if (diff > 4)
+    {
+        int16_t step = (diff > 12) ? 4 : ((diff > 6) ? 2 : 1);
+        settings.rssiTriggerLevel += step;
+    }
+    else if (diff < -4)
+    {
+        int16_t absDiff = -diff;
+        int16_t step = (absDiff > 12) ? 4 : ((absDiff > 6) ? 2 : 1);
+        settings.rssiTriggerLevel -= step;
+    }
+    // Dead zone ±4: hold steady to avoid jitter near target
 }
 
 static void UpdatePeakInfoForce()
@@ -619,7 +676,13 @@ static void SetRssiHistory(uint16_t idx, uint16_t rssi)
         return;
     }
 #endif
-    rssiHistory[idx] = rssi;
+    // Attack/decay: instant rise, fast fall for stable display
+    uint16_t prev = rssiHistory[idx];
+    if (rssi >= prev) {
+        rssiHistory[idx] = rssi;              // Attack: instant
+    } else {
+        rssiHistory[idx] = (prev + rssi) >> 1; // Decay: halve the gap each sweep
+    }
 }
 
 static void Measure()
@@ -642,6 +705,16 @@ static void ClampRssiTriggerLevel()
               dbm2rssi(settings.dbMax));
 }
 
+static void UpdateDbMax(bool inc)
+{
+    settings.dbMax = clamp(settings.dbMax + (inc ? 5 : -5),
+                           settings.dbMin + 10, 10);
+    ClampRssiTriggerLevel();
+    manualDbMaxTimer = MANUAL_DBMAX_SWEEPS;
+    redrawScreen = true;
+    redrawStatus = true;
+}
+
 static void UpdateRssiTriggerLevel(bool inc)
 {
     if (inc)
@@ -655,26 +728,6 @@ static void UpdateRssiTriggerLevel(bool inc)
     redrawStatus = true;
 }
 
-static void UpdateDBMax(bool inc)
-{
-    if (inc && settings.dbMax < 10)
-    {
-        settings.dbMax += 1;
-    }
-    else if (!inc && settings.dbMax > settings.dbMin)
-    {
-        settings.dbMax -= 1;
-    }
-    else
-    {
-        return;
-    }
-
-    ClampRssiTriggerLevel();
-    redrawStatus = true;
-    redrawScreen = true;
-    SYSTEM_DelayMs(20);
-}
 
 static void UpdateScanStep(bool inc)
 {
@@ -688,6 +741,9 @@ static void UpdateScanStep(bool inc)
     }
 
     settings.frequencyChangeStep = GetBW() >> 1;
+    // Reset squelch trigger so AutoTriggerLevel() recalibrates on next sweep.
+    // The filter BW changes with the step, so the old level is no longer valid.
+    settings.rssiTriggerLevel = RSSI_MAX_VALUE;
     RelaunchScan();
     ResetBlacklist();
     redrawScreen = true;
@@ -908,7 +964,19 @@ static bool IsBlacklisted(uint16_t idx)
 
 // Draw things
 
-// applied x2 to prevent initial rounding
+// Integer square root (for sugar map non-linear compression)
+static uint8_t iSqrt(uint16_t n)
+{
+    if (n == 0) return 0;
+    uint16_t x = n;
+    uint16_t y = (x + 1) >> 1;
+    while (y < x) { x = y; y = (x + n / x) >> 1; }
+    return (uint8_t)x;
+}
+
+// applied x2 to prevent initial rounding.
+// A mild square-root compression (sugar map) is applied so that weak signals
+// occupy more of the display height while strong peaks are not clipped.
 uint8_t Rssi2PX(uint16_t rssi, uint8_t pxMin, uint8_t pxMax)
 {
     const int DB_MIN = settings.dbMin << 1;
@@ -919,12 +987,203 @@ uint8_t Rssi2PX(uint16_t rssi, uint8_t pxMin, uint8_t pxMax)
 
     int dbm = clamp(Rssi2DBm(rssi) << 1, DB_MIN, DB_MAX);
 
-    return ((dbm - DB_MIN) * PX_RANGE + DB_RANGE / 2) / DB_RANGE + pxMin;
+    // Linear 0..PX_RANGE position
+    uint8_t linear = (uint8_t)(((dbm - DB_MIN) * PX_RANGE + DB_RANGE / 2) / DB_RANGE);
+
+    // Square-root compression: sqrt(linear * PX_RANGE) rescaled to PX_RANGE
+    uint8_t compressed = iSqrt((uint16_t)linear * PX_RANGE);
+
+    // Blend 50/50 between linear and compressed for a subtle effect
+    return ((uint16_t)linear + compressed) / 2 + pxMin;
 }
 
 uint8_t Rssi2Y(uint16_t rssi)
 {
-    return DrawingEndY - Rssi2PX(rssi, 0, DrawingEndY);
+    // Map into [DrawingTopY, DrawingEndY] so peaks never overdraw the
+    // frequency display rendered in gFrameBuffer[0] (pixels 0-7).
+    return DrawingEndY - Rssi2PX(rssi, 0, DrawingEndY - DrawingTopY);
+}
+
+// Resolve the RSSI value at fractional sample index (Q8 fixed-point) using
+// linear interpolation. Blacklisted samples (RSSI_MAX_VALUE) are skipped by
+// falling back to the other neighbour; if both are blacklisted, returns
+// RSSI_MAX_VALUE so the caller can skip the column.
+static uint16_t InterpolateRssi(uint8_t bars, uint16_t pos256)
+{
+    uint8_t i = pos256 >> 8;
+    uint8_t frac = pos256 & 0xFF;
+
+    if (i >= bars - 1)
+    {
+        i = bars - 1;
+        frac = 0;
+    }
+
+    uint16_t rssiA = rssiHistory[i];
+    uint16_t rssiB = rssiHistory[(i + 1 < bars) ? (i + 1) : i];
+
+    if (rssiA == RSSI_MAX_VALUE && rssiB == RSSI_MAX_VALUE)
+        return RSSI_MAX_VALUE;
+    if (rssiA == RSSI_MAX_VALUE)
+        return rssiB;
+    if (rssiB == RSSI_MAX_VALUE)
+        return rssiA;
+
+    return ((uint32_t)rssiA * (256 - frac) + (uint32_t)rssiB * frac) >> 8;
+}
+
+// Sentinel value in topY[] to mark a column that should not be drawn
+// (blacklisted RSSI sample on both neighbours).
+#define SPECTRUM_TOPY_SKIP 0xFF
+
+// Half-step bridging helper: compute crestTop/crestBot for column x
+// from a topY-like array.
+static void CalcCrest(const uint8_t *yArr, uint8_t x,
+                      uint8_t *crestTop, uint8_t *crestBot)
+{
+    uint8_t y0 = yArr[x];
+    *crestTop = y0;
+    *crestBot = y0;
+
+    if (x > 0)
+    {
+        uint8_t n = yArr[x - 1];
+        if (n != SPECTRUM_TOPY_SKIP && n <= DrawingEndY)
+        {
+            uint8_t mid = (y0 + n + 1) >> 1;
+            if (mid < *crestTop) *crestTop = mid;
+            if (mid > *crestBot) *crestBot = mid;
+        }
+    }
+    if (x + 1 < 128)
+    {
+        uint8_t n = yArr[x + 1];
+        if (n != SPECTRUM_TOPY_SKIP && n <= DrawingEndY)
+        {
+            uint8_t mid = (y0 + n + 1) >> 1;
+            if (mid < *crestTop) *crestTop = mid;
+            if (mid > *crestBot) *crestBot = mid;
+        }
+    }
+}
+
+// Draw the spectrum curve (solid crest + checkerboard body) and the peak hold
+// dotted trace.  Both use the same half-step bridging so the peak hold crest
+// shape mirrors the live crest exactly, just rendered with a dotted pattern.
+static void DrawSpectrumCurve(const uint8_t *topY)
+{
+    // Pass 1: update peakHoldY[] from topY[] before rendering so that the
+    // bridging in Pass 2 already sees fully-updated neighbour values.
+    for (uint8_t x = 0; x < 128; x++)
+    {
+        uint8_t y0 = topY[x];
+        if (y0 == SPECTRUM_TOPY_SKIP || y0 > DrawingEndY) {
+            peakHoldY[x] = PEAK_HOLD_INIT;
+            continue;
+        }
+
+        uint8_t ph = peakHoldY[x];
+        if (ph == PEAK_HOLD_INIT || y0 <= ph)
+        {
+            peakHoldY[x]        = y0;
+            peakHoldAge[x >> 1] = 0;
+        }
+        else
+        {
+            if (peakHoldAge[x >> 1] < PEAK_HOLD_DELAY) {
+                if (!(x & 1)) peakHoldAge[x >> 1]++;
+            } else {
+                ph += 2;
+                peakHoldY[x] = (ph <= DrawingEndY) ? ph : PEAK_HOLD_INIT;
+            }
+        }
+    }
+
+    // Pass 2: draw live curve (solid) then peak hold (dotted).
+    for (uint8_t x = 0; x < 128; x++)
+    {
+        // --- Live spectrum crest + body ---
+        uint8_t y0 = topY[x];
+        if (y0 != SPECTRUM_TOPY_SKIP && y0 <= DrawingEndY)
+        {
+            uint8_t crestTop, crestBot;
+            CalcCrest(topY, x, &crestTop, &crestBot);
+
+            // Solid crest contour.
+            for (uint8_t y = crestTop; y <= crestBot; y++)
+                PutPixel(x, y, true);
+
+            // Checkerboard body below the crest.
+            for (uint8_t y = crestBot + 1; y <= DrawingEndY; y++)
+                if (((x + y) & 1) == 0)
+                    PutPixel(x, y, true);
+        }
+
+        // --- Peak hold dotted crest ---
+        uint8_t ph = peakHoldY[x];
+        if (ph != PEAK_HOLD_INIT && ph <= DrawingEndY)
+        {
+            uint8_t phTop, phBot;
+            CalcCrest(peakHoldY, x, &phTop, &phBot);
+
+            // Dotted crest: checkerboard pattern over the full crest range.
+            for (uint8_t y = phTop; y <= phBot; y++)
+                if (((x + y) & 1) == 0)
+                    PutPixel(x, y, true);
+        }
+    }
+}
+
+// Spatial smoothing: 3-bin moving average on topY for a cleaner curve.
+// Only averages valid (non-SKIP) neighbours.
+static void SmoothTopY(uint8_t *topY)
+{
+    uint8_t prev = topY[0];
+    for (uint8_t x = 1; x < 127; x++)
+    {
+        uint8_t cur = topY[x];
+        uint8_t next = topY[x + 1];
+        if (cur == SPECTRUM_TOPY_SKIP) {
+            prev = cur;
+            continue;
+        }
+        uint16_t sum = cur;
+        uint8_t n = 1;
+        if (prev != SPECTRUM_TOPY_SKIP) { sum += prev; n++; }
+        if (next != SPECTRUM_TOPY_SKIP) { sum += next; n++; }
+        prev = cur;                       // save unsmoothed value for next iteration
+        topY[x] = (sum + n / 2) / n;     // rounded average
+    }
+}
+
+// Fill topY[0..127] by linear interpolation of `bars` RSSI samples across the
+// 128 display columns. Invalid (blacklisted) samples become SPECTRUM_TOPY_SKIP.
+static void BuildSpectrumTopY(uint8_t *topY, uint8_t bars)
+{
+    if (bars == 0)
+    {
+        for (uint8_t x = 0; x < 128; x++)
+            topY[x] = SPECTRUM_TOPY_SKIP;
+        return;
+    }
+
+    if (bars == 1)
+    {
+        uint16_t rssi = rssiHistory[0];
+        uint8_t y = (rssi == RSSI_MAX_VALUE) ? SPECTRUM_TOPY_SKIP : Rssi2Y(rssi);
+        for (uint8_t x = 0; x < 128; x++)
+            topY[x] = y;
+        return;
+    }
+
+    // Q8 fixed-point: step256 / 256 advances one sample, multiplied by x.
+    uint16_t step256 = ((uint16_t)(bars - 1) << 8) / 127;
+
+    for (uint8_t x = 0; x < 128; x++)
+    {
+        uint16_t rssi = InterpolateRssi(bars, (uint16_t)x * step256);
+        topY[x] = (rssi == RSSI_MAX_VALUE) ? SPECTRUM_TOPY_SKIP : Rssi2Y(rssi);
+    }
 }
 
 #ifdef ENABLE_FEAT_F4HWN
@@ -934,69 +1193,34 @@ uint8_t Rssi2Y(uint16_t rssi)
         // max bars at 128 to correctly draw larger numbers of samples
         uint8_t bars = (steps > 128) ? 128 : steps;
 
-        uint8_t ox = 0;
-        for (uint8_t i = 0; i < bars; ++i)
-        {
-            uint16_t rssi = rssiHistory[(bars>128) ? i >> settings.stepsCount : i];
-            
-#ifdef ENABLE_SCAN_RANGES
-            uint8_t x;
-            if (gScanRangeStart && bars > 1)
-            {
-                // Total width units = (bars - 1) full bars + 2 half bars = bars
-                // First bar: half width, middle bars: full width, last bar: half width
-                // Scale: 128 pixels / (bars - 1) = pixels per full bar
-                uint16_t fullWidth = (128 << 8) / (bars - 1);  // x256 for precision
-                
-                if (i == 0)
-                {
-                    x = fullWidth / (2 << 8);  // half of /256 (because fullWidth is x256)
-                }
-                else
-                {
-                    // Position = half + (i-1) full bars + current bar
-                    x = fullWidth / (2 << 8) + (uint16_t)i * fullWidth / (1 << 8);
-                    if (i == bars - 1) x = 128;  // Last bar ends at screen edge
-                }
-            }
-            else
-#endif
-            {
-                uint8_t shift_graph = 64 / steps + 1;
-                x = i * 128 / bars + shift_graph;
-            }
-
-            if (rssi != RSSI_MAX_VALUE)
-            {
-                for (uint8_t xx = ox; xx < x; xx++)
-                {
-                    DrawVLine(Rssi2Y(rssi), DrawingEndY, xx, true);
-                }
-            }
-            ox = x;
-        }
+        uint8_t topY[128];
+        BuildSpectrumTopY(topY, bars);
+        SmoothTopY(topY);
+        DrawSpectrumCurve(topY);
     }
 #else
     static void DrawSpectrum()
     {
-        for (uint8_t x = 0; x < 128; ++x)
-        {
-            uint16_t rssi = rssiHistory[x >> settings.stepsCount];
-            if (rssi != RSSI_MAX_VALUE)
-            {
-                DrawVLine(Rssi2Y(rssi), DrawingEndY, x, true);
-            }
-        }
+        uint8_t bars = 128 >> settings.stepsCount;
+        if (bars == 0)
+            bars = 1;
+
+        uint8_t topY[128];
+        BuildSpectrumTopY(topY, bars);
+        SmoothTopY(topY);
+        DrawSpectrumCurve(topY);
     }
 #endif
 
 static void DrawStatus()
 {
 #ifdef SPECTRUM_EXTRA_VALUES
-    sprintf(String, "%d/%d P:%d T:%d", settings.dbMin, settings.dbMax,
+    sprintf(String, "%d/%d%s P:%d T:%d", settings.dbMin, settings.dbMax,
+            manualDbMaxTimer ? "M" : "",
             Rssi2DBm(peak.rssi), Rssi2DBm(settings.rssiTriggerLevel));
 #else
-    sprintf(String, "%d/%d", settings.dbMin, settings.dbMax);
+    sprintf(String, "%d/%d%s", settings.dbMin, settings.dbMax,
+            manualDbMaxTimer ? "M" : "");
 #endif
     GUI_DisplaySmallest(String, 0, 1, true, true);
 
@@ -1097,6 +1321,7 @@ static void DrawNums()
         GUI_DisplaySmallest(String, 0, 1, false, true);
         sprintf(String, "%u.%02uk", GetScanStep() / 100, GetScanStep() % 100);
         GUI_DisplaySmallest(String, 0, 7, false, true);
+
     }
 
     if (IsCenterMode())
@@ -1186,7 +1411,7 @@ static void OnKeyDown(uint8_t key)
         isTrue = true;
         [[fallthrough]];
     case KEY_9:
-        UpdateDBMax(isTrue);
+        UpdateDbMax(isTrue);
         break;
     case KEY_1:
         isTrue = true;
@@ -1315,7 +1540,7 @@ void OnKeyDownStill(KEY_Code_t key)
         isTrue = true;
         [[fallthrough]];
     case KEY_9:
-        UpdateDBMax(isTrue);
+        UpdateDbMax(isTrue);
         break;
     case KEY_UP:
         nav = !nav;
@@ -1410,7 +1635,7 @@ static void RenderStill()
         gFrameBuffer[2][i + METER_PAD_LEFT] = 0b01110000;
     }
 
-    uint8_t x = Rssi2PX(scanInfo.rssi, 0, 121);
+    uint8_t x = Rssi2PX(rssiSmoothed, 0, 121);
     for (int i = 0; i < x; ++i)
     {
         if (i % 5)
@@ -1419,7 +1644,7 @@ static void RenderStill()
         }
     }
 
-    int dbm = Rssi2DBm(scanInfo.rssi);
+    int dbm = Rssi2DBm(rssiSmoothed);
     uint8_t s = DBm2S(dbm);
     sprintf(String, "S: %u", s);
     GUI_DisplaySmallest(String, 4, 25, false, true);
@@ -1549,7 +1774,7 @@ static void Scan()
 #endif
     )
     {
-        SetF(scanInfo.f);
+        SetFScan(scanInfo.f);
         Measure();
         UpdateScanInfo();
     }
@@ -1566,7 +1791,7 @@ static void UpdateScan()
 {
     Scan();
 
-    if (scanInfo.i + 1 < scanInfo.measurementsCount)
+    if (scanInfo.i < scanInfo.measurementsCount - 1)
     {
         NextScanStep();
         return;
@@ -1575,6 +1800,19 @@ static void UpdateScan()
     if (! (scanInfo.measurementsCount >> 7)) // if (scanInfo.measurementsCount < 128)
         memset(&rssiHistory[scanInfo.measurementsCount], 0,
                sizeof(rssiHistory) - scanInfo.measurementsCount * sizeof(rssiHistory[0]));
+
+    // Auto-adjust dbMax unless the user has overridden it manually.
+    if (manualDbMaxTimer > 0) {
+        if (--manualDbMaxTimer == 0)
+            redrawStatus = true;
+    } else {
+        int newMax = Rssi2DBm(scanInfo.rssiMax) + 5;
+        if (newMax < settings.dbMin + 10)
+            newMax = settings.dbMin + 10;
+        if (newMax > 10)
+            newMax = 10;
+        settings.dbMax = newMax;
+    }
 
     redrawScreen = true;
     preventKeypress = false;
@@ -1597,6 +1835,9 @@ static void UpdateStill()
     preventKeypress = false;
 
     peak.rssi = scanInfo.rssi;
+    // EMA α=0.25 for display only; seed on first sample
+    rssiSmoothed = rssiSmoothed ? (rssiSmoothed * 3 + scanInfo.rssi) >> 2
+                                : scanInfo.rssi;
     AutoTriggerLevel();
 
     if (IsPeakOverLevel() || monitorMode) {
@@ -1607,21 +1848,29 @@ static void UpdateStill()
 static void UpdateListening()
 {
     preventKeypress = false;
-    #ifdef ENABLE_FEAT_F4HWN_SPECTRUM
-    bool tailFound = checkIfTailFound();
-    if (tailFound)
-    #else
-    if (currentState == STILL)
-    #endif
-    {
-        listenT = 0;
-    }
+
+    // listenT counts down with 1ms delay per tick — no SPI during this phase.
     if (listenT)
     {
         listenT--;
         SYSTEM_DelayMs(1);
         return;
     }
+
+    // --- Single SPI burst: all BK4819 accesses happen here, once per
+    // listenT expiry (every 320 ms).  SPI repeats at ~3 Hz — below the
+    // audible range.  Between bursts the bus is completely silent.
+
+#ifdef ENABLE_FEAT_F4HWN_SPECTRUM
+    bool tailFound = checkIfTailFound();
+    if (tailFound)
+    {
+        ToggleRX(false);
+        ResetScanStats();
+        newScanStart = true;
+        return;
+    }
+#endif
 
     if (currentState == SPECTRUM)
     {
@@ -1631,28 +1880,40 @@ static void UpdateListening()
     }
     else
     {
+#ifndef ENABLE_FEAT_F4HWN_SPECTRUM
+        if (currentState == STILL)
+        {
+            ToggleRX(false);
+            ResetScanStats();
+            newScanStart = true;
+            return;
+        }
+#endif
         Measure();
     }
 
     peak.rssi = scanInfo.rssi;
+    rssiSmoothed = rssiSmoothed ? (rssiSmoothed * 3 + scanInfo.rssi) >> 2
+                                : scanInfo.rssi;
     redrawScreen = true;
 
-    #ifdef ENABLE_FEAT_F4HWN_SPECTRUM
-        if ((IsPeakOverLevel() && !tailFound) || monitorMode)
-        {
-            listenT = 100;
-            return;
-        }
-    #else
-        if (IsPeakOverLevel() || monitorMode)
-        {
-            listenT = 1000;
-            return;
-        }
-    #endif
+#ifdef ENABLE_FEAT_F4HWN_SPECTRUM
+    if ((IsPeakOverLevel() && !tailFound) || monitorMode)
+    {
+        listenT = 320;
+        return;
+    }
+#else
+    if (IsPeakOverLevel() || monitorMode)
+    {
+        listenT = 320;
+        return;
+    }
+#endif
 
     ToggleRX(false);
     ResetScanStats();
+    newScanStart = true;
 }
 
 static void Tick()
@@ -1680,18 +1941,11 @@ static void Tick()
     {
         gNextTimeslice_500ms = false;
 
-        // if a lot of steps then it takes long time
-        // we don't want to wait for whole scan
-        // listening has it's own timer
+        // For large scans (>128 steps), refresh display periodically but
+        // wait for the full sweep to complete before triggering listen mode.
+        // This avoids showing stale rssiHistory data from a previous sweep.
         if (GetStepsCount() > 128 && !isListening)
         {
-            UpdatePeakInfo();
-            if (IsPeakOverLevel())
-            {
-                ToggleRX(true);
-                TuneToPeak();
-                return;
-            }
             redrawScreen = true;
             preventKeypress = false;
         }
@@ -1798,6 +2052,10 @@ void APP_RunSpectrum()
     RelaunchScan();
 
     memset(rssiHistory, 0, sizeof(rssiHistory));
+    memset(peakHoldY,   PEAK_HOLD_INIT, sizeof(peakHoldY));
+    memset(peakHoldAge, 0,              sizeof(peakHoldAge));
+    rssiSmoothed    = 0;
+    manualDbMaxTimer = 0;
 
     isInitialized = true;
 
