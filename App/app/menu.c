@@ -1643,6 +1643,55 @@ static void MENU_Key_0_to_9(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
 
 static void MENU_Key_EXIT(bool bKeyPressed, bool bKeyHeld)
 {
+    const bool editing_name = !gCssBackgroundScan
+        && UI_MENU_GetCurrentMenuId() == MENU_MEM_NAME
+        && gIsInSubMenu
+        && edit_index >= 0;
+
+    if (editing_name)
+    {
+        if (!bKeyPressed)
+        {
+            if (bKeyHeld)
+                return; // release after a long press, keep editing
+
+            /* Backlight related menus set full brightness. Set it back to the configured value,
+               just in case we are exiting from one of them. */
+            BACKLIGHT_TurnOn();
+
+            gAskForConfirmation = 0;
+            gIsInSubMenu        = false;
+            gInputBoxIndex      = 0;
+            gFlagRefreshSetting = true;
+
+            #ifdef ENABLE_VOICE
+                gAnotherVoiceID = VOICE_ID_CANCEL;
+            #endif
+
+            gRequestDisplayScreen = DISPLAY_MENU;
+            return;
+        }
+
+        if (!bKeyHeld)
+        {   // wait to see if the user wants a short exit or a long backspace
+            gBeepToPlay = BEEP_1KHZ_60MS_OPTIONAL;
+            return;
+        }
+
+        /* Backlight related menus set full brightness. Set it back to the configured value,
+           just in case we are editing from one of them. */
+        BACKLIGHT_TurnOn();
+
+        if (edit_index > 0)
+        {   // step back one character while editing the channel name
+            edit_index--;
+            gAskForConfirmation = 0;
+            gRequestDisplayScreen = DISPLAY_MENU;
+        }
+
+        return;
+    }
+
     if (bKeyHeld || !bKeyPressed)
         return;
 
