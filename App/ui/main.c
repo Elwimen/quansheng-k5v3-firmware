@@ -60,6 +60,22 @@ center_line_t center_line = CENTER_LINE_NONE;
     }
 #endif
 
+#ifdef ENABLE_FEAT_F4HWN_SCAN_PROGRESS
+#define SCAN_PROGRESS_MR_CHANNEL_BYTES ((MR_CHANNELS_MAX + 7u) / 8u)
+
+static bool     gScanProgressSessionActive;
+static bool     gScanProgressSessionIsMemory;
+static uint8_t  gScanProgressSessionScanList;
+static uint32_t gScanProgressSessionRangeStart;
+static uint32_t gScanProgressSessionRangeStop;
+static uint32_t gScanProgressSessionStep;
+static uint16_t gScanProgressMemoryTotal;
+static uint8_t  gScanProgressMemoryMap[SCAN_PROGRESS_MR_CHANNEL_BYTES];
+static uint8_t  gScanProgressMemoryExcludeOrdinalMap[SCAN_PROGRESS_MR_CHANNEL_BYTES];
+static bool     gScanProgressPrevResetVfosFlag;
+static bool     gScanProgressForceRebuild;
+#endif
+
 const char *VfoStateStr[] = {
        [VFO_STATE_NORMAL]="",
        [VFO_STATE_BUSY]="BUSY",
@@ -69,6 +85,285 @@ const char *VfoStateStr[] = {
        [VFO_STATE_ALARM]="ALARM",
        [VFO_STATE_VOLTAGE_HIGH]="VOLT HIGH"
 };
+
+#ifdef ENABLE_FEAT_F4HWN_SCAN_PROGRESS
+static void ScanProgress_ResetSession(void)
+{
+    gScanProgressSessionActive = false;
+    gScanProgressMemoryTotal   = 0;
+    gScanProgressPrevResetVfosFlag = false;
+    gScanProgressForceRebuild = false;
+}
+
+void UI_MAIN_NotifyScanProgressDataChanged(void)
+{
+    gScanProgressForceRebuild = true;
+}
+
+static inline void ScanProgress_SetBit(uint8_t *map, uint16_t ch)
+{
+    map[ch >> 3] |= (uint8_t)(1u << (ch & 7));
+}
+
+static inline bool ScanProgress_GetBit(const uint8_t *map, uint16_t ch)
+{
+    return ((map[ch >> 3] >> (ch & 7)) & 1u) != 0;
+}
+
+static uint8_t ScanProgress_GetActiveScanList(void)
+{
+    const uint8_t max_scan_list = MR_CHANNELS_LIST + 1;
+    uint8_t scan_list = gEeprom.SCAN_LIST_DEFAULT;
+
+    if (scan_list == 0 || scan_list > max_scan_list)
+        scan_list = max_scan_list;
+
+    return scan_list;
+}
+
+static bool ScanProgress_ChannelBelongsToList(uint16_t channel, const ChannelAttributes_t *att, uint8_t scan_list)
+{
+    if (!IS_MR_CHANNEL(channel))
+        return false;
+
+    if (att->band > BAND7_470MHz)
+        return false;
+
+    if (scan_list > MR_CHANNELS_LIST && att->scanlist != 0)
+        return true;
+
+    if (scan_list > 0 && att->scanlist == (MR_CHANNELS_LIST + 1))
+        return true;
+
+    if (scan_list == 0 || scan_list != att->scanlist)
+        return false;
+
+    if (gEeprom.SCAN_LIST_ENABLED) {
+        const uint16_t priority1 = gEeprom.SCANLIST_PRIORITY_CH[0];
+        const uint16_t priority2 = gEeprom.SCANLIST_PRIORITY_CH[1];
+        if (priority1 == channel || priority2 == channel)
+            return false;
+    }
+
+    return true;
+}
+
+static void ScanProgress_RebuildMemoryMap(uint8_t scan_list)
+{
+    uint16_t ordinal = 0;
+
+    memset(gScanProgressMemoryMap, 0, sizeof(gScanProgressMemoryMap));
+    memset(gScanProgressMemoryExcludeOrdinalMap, 0, sizeof(gScanProgressMemoryExcludeOrdinalMap));
+    gScanProgressMemoryTotal = 0;
+
+    for (uint16_t ch = MR_CHANNEL_FIRST; IS_MR_CHANNEL(ch); ch++) {
+        const ChannelAttributes_t *att = MR_GetChannelAttributes(ch);
+
+        if (att == NULL || !ScanProgress_ChannelBelongsToList(ch, att, scan_list))
+            continue;
+
+        ScanProgress_SetBit(gScanProgressMemoryMap, ch);
+        ordinal++;
+
+        if (att->exclude) {
+            ScanProgress_SetBit(gScanProgressMemoryExcludeOrdinalMap, (uint16_t)(ordinal - 1));
+        }
+
+        gScanProgressMemoryTotal++;
+    }
+}
+
+static uint16_t ScanProgress_GetMemoryOrdinal(uint16_t channel)
+{
+    uint16_t ordinal = 0;
+
+    for (uint16_t ch = MR_CHANNEL_FIRST; IS_MR_CHANNEL(ch); ch++) {
+        if (!ScanProgress_GetBit(gScanProgressMemoryMap, ch))
+            continue;
+
+        ordinal++;
+        if (ch == channel)
+            return ordinal;
+    }
+
+    return 0;
+}
+
+static bool ScanProgress_IsForward(void)
+{
+    return gScanStateDir != SCAN_REV;
+}
+
+static void ScanProgress_DrawGaugeLine(uint8_t line, uint32_t current_index, uint32_t total, bool memory_mode)
+{
+    const bool forward = ScanProgress_IsForward();
+    const uint8_t gauge_left = 40;
+    const uint8_t gauge_right = 122;
+    const uint8_t fill_start = gauge_left + 2;
+    const uint8_t fill_end = gauge_right - 2;
+    const uint8_t fill_cols = fill_end - fill_start + 1;
+    uint32_t head_col;
+
+    if (total == 0)
+        total = 1;
+    if (current_index == 0)
+        current_index = 1;
+    else if (current_index > total)
+        current_index = total;
+
+    head_col = ((current_index - 1) * fill_cols) / total;
+    if (head_col >= fill_cols)
+        head_col = fill_cols - 1;
+
+    gFrameBuffer[line][gauge_left] = 0x0c;
+    gFrameBuffer[line][gauge_left + 1] = 0x12;
+    gFrameBuffer[line][gauge_right - 1] = 0x12;
+    gFrameBuffer[line][gauge_right] = 0x0c;
+
+    for (uint8_t col = 0; col < fill_cols; col++) {
+        const uint32_t ordinal = ((uint32_t)col * total) / fill_cols + 1;
+        const bool processed = forward ? (col <= head_col) : (col >= head_col);
+        bool excluded = false;
+        uint8_t pixel = 0x21;
+
+        if (memory_mode && ordinal > 0 && ordinal <= MR_CHANNELS_MAX)
+            excluded = ScanProgress_GetBit(gScanProgressMemoryExcludeOrdinalMap, (uint16_t)(ordinal - 1));
+
+        if (processed && !excluded) {
+            pixel = 0x2d;
+        }
+
+        gFrameBuffer[line][fill_start + col] = pixel;
+    }
+}
+
+static void ScanProgress_FormatIndex(char *out, uint32_t current_index, uint32_t total)
+{
+    if (total < 100 && current_index < 100)
+        sprintf(out, "%02u/%02u", (unsigned int)current_index, (unsigned int)total);
+    else
+        sprintf(out, "%u/%u", (unsigned int)current_index, (unsigned int)total);
+}
+
+static bool ScanProgress_BuildRangeIndex(uint32_t *current_index_out, uint32_t *total_out)
+{
+#ifdef ENABLE_SCAN_RANGES
+    uint32_t step = gScanProgressSessionStep ? gScanProgressSessionStep : 1;
+    uint32_t total = ((gScanProgressSessionRangeStop - gScanProgressSessionRangeStart) / step) + 1;
+    uint32_t current_freq = gRxVfo->freq_config_RX.Frequency;
+    uint32_t current_abs;
+
+    if (gScanProgressSessionRangeStart == 0 || gScanProgressSessionRangeStop < gScanProgressSessionRangeStart || current_index_out == NULL || total_out == NULL)
+        return false;
+
+    if (total == 0)
+        total = 1;
+
+    if (current_freq < gScanProgressSessionRangeStart)
+        current_freq = gScanProgressSessionRangeStart;
+    else if (current_freq > gScanProgressSessionRangeStop)
+        current_freq = gScanProgressSessionRangeStop;
+
+    current_abs = ((current_freq - gScanProgressSessionRangeStart) / step) + 1;
+    if (current_abs > total)
+        current_abs = total;
+
+    *current_index_out = current_abs;
+    *total_out = total;
+
+    return true;
+#else
+    (void)current_index_out;
+    (void)total_out;
+    return false;
+#endif
+}
+
+static bool UI_DrawScanProgress(void)
+{
+    bool show_memory = IS_MR_CHANNEL(gNextMrChannel);
+    bool show_range = false;
+    char text[12];
+    uint8_t line;
+    uint32_t current_index = 1;
+    uint32_t total = 1;
+
+#ifdef ENABLE_SCAN_RANGES
+    show_range = !show_memory && gScanRangeStart != 0;
+#endif
+
+    if (!show_memory && !show_range) {
+        ScanProgress_ResetSession();
+        return false;
+    }
+
+    if (show_memory) {
+        const uint8_t scan_list = ScanProgress_GetActiveScanList();
+        const bool reset_vfos_edge = gFlagResetVfos && !gScanProgressPrevResetVfosFlag;
+        const bool force_rebuild = !gScanProgressSessionActive ||
+                                   !gScanProgressSessionIsMemory ||
+                                   gScanProgressSessionScanList != scan_list ||
+                                   reset_vfos_edge ||
+                                   gScanProgressForceRebuild;
+
+        gScanProgressPrevResetVfosFlag = gFlagResetVfos;
+
+        if (force_rebuild) {
+            gScanProgressSessionActive       = true;
+            gScanProgressSessionIsMemory     = true;
+            gScanProgressSessionScanList     = scan_list;
+            ScanProgress_RebuildMemoryMap(scan_list);
+            gScanProgressForceRebuild = false;
+        }
+
+        if (gScanProgressMemoryTotal == 0)
+            return false;
+
+        current_index = ScanProgress_GetMemoryOrdinal(gRxVfo->CHANNEL_SAVE);
+        if (current_index == 0)
+            current_index = 1;
+        total = gScanProgressMemoryTotal;
+    } else {
+#ifdef ENABLE_SCAN_RANGES
+        const uint32_t range_start = gScanRangeStart;
+        const uint32_t range_stop = gScanRangeStop;
+        const uint32_t step = gRxVfo->StepFrequency;
+
+        if (!gScanProgressSessionActive ||
+            gScanProgressSessionIsMemory ||
+            gScanProgressSessionRangeStart != range_start ||
+            gScanProgressSessionRangeStop != range_stop ||
+            gScanProgressSessionStep != step)
+        {
+            gScanProgressSessionActive      = true;
+            gScanProgressSessionIsMemory    = false;
+            gScanProgressSessionRangeStart  = range_start;
+            gScanProgressSessionRangeStop   = range_stop;
+            gScanProgressSessionStep        = step;
+        }
+
+        if (!ScanProgress_BuildRangeIndex(&current_index, &total))
+            return false;
+#else
+        return false;
+#endif
+    }
+
+    ScanProgress_FormatIndex(text, current_index, total);
+
+#ifdef ENABLE_FEAT_F4HWN
+    line = isMainOnly() ? 5 : 3;
+    GUI_DisplaySmallest(text, 2, isMainOnly() ? 41 : 25, false, true);
+#else
+    line = 3;
+    UI_PrintStringSmallNormal(text, 2, 0, line);
+#endif
+
+    ScanProgress_DrawGaugeLine(line, current_index, total, show_memory);
+
+    return true;
+}
+#endif
 
 // ----------------------------------------
 
@@ -669,6 +964,11 @@ void UI_DisplayMain(void)
     char               String[22];
 
     center_line = CENTER_LINE_NONE;
+
+#ifdef ENABLE_FEAT_F4HWN_SCAN_PROGRESS
+    if (gScanStateDir == SCAN_OFF)
+        ScanProgress_ResetSession();
+#endif
 
     // clear the screen
     UI_DisplayClear();
@@ -1610,6 +1910,13 @@ void UI_DisplayMain(void)
 
         const bool rx = FUNCTION_IsRx();
 
+#ifdef ENABLE_FEAT_F4HWN_SCAN_PROGRESS
+        if (gScanStateDir != SCAN_OFF && UI_DrawScanProgress())
+        {
+            center_line = CENTER_LINE_SCAN_PROGRESS;
+        }
+        else
+#endif
 #ifdef ENABLE_FEAT_F4HWN_AUDIO_SCOPE
         if (gSetting_mic_bar && gCurrentFunction == FUNCTION_TRANSMIT) {
             // Reserve the line so no other element overwrites it.
