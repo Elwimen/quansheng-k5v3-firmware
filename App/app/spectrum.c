@@ -65,6 +65,8 @@ State currentState = SPECTRUM, previousState = SPECTRUM;
 PeakInfo peak;
 ScanInfo scanInfo;
 static KeyboardState kbd = {KEY_INVALID, KEY_INVALID, 0};
+static bool menuKeyPendingShort = false;
+static bool menuKeyLongHandled = false;
 
 #ifdef ENABLE_SCAN_RANGES
 static uint16_t blacklistFreqs[15];
@@ -103,6 +105,10 @@ static uint16_t scanReg30 = 0;
 
 // Bidirectional sweep: true = left→right (fStart→fEnd), false = right→left.
 static bool scanForward = true;
+// Alternate sweep start side across full sweep cycles to reduce directional bias.
+static bool scanStartFromLeft = true;
+// True until the opposite half-sweep is completed.
+static bool scanReturnPending = true;
 
 // Optional interlaced progression for large scans (>128 steps).
 // 1 = enabled, 0 = disabled.
@@ -125,12 +131,40 @@ static uint16_t renderTimer = 0;
 // Disabling automatic DbMax and squelch trigger settings
 static bool manualSetFlag = false;
 
+typedef enum AutoSensitivityProfile
+{
+    AUTO_SENS_WEAK = 0,    // less sensitive (higher margin over noise)
+    AUTO_SENS_NORMAL,      // default
+    AUTO_SENS_STRONG,      // more sensitive (lower margin over noise)
+    AUTO_SENS_N_ELEM
+} AutoSensitivityProfile;
+
+// Margin above the measured noise floor used by auto trigger.
+// 1 RSSI unit ~= 0.5 dB.
+static const uint8_t autoTriggerMarginRssi[AUTO_SENS_N_ELEM] = {
+    24, // weak  : +12 dB
+    16, // normal:  +8 dB (legacy behavior)
+    10, // strong:  +5 dB
+};
+static const char *autoSensitivityLabel[AUTO_SENS_N_ELEM] = {"WEAK", "NORM", "STRG"};
+static AutoSensitivityProfile autoSensitivity = AUTO_SENS_NORMAL;
+
+// Hysteresis and debounce for listen state.
+// 1 RSSI unit ~= 0.5 dB.
+#define LISTEN_OPEN_HYST_RSSI    4   // +2 dB above trigger to open
+#define LISTEN_CLOSE_HYST_RSSI   4   // -2 dB below trigger to keep listening
+#define LISTEN_RELEASE_LOW_COUNT 4   // consecutive low reads before release
+#define LISTEN_DROP_EXIT_RSSI   20   // 10 dB abrupt drop => leave RX
+static uint8_t listenLowCount = 0;
+static uint16_t listenPrevRssi = RSSI_MAX_VALUE;
+static uint16_t autoNoiseFloor = RSSI_MAX_VALUE;
+
 // EMA-smoothed RSSI for STILL display only (peak.rssi stays raw for trigger)
 static uint16_t rssiSmoothed = 0;
 
 // Sweeps remaining before auto-scaling of dbMax resumes (0 = auto)
 static uint8_t manualDbMaxTimer = 0;
-#define MANUAL_DBMAX_SWEEPS 15
+#define MANUAL_DBMAX_SWEEPS 2
 uint8_t vfo;
 uint8_t freqInputIndex = 0;
 uint8_t freqInputDotIndex = 0;
@@ -310,7 +344,7 @@ static int clamp(int v, int min, int max)
     return v <= min ? min : (v >= max ? max : v);
 }
 
-static uint8_t my_abs(signed v) { return v > 0 ? v : -v; }
+static uint16_t my_abs(int16_t v) { return v < 0 ? (uint16_t)(-v) : (uint16_t)v; }
 
 void SetState(State state)
 {
@@ -404,16 +438,37 @@ static void SetFScan(uint32_t f)
 
 bool IsPeakOverLevel() { return peak.rssi >= settings.rssiTriggerLevel; }
 
+static bool IsPeakOverOpenLevel()
+{
+    uint16_t openLevel = settings.rssiTriggerLevel;
+    if (openLevel <= (uint16_t)(RSSI_MAX_VALUE - LISTEN_OPEN_HYST_RSSI))
+        openLevel += LISTEN_OPEN_HYST_RSSI;
+    else
+        openLevel = RSSI_MAX_VALUE;
+
+    return peak.rssi >= openLevel;
+}
+
+static bool IsListeningSignalPresent(uint16_t rssi)
+{
+    uint16_t closeLevel = (settings.rssiTriggerLevel > LISTEN_CLOSE_HYST_RSSI)
+                              ? (uint16_t)(settings.rssiTriggerLevel - LISTEN_CLOSE_HYST_RSSI)
+                              : 0;
+    return rssi >= closeLevel;
+}
+
 static void ResetPeak()
 {
     peak.t = 0;
     peak.rssi = 0;
+    peak.f = 0;
+    peak.i = 0;
 }
 
 #ifdef ENABLE_FEAT_F4HWN_SPECTRUM
     static void setTailFoundInterrupt()
     {
-        BK4819_WriteRegister(BK4819_REG_3F, BK4819_REG_02_CxCSS_TAIL | BK4819_REG_02_SQUELCH_FOUND);
+        BK4819_WriteRegister(BK4819_REG_3F, BK4819_REG_3F_CxCSS_TAIL);
     }
 
     static bool checkIfTailFound()
@@ -425,7 +480,7 @@ static void ResetPeak()
         BK4819_WriteRegister(BK4819_REG_02, 0);
         // fetch the interrupt status bits
         interrupt_status_bits = BK4819_ReadRegister(BK4819_REG_02);
-        // if tail found interrupt
+        // End listen on CSS tail.
         if (interrupt_status_bits & BK4819_REG_02_CxCSS_TAIL)
         {
             listenT = 0;
@@ -560,6 +615,8 @@ static void ToggleRX(bool on)
 
     if (on)
     {
+        listenLowCount = 0;
+        listenPrevRssi = RSSI_MAX_VALUE;
     #ifdef ENABLE_FEAT_F4HWN_SPECTRUM
         listenT = 25;
         BK4819_WriteRegister(0x43, listenBWRegValues[settings.listenBw]);
@@ -571,6 +628,8 @@ static void ToggleRX(bool on)
     }
     else
     {
+        listenLowCount = 0;
+        listenPrevRssi = RSSI_MAX_VALUE;
         BK4819_WriteRegister(0x43, GetBWRegValueForScan());
     }
 }
@@ -594,19 +653,32 @@ static void InitScanPosition()
     ResetScanStats();
     scanInfo.scanStep = GetScanStep();
     scanInfo.measurementsCount = GetStepsCount();
-    scanInfo.i = 0;
-    scanInfo.f = GetFStart();
-    scanForward = true;
+    bool startFromLeft = scanStartFromLeft;
 #if SPECTRUM_INTERLACE_LARGE_SWEEPS
     interlacePhase = 0;
     interlaceStride = 1;
     if (scanInfo.measurementsCount > ARRAY_SIZE(rssiHistory))
     {
+        // Keep interlaced scans deterministic from the left edge.
+        startFromLeft = true;
         interlaceStride =
             (scanInfo.measurementsCount + ARRAY_SIZE(rssiHistory) - 1) /
             ARRAY_SIZE(rssiHistory);
     }
 #endif
+    if (!startFromLeft && scanInfo.measurementsCount > 1)
+    {
+        scanInfo.i = scanInfo.measurementsCount - 1;
+        scanInfo.f = GetFEnd();
+        scanForward = false;
+    }
+    else
+    {
+        scanInfo.i = 0;
+        scanInfo.f = GetFStart();
+        scanForward = true;
+    }
+    scanReturnPending = scanInfo.measurementsCount > 1;
 }
 
 static void InitScan()
@@ -676,20 +748,29 @@ static void AutoTriggerLevel()
     if (manualSetFlag)
         return;
 
-    // Track the NOISE FLOOR (rssiMin = quietest bin in the sweep), not the
-    // signal peak (rssiMax).  A squelch belongs just above the noise, so any
-    // real signal that clears the floor opens RX.  Using rssiMax would push
-    // the threshold above all signals and the squelch would never open.
     if (scanInfo.rssiMin == RSSI_MAX_VALUE)
-        return; // no measurement yet
+        return; // no valid measurement yet
 
-    // Target: noise floor + 16 RSSI units (~8 dBm above noise)
-    uint16_t target = scanInfo.rssiMin + 16;
+    // Lightweight floor tracking with tiny memory/code footprint.
+    // Uses current sweep min, smoothed across sweeps.
+    if (autoNoiseFloor == RSSI_MAX_VALUE || settings.rssiTriggerLevel == RSSI_MAX_VALUE)
+    {
+        autoNoiseFloor = scanInfo.rssiMin;
+    }
+    else
+    {
+        autoNoiseFloor = (uint16_t)((3u * autoNoiseFloor + scanInfo.rssiMin + 2u) >> 2);
+    }
+
+    uint16_t target = autoNoiseFloor + autoTriggerMarginRssi[autoSensitivity];
+
+    uint16_t oldTrigger = settings.rssiTriggerLevel;
 
     if (settings.rssiTriggerLevel == RSSI_MAX_VALUE)
     {
         // Fresh calibration (first sweep, or after step change): jump directly.
         settings.rssiTriggerLevel = target;
+        redrawStatus = true;
         return;
     }
 
@@ -697,15 +778,17 @@ static void AutoTriggerLevel()
     // Faster convergence when the gap is large (e.g. after filter BW change).
     int16_t diff  = (int16_t)target - (int16_t)settings.rssiTriggerLevel;
     bool diffSign = diff < 0;
+    uint16_t absDiff = my_abs(diff);
 
-    diff = my_abs(diff);
-
-    if (diff > 4)
+    if (absDiff > 4)
     {
-        int16_t step = (diff > 12) ? 4 : ((diff > 6) ? 2 : 1);
+        int16_t step = (absDiff > 12) ? 4 : ((absDiff > 6) ? 2 : 1);
         settings.rssiTriggerLevel += diffSign ? -step : step;
     }
     // Dead zone ±4: hold steady to avoid jitter near target
+
+    if (settings.rssiTriggerLevel != oldTrigger)
+        redrawStatus = true;
 }
 
 static void UpdatePeakInfoForce()
@@ -776,6 +859,60 @@ static void Measure()
     SetRssiHistory(scanInfo.i, rssi);
 }
 
+static void RequestAutoTriggerRecalibration()
+{
+    if (!manualSetFlag)
+    {
+        settings.rssiTriggerLevel = RSSI_MAX_VALUE;
+        autoNoiseFloor = RSSI_MAX_VALUE;
+    }
+}
+
+// Reset spectrum runtime/config to defaults while keeping current frequency
+// context (center/range). Persist only fields that are normally saved.
+static void ResetSpectrumToDefaults()
+{
+    manualSetFlag = false;
+    manualDbMaxTimer = 0;
+    autoSensitivity = AUTO_SENS_NORMAL;
+    monitorMode = false;
+    menuState = 0;
+    lockAGC = false;
+
+    settings.scanStepIndex = S_STEP_25_0kHz;
+    settings.stepsCount = STEPS_64;
+    settings.listenBw = BK4819_FILTER_BW_WIDE;
+    settings.modulationType = gTxVfo->Modulation;
+    settings.rssiTriggerLevel = RSSI_MAX_VALUE;
+    autoNoiseFloor = RSSI_MAX_VALUE;
+    settings.dbMin = -128;
+    settings.dbMax = -97;
+
+    // Keep frequency/range unchanged; recompute move step from fresh scan params.
+    settings.frequencyChangeStep = GetBW() >> 1;
+
+    RADIO_SetModulation(settings.modulationType);
+    BK4819_SetFilterBandwidth(settings.listenBw, false);
+
+    memset(rssiHistory, 0, sizeof(rssiHistory));
+    memset(peakHoldY,   PEAK_HOLD_INIT, sizeof(peakHoldY));
+    memset(peakHoldAge, 0,              sizeof(peakHoldAge));
+    rssiSmoothed = 0;
+    listenLowCount = 0;
+    listenPrevRssi = RSSI_MAX_VALUE;
+    scanStartFromLeft = true;
+
+    RelaunchScan();
+    ResetBlacklist();
+
+#ifdef ENABLE_FEAT_F4HWN_SPECTRUM
+    SaveSettings();
+#endif
+
+    redrawScreen = true;
+    redrawStatus = true;
+}
+
 // Update things by keypress
 
 static uint16_t dbm2rssi(int dBm)
@@ -796,6 +933,25 @@ static void UpdateDbMax(bool inc)
                            settings.dbMin + 10, 10);
     ClampRssiTriggerLevel();
     manualDbMaxTimer = MANUAL_DBMAX_SWEEPS;
+    redrawScreen = true;
+    redrawStatus = true;
+}
+
+static void UpdateAutoSensitivity(bool inc)
+{
+    if (inc)
+    {
+        if (autoSensitivity < AUTO_SENS_STRONG)
+            autoSensitivity++;
+    }
+    else
+    {
+        if (autoSensitivity > AUTO_SENS_WEAK)
+            autoSensitivity--;
+    }
+
+    // Force immediate re-calibration to the new profile margin.
+    settings.rssiTriggerLevel = RSSI_MAX_VALUE;
     redrawScreen = true;
     redrawStatus = true;
 }
@@ -879,6 +1035,32 @@ static void UpdateCurrentFreqStill(bool inc)
     redrawScreen = true;
 }
 
+static void ResumeSweepInDirection(bool forward)
+{
+    ToggleRX(false);
+    ResetScanStats();
+    ResetPeak();
+    InitScanPosition();
+
+    if (forward || scanInfo.measurementsCount <= 1)
+    {
+        scanForward = true;
+        scanInfo.i = 0;
+        scanInfo.f = GetFStart();
+    }
+    else
+    {
+        scanForward = false;
+        scanInfo.i = scanInfo.measurementsCount - 1;
+        scanInfo.f = GetFEnd();
+    }
+
+    newScanStart = false;
+    preventKeypress = false;
+    redrawScreen = true;
+    redrawStatus = true;
+}
+
 static void UpdateFreqChangeStep(bool inc)
 {
     uint16_t diff = GetScanStep() * 4;
@@ -896,6 +1078,11 @@ static void UpdateFreqChangeStep(bool inc)
 
 static void ToggleModulation()
 {
+    // Always leave listen mode before changing demod path.
+    // This prevents carrying a stale "locked RX" state across modulation
+    // changes (notably USB -> FM).
+    ToggleRX(false);
+
     if (settings.modulationType < MODULATION_UKNOWN - 1)
     {
         settings.modulationType++;
@@ -906,8 +1093,23 @@ static void ToggleModulation()
     }
     RADIO_SetModulation(settings.modulationType);
 
+    // Re-arm runtime spectrum state for the new demodulation profile.
+    // USB and FM can have very different RSSI/noise floors, so keeping the
+    // previous history/levels can draw a persistent horizontal wall.
+    if (!manualSetFlag)
+        settings.rssiTriggerLevel = RSSI_MAX_VALUE;
+    settings.dbMin = -128;
+    settings.dbMax = -97;
+    manualDbMaxTimer = 0;
+    rssiSmoothed = 0;
+    memset(rssiHistory, 0, sizeof(rssiHistory));
+    memset(peakHoldY,   PEAK_HOLD_INIT, sizeof(peakHoldY));
+    memset(peakHoldAge, 0,              sizeof(peakHoldAge));
+
     RelaunchScan();
+    ResetBlacklist();
     redrawScreen = true;
+    redrawStatus = true;
 }
 
 static void ToggleListeningBW()
@@ -1069,6 +1271,13 @@ static uint8_t iSqrt(uint16_t n)
     return (uint8_t)x;
 }
 
+static bool IsRssiHistoryInvalid(uint16_t rssi)
+{
+    // rssiHistory is cleared to 0 on (re)entry; treat it as "not measured yet"
+    // so the renderer does not draw an artificial horizontal baseline.
+    return rssi == 0 || rssi == RSSI_MAX_VALUE;
+}
+
 // applied x2 to prevent initial rounding.
 // A mild square-root compression (sugar map) is applied so that weak signals
 // occupy more of the display height while strong peaks are not clipped.
@@ -1117,11 +1326,11 @@ static uint16_t InterpolateRssi(uint8_t bars, uint16_t pos256)
     uint16_t rssiA = rssiHistory[i];
     uint16_t rssiB = rssiHistory[(i + 1 < bars) ? (i + 1) : i];
 
-    if (rssiA == RSSI_MAX_VALUE && rssiB == RSSI_MAX_VALUE)
+    if (IsRssiHistoryInvalid(rssiA) && IsRssiHistoryInvalid(rssiB))
         return RSSI_MAX_VALUE;
-    if (rssiA == RSSI_MAX_VALUE)
+    if (IsRssiHistoryInvalid(rssiA))
         return rssiB;
-    if (rssiB == RSSI_MAX_VALUE)
+    if (IsRssiHistoryInvalid(rssiB))
         return rssiA;
 
     return ((uint32_t)rssiA * (256 - frac) + (uint32_t)rssiB * frac) >> 8;
@@ -1272,7 +1481,7 @@ static void BuildSpectrumTopY(uint8_t *topY, uint8_t bars)
     if (bars == 1)
     {
         uint16_t rssi = rssiHistory[0];
-        uint8_t y = (rssi == RSSI_MAX_VALUE) ? SPECTRUM_TOPY_SKIP : Rssi2Y(rssi);
+        uint8_t y = IsRssiHistoryInvalid(rssi) ? SPECTRUM_TOPY_SKIP : Rssi2Y(rssi);
         for (uint8_t x = 0; x < 128; x++)
             topY[x] = y;
         return;
@@ -1316,15 +1525,29 @@ static void BuildSpectrumTopY(uint8_t *topY, uint8_t bars)
 
 static void DrawStatus()
 {
-#ifdef SPECTRUM_EXTRA_VALUES
-    sprintf(String, "%d/%d%s P:%d T:%d", settings.dbMin, settings.dbMax,
-            manualSetFlag ? "M" : (manualDbMaxTimer ? "T" : ""),
-            Rssi2DBm(peak.rssi), Rssi2DBm(settings.rssiTriggerLevel));
-#else
-    sprintf(String, "%d/%d%s", settings.dbMin, settings.dbMax,
-            manualSetFlag ? "M" : (manualDbMaxTimer ? "T" : ""));
-#endif
-    GUI_DisplaySmallest(String, 0, 1, true, true);
+    if (manualSetFlag)
+    {
+        bool curInvalid = IsRssiHistoryInvalid(scanInfo.rssi);
+        bool trigInvalid =
+            monitorMode || settings.rssiTriggerLevel == RSSI_MAX_VALUE;
+
+        if (curInvalid && trigInvalid)
+            sprintf(String, "M --/--");
+        else if (curInvalid)
+            sprintf(String, "M --/%d", Rssi2DBm(settings.rssiTriggerLevel));
+        else if (trigInvalid)
+            sprintf(String, "M %d/--", Rssi2DBm(scanInfo.rssi));
+        else
+            sprintf(String, "M %d/%d", Rssi2DBm(scanInfo.rssi),
+                    Rssi2DBm(settings.rssiTriggerLevel));
+        GUI_DisplaySmallest(String, 0, 1, true, true);
+    }
+    else
+    {
+        // In AUTO, keep mode/profile display only (no current/trigger pair).
+        sprintf(String, "A:%s", autoSensitivityLabel[autoSensitivity]);
+        GUI_DisplaySmallest(String, 0, 1, true, true);
+    }
 
     BOARD_ADC_GetBatteryInfo(&gBatteryVoltages[gBatteryCheckCounter++ % 4],
                              &gBatteryCurrent);
@@ -1384,12 +1607,15 @@ static void ShowChannelName(uint32_t f)
             // Clear first so a shorter name doesn't leave stale pixels.
             memset(&gStatusLine[43], 0, 116 - 43);
             UI_PrintStringSmallBufferNormal(channelName, gStatusLine + 43);
+        } else {
+            memset(&gStatusLine[43], 0, 116 - 43);
         }
     }
     else
     {
         memset(&gStatusLine[43], 0, 116 - 43);
     }
+
     ST7565_BlitStatusLine();
 }
 #endif
@@ -1519,7 +1745,10 @@ static bool OnKeyDownCommon(uint8_t key) {
     {
     case KEY_3:
     case KEY_9:
-        UpdateDbMax(isTrue);
+        if (manualSetFlag)
+            UpdateDbMax(isTrue);
+        else
+            UpdateAutoSensitivity(isTrue);
         return true;
     case KEY_STAR:
     case KEY_F:
@@ -1553,6 +1782,12 @@ static void OnKeyDown(uint8_t key) {
         break;
     case KEY_UP:
     case KEY_DOWN:
+        // If the spectrum is currently receiving (green LED on),
+        // force-stop RX and restart sweep in the requested direction.
+        if (isListening) {
+            ResumeSweepInDirection(GetDirection(key));
+            break;
+        }
 #ifdef ENABLE_SCAN_RANGES
         if (!gScanRangeStart) {
 #endif
@@ -1581,6 +1816,7 @@ static void OnKeyDown(uint8_t key) {
         TuneToPeak();
         break;
     case KEY_MENU:
+        // Short press toggles manual/auto.
         manualSetFlag = !manualSetFlag;
         if (!manualSetFlag)
             settings.rssiTriggerLevel = RSSI_MAX_VALUE;
@@ -1833,8 +2069,43 @@ static bool HandleUserInput()
         kbd.counter = 0;
     }
 
+    // Spectrum MENU key handling:
+    // - short press => action on release
+    // - long press  => one-shot at counter==16
+    if (currentState == SPECTRUM)
+    {
+        if (kbd.current == KEY_INVALID && kbd.prev == KEY_MENU)
+        {
+            if (menuKeyPendingShort && !menuKeyLongHandled)
+                OnKeyDown(KEY_MENU);
+            menuKeyPendingShort = false;
+            menuKeyLongHandled = false;
+        }
+        else if (kbd.current != KEY_MENU && kbd.prev != KEY_MENU)
+        {
+            menuKeyPendingShort = false;
+            menuKeyLongHandled = false;
+        }
+    }
+
     if (kbd.counter == 3 || kbd.counter == 16)
     {
+        if (currentState == SPECTRUM && kbd.current == KEY_MENU)
+        {
+            if (kbd.counter == 3)
+            {
+                menuKeyPendingShort = true;
+                menuKeyLongHandled = false;
+            }
+            else if (kbd.counter == 16 && !menuKeyLongHandled)
+            {
+                menuKeyPendingShort = false;
+                menuKeyLongHandled = true;
+                ResetSpectrumToDefaults();
+            }
+            return true;
+        }
+
         if (currentState == FREQ_INPUT)
             OnKeyDownFreqInput(kbd.current);
 
@@ -1933,6 +2204,8 @@ static void FinalizeCompletedSweep()
         settings.dbMax = newMax;
     }
 
+    // Next full sweep starts from the opposite side to avoid directional bias.
+    scanStartFromLeft = !scanStartFromLeft;
     newScanStart = true;
 }
 
@@ -1955,7 +2228,7 @@ static void UpdateScan()
         preventKeypress = false;
 
         UpdatePeakInfo();
-        if (IsPeakOverLevel())
+        if (IsPeakOverOpenLevel())
         {
             ToggleRX(true);
             TuneToPeak();
@@ -1984,25 +2257,23 @@ static void UpdateScan()
     preventKeypress = false;
 
     UpdatePeakInfo();
-    if (IsPeakOverLevel())
+    if (IsPeakOverOpenLevel())
     {
         ToggleRX(true);
         TuneToPeak();
         return;
     }
 
-    if (scanForward)
+    if (scanReturnPending)
     {
-        // End of forward half-sweep: reverse direction.
-        // Advance one step immediately so the backward sweep starts at count-2,
-        // not count-1 — avoids scanning the same endpoint twice in a row,
-        // which would produce a double SPI burst ("ta-tac" audio artifact).
-        scanForward = false;
+        // Finish the opposite half-sweep before finalizing this cycle.
+        scanReturnPending = false;
+        scanForward = !scanForward;
         NextScanStep();
         return;
     }
 
-    // End of backward half-sweep: full round trip done.
+    // Full round trip done.
     FinalizeCompletedSweep();
 }
 
@@ -2018,7 +2289,7 @@ static void UpdateStill()
                                 : scanInfo.rssi;
     AutoTriggerLevel();
 
-    if (IsPeakOverLevel() || monitorMode) {
+    if (IsPeakOverOpenLevel() || monitorMode) {
         ToggleRX(true);
     }
 }
@@ -2045,7 +2316,10 @@ static void UpdateListening()
     {
         ToggleRX(false);
         ResetScanStats();
+        ResetPeak();
+        RequestAutoTriggerRecalibration();
         newScanStart = true;
+        redrawStatus = true;
         return;
     }
 #endif
@@ -2063,7 +2337,10 @@ static void UpdateListening()
         {
             ToggleRX(false);
             ResetScanStats();
+            ResetPeak();
+            RequestAutoTriggerRecalibration();
             newScanStart = true;
+            redrawStatus = true;
             return;
         }
 #endif
@@ -2074,24 +2351,54 @@ static void UpdateListening()
     rssiSmoothed = rssiSmoothed ? (rssiSmoothed * 3 + scanInfo.rssi) >> 2
                                 : scanInfo.rssi;
     redrawScreen = true;
+    redrawStatus = true;
 
-#ifdef ENABLE_FEAT_F4HWN_SPECTRUM
-    if ((IsPeakOverLevel() && !tailFound) || monitorMode)
+    bool abruptDrop = false;
+    if (!monitorMode && listenPrevRssi != RSSI_MAX_VALUE &&
+        listenPrevRssi > LISTEN_DROP_EXIT_RSSI)
+    {
+        // End TX usually appears as a sharp RSSI fall; leave RX quickly and
+        // resume sweep instead of waiting for the debounce path.
+        abruptDrop = (scanInfo.rssi + LISTEN_DROP_EXIT_RSSI) <= listenPrevRssi;
+    }
+    listenPrevRssi = scanInfo.rssi;
+
+    bool keepListening = monitorMode;
+    if (!keepListening)
+    {
+        if (abruptDrop)
+        {
+            listenLowCount = 0;
+            keepListening = false;
+        }
+        else if (IsListeningSignalPresent(scanInfo.rssi))
+        {
+            listenLowCount = 0;
+            keepListening = true;
+        }
+        else if (++listenLowCount < LISTEN_RELEASE_LOW_COUNT)
+        {
+            keepListening = true;
+        }
+        else
+        {
+            listenLowCount = 0;
+            keepListening = false;
+        }
+    }
+
+    if (keepListening)
     {
         listenT = 320;
         return;
     }
-#else
-    if (IsPeakOverLevel() || monitorMode)
-    {
-        listenT = 320;
-        return;
-    }
-#endif
 
     ToggleRX(false);
     ResetScanStats();
+    ResetPeak();
+    RequestAutoTriggerRecalibration();
     newScanStart = true;
+    redrawStatus = true;
 }
 
 static void Tick()
@@ -2195,15 +2502,10 @@ void APP_RunSpectrum()
     if (gScanRangeStart)
     {
         currentFreq = initialFreq = gScanRangeStart;
-        for (uint8_t i = 0; i < ARRAY_SIZE(scanStepValues); i++)
-        {
-            if (scanStepValues[i] >= gTxVfo->StepFrequency)
-            {
-                settings.scanStepIndex = i;
-                break;
-            }
-        }
-        settings.stepsCount = STEPS_128;
+        // Keep saved spectrum step/count in scan-range mode.
+        // Previously this branch forced scanStepIndex from VFO step and
+        // stepsCount to STEPS_128 on every entry, which made the user think
+        // spectrum settings were not persisted.
         #ifdef ENABLE_FEAT_F4HWN_RESUME_STATE
             gEeprom.CURRENT_STATE = 5;
         #endif
@@ -2227,6 +2529,7 @@ void APP_RunSpectrum()
     redrawStatus = true;
     redrawScreen = true;
     newScanStart = true;
+    scanStartFromLeft = true;
 
     ToggleRX(true), ToggleRX(false); // hack to prevent noise when squelch off
     RADIO_SetModulation(settings.modulationType = gTxVfo->Modulation);
@@ -2237,14 +2540,21 @@ void APP_RunSpectrum()
     BK4819_SetFilterBandwidth(settings.listenBw = BK4819_FILTER_BW_WIDE, false);
 #endif
 
+    // Reset dynamic spectrum state on every entry.
+    // Persisted settings are step/count/listenBW only; trigger and dB window
+    // are runtime values and should not carry over between sessions.
+    manualSetFlag = false;
+    manualDbMaxTimer = 0;
+    settings.rssiTriggerLevel = RSSI_MAX_VALUE;
+    settings.dbMin = -128;
+    settings.dbMax = -97;
+
     RelaunchScan();
 
     memset(rssiHistory, 0, sizeof(rssiHistory));
     memset(peakHoldY,   PEAK_HOLD_INIT, sizeof(peakHoldY));
     memset(peakHoldAge, 0,              sizeof(peakHoldAge));
     rssiSmoothed    = 0;
-    manualDbMaxTimer = 0;
-    manualSetFlag    = false;
 
     isInitialized = true;
 
