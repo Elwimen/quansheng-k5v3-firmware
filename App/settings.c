@@ -30,6 +30,23 @@
 
 EEPROM_Config_t gEeprom = { 0 };
 
+// Load a DTMF code from EEPROM, falling back to default_val if invalid.
+static void SETTINGS_LoadEepromDtmf(uint32_t addr, char *dest, size_t size, const char *default_val)
+{
+    uint8_t buf[16];
+
+    if (size > sizeof(buf))
+        size = sizeof(buf);
+
+    PY25Q16_ReadBuffer(addr, buf, size);
+
+    if (DTMF_ValidateCodes((char *)buf, size)) {
+        memcpy(dest, buf, size);
+    } else {
+        strcpy(dest, default_val);
+    }
+}
+
 void SETTINGS_InitEEPROM(void)
 {
     uint8_t Data[16] = {0};
@@ -297,16 +314,6 @@ gEeprom.FreqChannel[1]   = IS_FREQ_CHANNEL(Data16[5]) ? Data16[5] : (FREQ_CHANNE
     PY25Q16_ReadBuffer(0x00A0A8 + 0x48, Data, 8);
     gEeprom.DTMF_CODE_PERSIST_TIME  = (Data[0] < 101) ? Data[0] * 10 : 100;
     gEeprom.DTMF_CODE_INTERVAL_TIME = (Data[1] < 101) ? Data[1] * 10 : 100;
-
-    void SETTINGS_LoadEepromDtmf(uint32_t addr, char *dest, size_t size, const char *default_val) {       
-        PY25Q16_ReadBuffer(addr, Data, size);
-        
-        if (DTMF_ValidateCodes((char *)Data, size)) {
-            memcpy(dest, Data, size);
-        } else {
-            strcpy(dest, default_val);
-        }
-    }
 
 #ifdef ENABLE_DTMF_CALLING
     gEeprom.PERMIT_REMOTE_KILL      = (Data[2] <   2) ? Data[2] : true;
