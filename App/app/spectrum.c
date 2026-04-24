@@ -115,8 +115,10 @@ static bool scanReturnPending = true;
 #ifndef SPECTRUM_INTERLACE_LARGE_SWEEPS
 #define SPECTRUM_INTERLACE_LARGE_SWEEPS 1
 #endif
+#if SPECTRUM_INTERLACE_LARGE_SWEEPS
 static uint16_t interlaceStride = 1;
 static uint16_t interlacePhase = 0;
+#endif
 
 // Incremental display: one framebuffer page sent per tick instead of a full
 // BlitFullScreen burst.
@@ -2148,14 +2150,11 @@ static void NextScanStep()
     }
 }
 
+#if SPECTRUM_INTERLACE_LARGE_SWEEPS
 static bool UseInterlacedSweep()
 {
-#if SPECTRUM_INTERLACE_LARGE_SWEEPS
     return scanInfo.measurementsCount > ARRAY_SIZE(rssiHistory) &&
            interlaceStride > 1;
-#else
-    return false;
-#endif
 }
 
 static bool NextScanStepInterlaced()
@@ -2183,6 +2182,7 @@ static bool NextScanStepInterlaced()
     interlacePhase = 0;
     return true;
 }
+#endif
 
 static void FinalizeCompletedSweep()
 {
