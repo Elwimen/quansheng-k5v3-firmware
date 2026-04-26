@@ -19,6 +19,9 @@
 
 void UI_DisplayReleaseKeys(void);
 void UI_DisplayWelcome(void);
+#ifdef ENABLE_FEAT_F4HWN_QRCODE
+void UI_DisplayWelcomeQR(void);
+#endif
 
 #endif
 

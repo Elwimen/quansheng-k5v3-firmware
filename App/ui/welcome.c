@@ -33,6 +33,33 @@
     #include "screenshot.h"
 #endif
 
+#ifdef ENABLE_FEAT_F4HWN_QRCODE
+// QR code (version 4, 33x33 modules, EC level L) encoding:
+// https://github.com/armel/uv-k1-k5v3-firmware-custom
+// Stored in framebuffer column-major format: 5 fb-lines x 33 columns.
+// Each byte packs 8 vertical pixels (bit 0 = top). Last fb-line uses
+// only bit 0 (row 32); bits 1..7 are always 0.
+static const uint8_t BITMAP_QR_GitHub[5][33] = {
+    { 0x7F, 0x41, 0x5D, 0x5D, 0x5D, 0x41, 0x7F, 0x00, 0x6A, 0xB8, 0xCB, 0xA0, 0x6D, 0x07, 0xCB, 0x1F, 0xD2, 0x18, 0x59, 0x15, 0x79, 0x86, 0xCE, 0x15, 0x43, 0x00, 0x7F, 0x41, 0x5D, 0x5D, 0x5D, 0x41, 0x7F },
+    { 0x87, 0xA3, 0x69, 0xC3, 0x19, 0x0E, 0x55, 0x1F, 0x43, 0x11, 0x16, 0xC1, 0x5A, 0x0E, 0x96, 0x3E, 0xA5, 0x15, 0x06, 0x2A, 0xFE, 0xCE, 0xCA, 0x3A, 0x70, 0xD9, 0xEA, 0xF5, 0x5C, 0x15, 0x8A, 0x67, 0x22 },
+    { 0xE0, 0x0B, 0x1D, 0x28, 0xF5, 0x87, 0x55, 0xEB, 0xA8, 0x11, 0xA3, 0xC1, 0x5A, 0x0E, 0x96, 0x3E, 0xA5, 0x15, 0x84, 0x2B, 0x72, 0xE8, 0xE9, 0x23, 0x11, 0xCD, 0xE6, 0xC1, 0x91, 0xE6, 0x88, 0x77, 0x22 },
+    { 0xFD, 0x04, 0x75, 0x75, 0x75, 0x04, 0xFD, 0x01, 0xF7, 0xE0, 0xD6, 0xC1, 0x5A, 0x0E, 0x96, 0x3E, 0xA5, 0x37, 0x22, 0x2B, 0xEA, 0xAA, 0xA7, 0x8D, 0x5F, 0x31, 0x55, 0xB1, 0x3F, 0xCE, 0xCA, 0x2C, 0x2B },
+    { 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x00, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x00, 0x00, 0x00, 0x01, 0x01, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00 }
+};
+
+// QR code (version 4, 33x33 modules, EC level L) encoding:
+// https://github.com/armel/uv-k1-k5v3-firmware-custom/wiki
+// Stored in framebuffer column-major format: 5 fb-lines x 33 columns.
+// Last fb-line uses only bit 0 (row 32); bits 1..7 are always 0.
+static const uint8_t BITMAP_QR_GitHub_Wiki[5][33] = {
+    { 0x7F, 0x41, 0x5D, 0x5D, 0x5D, 0x41, 0x7F, 0x00, 0x6A, 0x0F, 0x74, 0x0E, 0xD2, 0xB0, 0x74, 0xB1, 0x6D, 0x18, 0x59, 0x15, 0x79, 0x86, 0xCE, 0x15, 0x43, 0x00, 0x7F, 0x41, 0x5D, 0x5D, 0x5D, 0x41, 0x7F },
+    { 0xCD, 0x5D, 0x83, 0x65, 0xE7, 0xC6, 0x55, 0xBD, 0x6B, 0x3F, 0xA9, 0x1C, 0xA5, 0xE0, 0x69, 0xE3, 0x4A, 0x15, 0x06, 0x2A, 0xFE, 0xCE, 0xCA, 0x3A, 0x70, 0xD9, 0xEA, 0xF5, 0x5C, 0x15, 0x8A, 0x67, 0x22 },
+    { 0xFF, 0x25, 0xAE, 0xB6, 0x30, 0xF8, 0x55, 0xDD, 0x07, 0xB6, 0xC2, 0x1C, 0xA5, 0xE0, 0x69, 0xC4, 0x66, 0x15, 0x84, 0x2B, 0x72, 0xE8, 0xE9, 0x23, 0x11, 0xCD, 0xE6, 0xC1, 0x91, 0xE6, 0x88, 0x77, 0x22 },
+    { 0xFD, 0x04, 0x74, 0x74, 0x74, 0x05, 0xFD, 0x01, 0xF7, 0xAE, 0x81, 0x1C, 0xA5, 0xE0, 0x69, 0x54, 0xFE, 0x37, 0x22, 0x2B, 0xEA, 0xAA, 0xA7, 0x8D, 0x5F, 0x31, 0x55, 0xB1, 0x3F, 0xCE, 0xCA, 0x24, 0x33 },
+    { 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x00, 0x01, 0x01, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x01, 0x01, 0x01, 0x00, 0x00, 0x00, 0x01, 0x01, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00 }
+};
+#endif
+
 #ifdef ENABLE_FEAT_F4HWN_MEM
 // Linker symbols (provided by the linker script)
 extern uint8_t _sdata;          // Start of .data in RAM
@@ -87,6 +114,112 @@ static void build_usage(uint32_t* ram_used, uint32_t* flash_used)
 static inline uint16_t pct_x100(uint32_t used, uint32_t total)
 {
     return (uint16_t)((used * 10000u) / total); // 7559 => 75.59%
+}
+#endif
+
+#ifdef ENABLE_FEAT_F4HWN_QRCODE
+// Set a single pixel at LCD-physical (x, y). y=0..7 maps to gStatusLine,
+// y=8..63 maps to gFrameBuffer (line = (y-8)/8, bit = (y-8)%8).
+static void QR_SetPixel(uint8_t x, uint8_t y)
+{
+    if (x >= 128 || y >= 64) return;
+    if (y < 8) {
+        gStatusLine[x] |= (uint8_t)(1u << y);
+    } else {
+        const uint8_t fb_y = (uint8_t)(y - 8u);
+        gFrameBuffer[fb_y >> 3][x] |= (uint8_t)(1u << (fb_y & 7u));
+    }
+}
+
+// Render a square QR bitmap stored in framebuffer column-major format
+// (size cols × ceil(size/8) fb-lines, row-major in memory).
+static void QR_Draw(const uint8_t *bitmap, uint8_t size, uint8_t origin_x, uint8_t origin_y)
+{
+    for (uint8_t qy = 0; qy < size; qy++) {
+        for (uint8_t qx = 0; qx < size; qx++) {
+            const uint16_t idx = (uint16_t)(qy >> 3) * (uint16_t)size + (uint16_t)qx;
+            if ((bitmap[idx] >> (qy & 7u)) & 1u) {
+                QR_SetPixel((uint8_t)(origin_x + qx),
+                            (uint8_t)(origin_y + qy));
+            }
+        }
+    }
+}
+
+// Tiny-font capsule label drawn entirely inside the status line, mirroring the
+// scan-list name pill (see status.c). Body uses 0x7F (bits 0..6 = 7 px tall),
+// caps use 0x3E (bits 1..5 = 5 px tall) for rounded corners.
+// Caller passes glyph_x = first glyph column. Capsule width = len*4 + 3 px.
+static void DrawStatusCapsule(const char *text, uint8_t glyph_x)
+{
+    const uint8_t len = (uint8_t)strlen(text);
+    if (len == 0) return;
+
+    GUI_DisplaySmallest(text, glyph_x, 1, true, true);
+
+    const uint8_t left_cap  = (uint8_t)(glyph_x - 2u);
+    const uint8_t body_x0   = (uint8_t)(glyph_x - 1u);
+    const uint8_t body_x1   = (uint8_t)(glyph_x + (uint16_t)len * 4u - 1u);
+    const uint8_t right_cap = (uint8_t)(glyph_x + (uint16_t)len * 4u);
+
+    gStatusLine[left_cap] ^= 0x3E;
+    for (uint8_t x = body_x0; x <= body_x1; x++) {
+        gStatusLine[x] ^= 0x7F;
+    }
+    gStatusLine[right_cap] ^= 0x3E;
+}
+
+void UI_DisplayWelcomeQR(void)
+{
+    memset(gStatusLine, 0, sizeof(gStatusLine));
+#if defined(ENABLE_FEAT_F4HWN_CTR) || defined(ENABLE_FEAT_F4HWN_INV)
+    ST7565_ContrastAndInv();
+#endif
+    UI_DisplayClear();
+
+    // Capsule labels in the status line, same style as the scan-list name pill.
+    // Capsule width = 4*4 + 3 = 19 px → centered above each 33-px QR.
+    // glyph_x = QR_x + (33-19)/2 + 2 = QR_x + 9.
+    DrawStatusCapsule("CODE", 23);   //  4 + 9
+    DrawStatusCapsule("WIKI", 90);  // 91 + 9
+
+    // Two QR codes (V4, 33x33) side by side, just below the status line.
+    // Left  → repo : x=4..36,  y=8..40
+    // Right → wiki : x=91..123, y=8..40
+    QR_Draw((const uint8_t *)BITMAP_QR_GitHub,      33, 14, 12);
+    QR_Draw((const uint8_t *)BITMAP_QR_GitHub_Wiki, 33, 81, 12);
+
+    // "Open Source Firmware" tiny font at fb_y=42 → physical y=50..55,
+    // just above the MEM line (which is at physical y=58..63).
+    GUI_DisplaySmallest("OPEN SOURCE FIRMWARE", 24, 42, false, true);
+
+#ifdef ENABLE_FEAT_F4HWN_MEM
+    // FLASH + SRAM combined on the very bottom row, 3x5 tiny font (physical y=58..63).
+    {
+        char mem_line[32];
+        uint32_t ram_used   = 0;
+        uint32_t flash_used = 0;
+        build_usage(&ram_used, &flash_used);
+
+        const uint16_t ram_pct   = pct_x100(ram_used,   RAM_SIZE_BYTES);
+        const uint16_t flash_pct = pct_x100(flash_used, FLASH_SIZE_BYTES);
+
+        sprintf(mem_line, "FLASH %u.%02u %% - SRAM  %u.%02u %%",
+                (unsigned)(flash_pct / 100), (unsigned)(flash_pct % 100),
+                (unsigned)(ram_pct   / 100), (unsigned)(ram_pct   % 100));
+
+        // 3x5 font, 4 px stride: 29 chars × 4 = 116 px → x=6 centers it.
+        // y=50 in framebuffer coords = physical y=58.
+        GUI_DisplaySmallest(mem_line, 6, 50, false, true);
+    }
+#endif
+
+    ST7565_BlitStatusLine();
+    ST7565_BlitFullScreen();
+
+    #ifdef ENABLE_FEAT_F4HWN_SCREENSHOT
+        SCREENSHOT_Update(true);
+    #endif
 }
 #endif
 
@@ -193,6 +326,7 @@ void UI_DisplayWelcome(void)
         gFrameBuffer[4][108] ^= 0x7F;
         UI_DrawLineBuffer(gFrameBuffer, 109, 35, 127, 35, 1);
 
+        /*
         #ifdef ENABLE_FEAT_F4HWN_MEM
             uint32_t ram_used   = 0;
             uint32_t flash_used = 0;
@@ -210,6 +344,7 @@ void UI_DisplayWelcome(void)
             GUI_DisplaySmallest(WelcomeString3, 5, 1, true, true);
             ST7565_BlitStatusLine();
         #endif
+        */
 
         sprintf(WelcomeString3, "%s Edition", Edition);
         UI_PrintStringSmallNormal(WelcomeString3, 0, 127, 6);
