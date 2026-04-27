@@ -1597,7 +1597,8 @@ void UI_DisplayMain(void)
 
                     case MDF_CHANNEL:   // show the channel number
                         sprintf(String, "CH-%04u", gEeprom.ScreenChannel[vfo_num] + 1);
-                        UI_PrintString(String, 36, 0, line, 8);
+                        //UI_PrintString(String, 36, 0, line, 8);
+                        UI_PrintStringYOffset(String, 36, 0, line, 8, 3);
                         break;
 
                     case MDF_NAME:      // show the channel name
@@ -1611,14 +1612,15 @@ void UI_DisplayMain(void)
 
                         if (gEeprom.CHANNEL_DISPLAY_MODE == MDF_NAME) {
                             String[10] = 0;
-                            UI_PrintString(String, 33, 0, line, 8);
+                            UI_PrintStringYOffset(String, 33, 0, line, 8, 3);
                         }
                         else {
 #ifdef ENABLE_FEAT_F4HWN
                             if (isMainOnly())
                             {
                                 String[10] = 0;
-                                UI_PrintString(String, 33, 0, line, 8);
+                                //UI_PrintString(String, 33, 0, line, 8);
+                                UI_PrintStringYOffset(String, 33, 0, line, 8, 3);
                             }
                             else
                             {
