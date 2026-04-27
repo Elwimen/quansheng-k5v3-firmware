@@ -98,46 +98,6 @@ void UI_PrintString(const char *pString, uint8_t Start, uint8_t End, uint8_t Lin
     }
 }
 
-// Same as UI_PrintString but shifts the glyph down by YOffset pixels (0..7).
-// When YOffset > 0, a third page (Line+2) is also written. Bits are OR-ed
-// so existing framebuffer content outside the glyph footprint is preserved.
-void UI_PrintStringYOffset(const char *pString, uint8_t Start, uint8_t End, uint8_t Line, uint8_t Width, uint8_t YOffset)
-{
-    size_t i;
-    size_t Length = strlen(pString);
-
-    if (End > Start)
-        Start += (((End - Start) - (Length * Width)) + 1) / 2;
-
-    YOffset &= 7;
-
-    for (i = 0; i < Length; i++)
-    {
-        const unsigned int ofs = (unsigned int)Start + (i * Width);
-        if (pString[i] > ' ' && pString[i] < 127)
-        {
-            const unsigned int index = pString[i] - ' ' - 1;
-
-            if (YOffset == 0)
-            {
-                memcpy(gFrameBuffer[Line + 0] + ofs, &gFontBig[index][0], 7);
-                memcpy(gFrameBuffer[Line + 1] + ofs, &gFontBig[index][7], 7);
-            }
-            else
-            {
-                for (unsigned int x = 0; x < 7; x++)
-                {
-                    const uint8_t top = gFontBig[index][x];
-                    const uint8_t bot = gFontBig[index][7 + x];
-                    gFrameBuffer[Line + 0][ofs + x] |= (uint8_t)(top << YOffset);
-                    gFrameBuffer[Line + 1][ofs + x] |= (uint8_t)(top >> (8 - YOffset)) | (uint8_t)(bot << YOffset);
-                    gFrameBuffer[Line + 2][ofs + x] |= (uint8_t)(bot >> (8 - YOffset));
-                }
-            }
-        }
-    }
-}
-
 void UI_PrintStringSmall(const char *pString, uint8_t Start, uint8_t End, uint8_t Line, uint8_t char_width, const uint8_t *font)
 {
     const size_t Length = strlen(pString);
