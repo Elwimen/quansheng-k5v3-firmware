@@ -1134,6 +1134,7 @@ void UI_DisplayMenu(void)
             // SysInf is paginated. Pages appear in this order, only when their
             // feature flag is enabled:
             //   0          -> identity
+            //   next       -> Build date/time         (ENABLE_FEAT_F4HWN)
             //   next       -> Battery                 (ENABLE_FEAT_F4HWN)
             //   next       -> Flash / SRAM usage      (ENABLE_FEAT_F4HWN_MEM)
             //   next, +1   -> CODE / WIKI QR codes    (ENABLE_FEAT_F4HWN_QRCODE)
@@ -1153,6 +1154,16 @@ void UI_DisplayMenu(void)
                 break;
             }
 #ifdef ENABLE_FEAT_F4HWN
+            if (page == p++) {
+                UI_PrintStringSmallNormalInverse("BUILD", 70, 0, 1);
+                UI_PrintStringSmallNormal(BuildDate, 49, 127, 3);
+                UI_PrintStringSmallNormal(BuildTime, 49, 127, 4);
+                UI_PrintStringSmallNormal(BuildCommit, 49, 127, 6);
+
+                already_printed = true;
+                break;
+            }
+
             if (page == p++) {
                 char val[16];
 
@@ -1432,16 +1443,6 @@ void UI_DisplayMenu(void)
             */
 
             y = (small ? 3 : 2) - (lines / 2); 
-
-            // Page 0 gets a fixed vertical position; other SysInf pages own their layout.
-            if(UI_MENU_GetCurrentMenuId() == MENU_VOL && gSubMenuSelection == 0)
-            {
-                //#ifdef ENABLE_FEAT_F4HWN
-                //    UI_PrintStringSmallNormal(VERSION_STRING_2, 54, 127, 6);
-                //#endif
-
-                y = 1;
-            }
 
             // draw the text lines
             for (i = 0; i < len && lines > 0; lines--)
