@@ -513,6 +513,12 @@ gEeprom.FreqChannel[1]   = IS_FREQ_CHANNEL(Data16[5]) ? Data16[5] : (FREQ_CHANNE
         if (gEeprom.CW_TONE_HZ < 400 || gEeprom.CW_TONE_HZ > 1000)
             gEeprom.CW_TONE_HZ = 700;
         gEeprom.CW_FLAGS   = cw_buf[3];
+
+        /* prediction popup usage counters — 14 bytes at 0x00A174 */
+        uint8_t pred_buf[CW_PRED_COUNT];
+        PY25Q16_ReadBuffer(0x00A174, pred_buf, sizeof(pred_buf));
+        for (uint8_t i = 0; i < CW_PRED_COUNT; i++)
+            gEeprom.CW_PRED_COUNTS[i] = (pred_buf[i] == 0xFFu) ? 0u : pred_buf[i];
     }
 #endif
 }
@@ -1243,6 +1249,13 @@ void SETTINGS_SaveChannel(uint16_t Channel, uint8_t VFO, const VFO_Info_t *pVFO,
     }
 
 }
+
+#ifdef ENABLE_FEAT_ELW_CW
+void SETTINGS_SaveCwPredCounts(void)
+{
+    PY25Q16_WriteBuffer(0x00A174, gEeprom.CW_PRED_COUNTS, CW_PRED_COUNT, false);
+}
+#endif
 
 void SETTINGS_SaveBatteryCalibration(const uint16_t * batteryCalibration)
 {
