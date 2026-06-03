@@ -17,7 +17,9 @@ void UI_DisplayCwChat(void)
     /* Line 0 — status bar: WPM + frequency (left) + char counter (right) */
     {
         const uint32_t freq = gCurrentVfo->pRX->Frequency;
-        sprintf_(buf, "AFCW %uW %u.%03u",
+        const bool ook = (gCurrentVfo->Modulation == MODULATION_CW);
+        sprintf_(buf, "%s %uW %u.%03u",
+                 ook ? "CW" : "AFCW",
                  gEeprom.CW_WPM,
                  freq / 100000,
                  (freq % 100000) / 100);
