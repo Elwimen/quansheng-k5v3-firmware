@@ -195,6 +195,7 @@ const t_menu_item MenuList[] =
     {"CWSpd",       MENU_CW_SPEED      }, // CW speed in WPM
     {"CWTone",      MENU_CW_TONE       }, // CW sidetone frequency
     {"CWPset",      MENU_CW_PRESET     }, // CW parameter presets
+    {"CWRHst",      MENU_CW_RECALL_HIST}, // log recalled TX to history
 #endif
 
     {"",                              0xff               }  // end of list - DO NOT delete or move this this
@@ -1453,6 +1454,10 @@ void UI_DisplayMenu(void)
             strcpy(String, cw_preset_names[gSubMenuSelection < 5 ? gSubMenuSelection : 1]);
             break;
         }
+
+        case MENU_CW_RECALL_HIST:
+            strcpy(String, gSubMenuSelection ? "ON" : "OFF");
+            break;
 #endif
 
     }
