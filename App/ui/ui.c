@@ -33,6 +33,10 @@
 #ifdef ENABLE_REGA
     #include "app/rega.h"
 #endif
+#ifdef ENABLE_FEAT_ELW_CW
+    #include "app/cw.h"
+    void UI_DisplayCwChat(void);
+#endif
 #include "ui/inputbox.h"
 #include "ui/main.h"
 #include "ui/menu.h"
@@ -63,6 +67,10 @@ void (*UI_DisplayFunctions[])(void) = {
 
 #ifdef ENABLE_REGA
     [DISPLAY_REGA] = &UI_DisplayREGA,
+#endif
+
+#ifdef ENABLE_FEAT_ELW_CW
+    [DISPLAY_CW_CHAT] = &UI_DisplayCwChat,
 #endif
 };
 
