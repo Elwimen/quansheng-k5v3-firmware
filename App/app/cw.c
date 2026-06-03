@@ -91,6 +91,81 @@ static uint16_t     tx_elem_code = 0;
 static uint16_t     tx_tick      = 0;
 
 static uint16_t dit_ticks;
+
+/* ------------------------------------------------------------------ */
+/* Prediction popup                                                    */
+/* ------------------------------------------------------------------ */
+
+static const char * const cw_pred_text[CW_PRED_COUNT] = {
+    "CQ", "DE", "K", "73", "KN", "AR", "SK",
+    "QSL", "QRZ?", "BK", "TNX", "FB", "QTH", "HI"
+};
+
+static bool    cw_popup_active              = false;
+static uint8_t cw_popup_sel                = 0;
+static uint8_t cw_pred_order[CW_PRED_COUNT];
+static uint8_t cw_pred_count[CW_PRED_COUNT];
+
+static void cw_pred_sort(void)
+{
+    for (uint8_t i = 0; i < CW_PRED_COUNT; i++) cw_pred_order[i] = i;
+    for (uint8_t i = 1; i < CW_PRED_COUNT; i++) {
+        uint8_t key = cw_pred_order[i];
+        int8_t  j   = (int8_t)i - 1;
+        while (j >= 0 && cw_pred_count[cw_pred_order[(uint8_t)j]] < cw_pred_count[key]) {
+            cw_pred_order[(uint8_t)(j + 1)] = cw_pred_order[(uint8_t)j];
+            j--;
+        }
+        cw_pred_order[(uint8_t)(j + 1)] = key;
+    }
+}
+
+static void cw_pred_load(void)
+{
+    for (uint8_t i = 0; i < CW_PRED_COUNT; i++)
+        cw_pred_count[i] = gEeprom.CW_PRED_COUNTS[i];
+    cw_pred_sort();
+}
+
+static void cw_pred_save(void)
+{
+    for (uint8_t i = 0; i < CW_PRED_COUNT; i++)
+        gEeprom.CW_PRED_COUNTS[i] = cw_pred_count[i];
+    SETTINGS_SaveCwPredCounts();
+}
+
+static void cw_pred_insert(uint8_t item_idx)
+{
+    const char *text = cw_pred_text[item_idx];
+    uint8_t     tlen = (uint8_t)strlen(text);
+    uint8_t     clen = (uint8_t)strlen(cw_compose);
+
+    T9_Commit(&cw_t9);  /* finalise any pending T9 character first */
+
+    if (clen > 0 && (clen + 1u + tlen) < (CW_COMPOSE_MAX - 1u)) {
+        cw_compose[clen] = ' ';
+        memcpy(cw_compose + clen + 1, text, tlen + 1);
+        cw_t9.len = clen + 1 + tlen;
+    } else if (clen == 0 && tlen < (CW_COMPOSE_MAX - 1u)) {
+        memcpy(cw_compose, text, tlen + 1);
+        cw_t9.len = tlen;
+    }
+
+    if (cw_pred_count[item_idx] < 255u) cw_pred_count[item_idx]++;
+    cw_pred_sort();
+    cw_pred_save();
+
+    /* keep selection on the same item after re-sort */
+    for (uint8_t i = 0; i < CW_PRED_COUNT; i++) {
+        if (cw_pred_order[i] == item_idx) { cw_popup_sel = i; break; }
+    }
+}
+
+/* accessors for ui/cw.c */
+bool        CW_PopupActive(void)                      { return cw_popup_active; }
+uint8_t     CW_PopupSel(void)                         { return cw_popup_sel; }
+const char *CW_PopupItemText(uint8_t display_idx)     { return cw_pred_text[cw_pred_order[display_idx]]; }
+uint8_t     CW_PopupItemCount(uint8_t display_idx)    { return cw_pred_count[cw_pred_order[display_idx]]; }
 static uint16_t dah_ticks;
 static uint16_t cgap_ticks;
 static uint16_t wgap_ticks;
@@ -314,12 +389,14 @@ void CW_Init(void)
 {
     static bool cw_ready = false;
     if (!cw_ready) {
-        /* First entry only — clear history and compose buffer */
+        /* First entry only — clear history, compose, and load prediction counts */
         memset(cw_history, 0, sizeof(cw_history));
         cw_history_count = 0;
         cw_scroll        = 0;
+        cw_pred_load();
         cw_ready         = true;
     }
+    cw_popup_active   = false;
     cw_tx_recall      = -1;
     cw_live_char      = '\0';
     cw_cursor_visible = true;
@@ -384,7 +461,21 @@ void CW_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
         return;
 
     switch (Key) {
-    case KEY_0 ... KEY_9:
+    case KEY_1:
+        if (!bKeyHeld) {
+            if (!cw_popup_active) {
+                cw_popup_active = true;
+                cw_popup_sel    = 0;
+            } else {
+                cw_pred_insert(cw_pred_order[cw_popup_sel]);
+            }
+        }
+        gRequestDisplayScreen = DISPLAY_CW_CHAT;
+        return;
+
+    case KEY_0:
+    case KEY_2 ... KEY_9:
+        cw_popup_active = false;
         cw_tx_recall = -1;
         T9_Key(&cw_t9, Key, bKeyHeld);
         cw_t9_timeout = CW_T9_TIMEOUT_TICKS;
@@ -437,6 +528,10 @@ void CW_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
         break;
 
     case KEY_UP: {
+        if (!bKeyHeld && cw_popup_active) {
+            cw_popup_sel = (cw_popup_sel == 0) ? (uint8_t)(CW_PRED_COUNT - 1u) : cw_popup_sel - 1u;
+            break;
+        }
         if (bKeyHeld) {
             cw_scroll    = 0;
             cw_tx_recall = -1;
@@ -461,6 +556,10 @@ void CW_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
     }
 
     case KEY_DOWN: {
+        if (!bKeyHeld && cw_popup_active) {
+            cw_popup_sel = (cw_popup_sel >= (uint8_t)(CW_PRED_COUNT - 1u)) ? 0u : cw_popup_sel + 1u;
+            break;
+        }
         if (bKeyHeld) {
             cw_scroll    = (cw_history_count > CW_VISIBLE_LINES)
                            ? cw_history_count - CW_VISIBLE_LINES : 0;
@@ -485,6 +584,11 @@ void CW_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
     }
 
     case KEY_EXIT:
+        if (cw_popup_active) {
+            cw_popup_active = false;
+            gRequestDisplayScreen = DISPLAY_CW_CHAT;
+            return;
+        }
         if (!bKeyHeld && cw_tx_recall >= 0) {
             cw_tx_recall = -1;  /* cancel recall first */
         } else if (!bKeyHeld && cw_t9.last_key != 255) {
