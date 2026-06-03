@@ -120,7 +120,10 @@ static void cw_tx_tick(void)
     /* PTT released mid-message — abort cleanly.
        Skip this check while ARMING: TX isn't active yet, that's expected. */
     if (tx_state != CW_TX_ARMING && gCurrentFunction != FUNCTION_TRANSMIT) {
-        BK4819_ExitDTMF_TX(false);
+        if (gCurrentVfo != NULL && gCurrentVfo->Modulation == MODULATION_CW)
+            BK4819_CW_KeyUp();
+        else
+            BK4819_ExitDTMF_TX(false);
         tx_state = CW_TX_IDLE;
         gRequestDisplayScreen = DISPLAY_CW_CHAT;
         return;
@@ -128,19 +131,27 @@ static void cw_tx_tick(void)
 
     if (tx_tick > 0) { tx_tick--; return; }
 
+    const bool ook = (gCurrentVfo != NULL && gCurrentVfo->Modulation == MODULATION_CW);
+
     switch (tx_state) {
 
     case CW_TX_ARMING:
         /* Wait here until FUNCTION_TRANSMIT becomes active */
         if (gCurrentFunction != FUNCTION_TRANSMIT) break;
-        /* TX just became active — init tone generator */
-        BK4819_EnterTxMute();
-        BK4819_WriteRegister(BK4819_REG_70,
-            BK4819_REG_70_MASK_ENABLE_TONE1 | (66u << BK4819_REG_70_SHIFT_TONE1_TUNING_GAIN));
-        BK4819_WriteRegister(BK4819_REG_71,
-            (uint16_t)(((uint32_t)gEeprom.CW_TONE_HZ * 1353245u + (1u << 16)) >> 17));
-        BK4819_SetAF(BK4819_AF_MUTE);
-        BK4819_EnableTXLink();
+        if (ook) {
+            /* OOK CW: FUNCTION_Transmit already armed the PA with unmodulated carrier.
+               PA starts muted (KeyUp) — first ELEMENT_ON will key it down. */
+            BK4819_CW_KeyUp();
+        } else {
+            /* AF CW: set up tone generator in TX mute mode */
+            BK4819_EnterTxMute();
+            BK4819_WriteRegister(BK4819_REG_70,
+                BK4819_REG_70_MASK_ENABLE_TONE1 | (66u << BK4819_REG_70_SHIFT_TONE1_TUNING_GAIN));
+            BK4819_WriteRegister(BK4819_REG_71,
+                (uint16_t)(((uint32_t)gEeprom.CW_TONE_HZ * 1353245u + (1u << 16)) >> 17));
+            BK4819_SetAF(BK4819_AF_MUTE);
+            BK4819_EnableTXLink();
+        }
         tx_tick = 5;    /* 50ms settle before first element */
         tx_state = CW_TX_ELEMENT_ON;
         cw_tx_load_next_char();
@@ -148,14 +159,20 @@ static void cw_tx_tick(void)
 
     case CW_TX_ELEMENT_ON: {
         bool is_dah = (tx_elem_code >> (tx_elem_len - 1 - tx_elem_idx)) & 1;
-        BK4819_ExitTxMute();
+        if (ook)
+            BK4819_CW_KeyDown();
+        else
+            BK4819_ExitTxMute();
         tx_tick  = is_dah ? dah_ticks : dit_ticks;
         tx_state = CW_TX_ELEMENT_OFF;
         break;
     }
 
     case CW_TX_ELEMENT_OFF:
-        BK4819_EnterTxMute();
+        if (ook)
+            BK4819_CW_KeyUp();
+        else
+            BK4819_EnterTxMute();
         tx_elem_idx++;
         if (tx_elem_idx >= tx_elem_len) {
             tx_state = CW_TX_CHAR_GAP;
@@ -172,8 +189,11 @@ static void cw_tx_tick(void)
         break;
 
     case CW_TX_DONE:
-        /* Message finished — stop tone, keep TX up until user releases PTT */
-        BK4819_ExitDTMF_TX(false);
+        /* Message finished — ensure carrier off, keep TX armed until PTT release */
+        if (ook)
+            BK4819_CW_KeyUp();
+        else
+            BK4819_ExitDTMF_TX(false);
         tx_state = CW_TX_IDLE;
         gRequestDisplayScreen = DISPLAY_CW_CHAT;
         break;
