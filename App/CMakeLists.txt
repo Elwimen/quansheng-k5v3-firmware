@@ -208,6 +208,11 @@ enable_feature(ENABLE_FEAT_F4HWN_GMRS_FRS_MURS)
 enable_feature(ENABLE_FEAT_F4HWN_CA)
 enable_feature(ENABLE_FEAT_F4HWN_DEBUG)
 enable_feature(ENABLE_FEAT_F4HWN_MEM)
+enable_feature(ENABLE_FEAT_ELW_CW
+    app/t9.c
+    app/cw.c
+    ui/cw.c
+)
 enable_feature(ENABLE_FEAT_F4HWN_BEAM
     app/beam.c
 )
