@@ -134,6 +134,9 @@ enum ACTION_OPT_t {
 #ifdef ENABLE_FEAT_F4HWN_BEAM
     ACTION_OPT_BEAM,
 #endif
+#ifdef ENABLE_FEAT_ELW_CW
+    ACTION_OPT_CW_CHAT,
+#endif
     ACTION_OPT_LEN
 };
 
@@ -308,6 +311,11 @@ typedef struct {
 #ifdef ENABLE_RSSI_BAR
     uint8_t               S0_LEVEL;
     uint8_t               S9_LEVEL;
+#endif
+#ifdef ENABLE_FEAT_ELW_CW
+    uint8_t               CW_WPM;
+    uint16_t              CW_TONE_HZ;
+    uint8_t               CW_FLAGS;
 #endif
 } EEPROM_Config_t;
 
