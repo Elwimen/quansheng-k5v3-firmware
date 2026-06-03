@@ -48,6 +48,9 @@
 #ifdef ENABLE_FEAT_F4HWN_BEAM
     #include "app/beam.h"
 #endif
+#ifdef ENABLE_FEAT_ELW_CW
+    #include "app/cw.h"
+#endif
 
 #if defined(ENABLE_FMRADIO)
 static void ACTION_Scan_FM(bool bRestart);
@@ -137,6 +140,9 @@ void (*action_opt_table[])(void) = {
 #endif
 #ifdef ENABLE_FEAT_F4HWN_BEAM
     [ACTION_OPT_BEAM] = &ACTION_Beam,
+#endif
+#ifdef ENABLE_FEAT_ELW_CW
+    [ACTION_OPT_CW_CHAT] = &ACTION_CwChat,
 #endif
 };
 
@@ -682,4 +688,12 @@ void ACTION_Remove_Offset(void)
     ACTION_ToggleVfoSetting(&gRemoveOffset);
 }
 #endif
+#endif
+
+#ifdef ENABLE_FEAT_ELW_CW
+void ACTION_CwChat(void)
+{
+    CW_Init();
+    GUI_SelectNextDisplay(DISPLAY_CW_CHAT);
+}
 #endif
