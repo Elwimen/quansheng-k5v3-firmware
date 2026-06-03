@@ -316,6 +316,8 @@ typedef struct {
     uint8_t               CW_WPM;
     uint16_t              CW_TONE_HZ;
     uint8_t               CW_FLAGS;
+    /* CW_FLAGS bits */
+    #define CW_FLAG_RECALL_HISTORY  (1u << 0)   /* push recalled TX back to history */
 #endif
 } EEPROM_Config_t;
 

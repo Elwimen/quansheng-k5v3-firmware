@@ -195,9 +195,10 @@ const t_menu_item MenuList[] =
     {"SetNav",      MENU_SET_NAV       }, // set navigation (LEFT / RIGHT or UP / DOWN)
     {"Reset",       MENU_RESET         }, // might be better to move this to the hidden menu items ?
 #ifdef ENABLE_FEAT_ELW_CW
-    {"CWSpd",       MENU_CW_SPEED      }, // CW speed in WPM
-    {"CWTone",      MENU_CW_TONE       }, // CW sidetone frequency
-    {"CWPset",      MENU_CW_PRESET     }, // CW parameter presets
+    {"AFSpd",       MENU_CW_SPEED      }, // AF CW speed in WPM
+    {"AFTone",      MENU_CW_TONE       }, // AF CW sidetone frequency
+    {"AFPst",       MENU_CW_PRESET     }, // AF CW parameter presets
+    {"AFRHs",       MENU_CW_RECALL_HIST}, // AF CW log recalled TX to history
 #endif
 
     {"",                              0xff               }  // end of list - DO NOT delete or move this this
@@ -530,7 +531,7 @@ const t_sidefunction gSubMenu_SIDEFUNCTIONS[] =
         {"BEAM",            ACTION_OPT_BEAM},
     #endif
     #ifdef ENABLE_FEAT_ELW_CW
-        {"CW\nCHAT",        ACTION_OPT_CW_CHAT},
+        {"AF\nCW",          ACTION_OPT_CW_CHAT},
     #endif
 #endif
 };
@@ -1475,6 +1476,10 @@ void UI_DisplayMenu(void)
             strcpy(String, cw_preset_names[gSubMenuSelection < 5 ? gSubMenuSelection : 1]);
             break;
         }
+
+        case MENU_CW_RECALL_HIST:
+            strcpy(String, gSubMenuSelection ? "ON" : "OFF");
+            break;
 #endif
 
     }

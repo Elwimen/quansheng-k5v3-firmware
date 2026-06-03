@@ -314,6 +314,9 @@ void UI_DisplayWelcome(void)
 #ifdef ENABLE_FEAT_F4HWN
         UI_PrintStringSmallNormal(Version, 0, 128, 4);
 
+        sprintf(WelcomeString3, "%s %.5s", __DATE__, __TIME__);
+        GUI_DisplaySmallest(WelcomeString3, (uint8_t)((128u - strlen(WelcomeString3) * 4u) / 2u), 41, false, true);
+
         UI_DrawLineBuffer(gFrameBuffer, 0, 35, 18, 35, 1);
         gFrameBuffer[4][19] ^= 0x7F;
         for (uint8_t x = 20; x < 108; x++)
