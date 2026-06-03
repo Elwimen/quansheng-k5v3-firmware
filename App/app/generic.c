@@ -110,7 +110,11 @@ void GENERIC_Key_PTT(bool bKeyPressed)
 #endif
             RADIO_SetVfoState(VFO_STATE_NORMAL);
 
-            if (gScreenToDisplay != DISPLAY_MENU)     // 1of11 .. don't close the menu
+            if (gScreenToDisplay != DISPLAY_MENU     // 1of11 .. don't close the menu
+#ifdef ENABLE_FEAT_ELW_CW
+                && gScreenToDisplay != DISPLAY_CW_CHAT
+#endif
+            )
                 gRequestDisplayScreen = DISPLAY_MAIN;
         }
 
@@ -153,9 +157,12 @@ void GENERIC_Key_PTT(bool bKeyPressed)
         return;
     }
 
-    if (gScreenToDisplay != DISPLAY_MENU)     // 1of11 .. don't close the menu
+    if (gScreenToDisplay != DISPLAY_MENU     // 1of11 .. don't close the menu
+#ifdef ENABLE_FEAT_ELW_CW
+        && gScreenToDisplay != DISPLAY_CW_CHAT
+#endif
+    )
         gRequestDisplayScreen = DISPLAY_MAIN;
-
 
     if (!gDTMF_InputMode && gDTMF_InputBox_Index == 0)
         goto start_tx;  // wasn't entering a DTMF code .. start TX'ing (maybe)
@@ -199,12 +206,14 @@ cancel_tx:
 
 done:
     gPttDebounceCounter = 0;
-    if (gScreenToDisplay != DISPLAY_MENU
+    if (gScreenToDisplay != DISPLAY_MENU     // 1of11 .. don't close the menu
 #ifdef ENABLE_FMRADIO
         && gRequestDisplayScreen != DISPLAY_FM
 #endif
+#ifdef ENABLE_FEAT_ELW_CW
+        && gScreenToDisplay != DISPLAY_CW_CHAT
+#endif
     ) {
-        // 1of11 .. don't close the menu
         gRequestDisplayScreen = DISPLAY_MAIN;
     }
 
