@@ -171,6 +171,7 @@ enum
     MENU_CW_SPEED,
     MENU_CW_TONE,
     MENU_CW_PRESET,
+    MENU_CW_RECALL_HIST,
 #endif
 };
 
