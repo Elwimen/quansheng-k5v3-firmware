@@ -191,6 +191,11 @@ const t_menu_item MenuList[] =
     {"BatTyp",      MENU_BATTYP        }, // battery type 1600/2200mAh
     {"SetNav",      MENU_SET_NAV       }, // set navigation (LEFT / RIGHT or UP / DOWN)
     {"Reset",       MENU_RESET         }, // might be better to move this to the hidden menu items ?
+#ifdef ENABLE_FEAT_ELW_CW
+    {"CWSpd",       MENU_CW_SPEED      }, // CW speed in WPM
+    {"CWTone",      MENU_CW_TONE       }, // CW sidetone frequency
+    {"CWPset",      MENU_CW_PRESET     }, // CW parameter presets
+#endif
 
     {"",                              0xff               }  // end of list - DO NOT delete or move this this
 };
@@ -513,6 +518,9 @@ const t_sidefunction gSubMenu_SIDEFUNCTIONS[] =
     #endif
     #ifdef ENABLE_FEAT_F4HWN_BEAM
         {"BEAM",            ACTION_OPT_BEAM},
+    #endif
+    #ifdef ENABLE_FEAT_ELW_CW
+        {"CW\nCHAT",        ACTION_OPT_CW_CHAT},
     #endif
 #endif
 };
@@ -1420,8 +1428,31 @@ void UI_DisplayMenu(void)
         #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
             case MENU_SET_KEY:
                 strcpy(String, gSubMenu_SET_KEY[gSubMenuSelection]);
-                break;                
+                break;
         #endif
+#endif
+
+#ifdef ENABLE_FEAT_ELW_CW
+        case MENU_CW_SPEED:
+            sprintf(String, "%u WPM", (unsigned)gSubMenuSelection);
+            break;
+
+        case MENU_CW_TONE: {
+            static const uint16_t cw_tone_table[] = {
+                400, 500, 600, 700, 800, 900, 1000
+            };
+            sprintf(String, "%u Hz",
+                    (unsigned)cw_tone_table[gSubMenuSelection < 7 ? gSubMenuSelection : 3]);
+            break;
+        }
+
+        case MENU_CW_PRESET: {
+            static const char * const cw_preset_names[] = {
+                "SLOW", "STD", "QSO", "FAST", "CONTEST"
+            };
+            strcpy(String, cw_preset_names[gSubMenuSelection < 5 ? gSubMenuSelection : 1]);
+            break;
+        }
 #endif
 
     }

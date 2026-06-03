@@ -163,7 +163,12 @@ enum
     MENU_F2SHRT,
     MENU_F2LONG,
     MENU_MLONG,
-    MENU_BATTYP
+    MENU_BATTYP,
+#ifdef ENABLE_FEAT_ELW_CW
+    MENU_CW_SPEED,
+    MENU_CW_TONE,
+    MENU_CW_PRESET,
+#endif
 };
 
 extern const uint8_t FIRST_HIDDEN_MENU_ITEM;
