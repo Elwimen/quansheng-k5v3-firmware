@@ -10,6 +10,9 @@
 #include "app/generic.h"
 #include "functions.h"
 #include "misc.h"
+#include "app/menu.h"
+#include "ui/menu.h"
+#include "ui/ui.h"
 
 /* ------------------------------------------------------------------ */
 /* Morse table                                                         */
@@ -341,6 +344,7 @@ void CW_TX_Start(const char *text)
     tx_buf[CW_COMPOSE_MAX - 1] = '\0';
     tx_ptr  = tx_buf;
     tx_tick = 0;
+
     tx_state = CW_TX_ARMING;
     /* TX hardware is armed by GENERIC_Key_PTT(true) called from CW_ProcessKeys */
 }
@@ -425,12 +429,19 @@ void CW_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
 
     case KEY_MENU:
         if (!bKeyHeld) {
-            cw_tx_recall = -1;
-            T9_Reset(&cw_t9);
+            gMenuCursor = UI_MENU_GetMenuIdx(MENU_CW_SPEED);
+            MENU_ShowCurrentSetting();
+            gRequestDisplayScreen = DISPLAY_MENU;
+            return;
         }
         break;
 
     case KEY_UP: {
+        if (bKeyHeld) {
+            cw_scroll    = 0;
+            cw_tx_recall = -1;
+            break;
+        }
         /* Navigate to the next older TX entry; fallback to plain scroll */
         int8_t start = (cw_tx_recall > 0) ? (int8_t)(cw_tx_recall - 1)
                                            : (int8_t)(cw_history_count - 1);
@@ -450,6 +461,12 @@ void CW_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
     }
 
     case KEY_DOWN: {
+        if (bKeyHeld) {
+            cw_scroll    = (cw_history_count > CW_VISIBLE_LINES)
+                           ? cw_history_count - CW_VISIBLE_LINES : 0;
+            cw_tx_recall = -1;
+            break;
+        }
         /* Navigate to the next newer TX entry; fallback to plain scroll */
         uint8_t start = (cw_tx_recall >= 0) ? (uint8_t)(cw_tx_recall + 1) : 0;
         bool found = false;
