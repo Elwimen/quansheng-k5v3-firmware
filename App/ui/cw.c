@@ -17,16 +17,23 @@ void UI_DisplayCwChat(void)
     /* Line 0 — status bar: WPM + frequency (left) + char counter (right) */
     {
         const uint32_t freq = gCurrentVfo->pRX->Frequency;
-        sprintf_(buf, "AFCW %uW %u.%03u",
+        const bool ook = (gCurrentVfo->Modulation == MODULATION_CW);
+        sprintf_(buf, "%s %uW %u.%03u",
+                 ook ? "CW" : "AFCW",
                  gEeprom.CW_WPM,
                  freq / 100000,
                  (freq % 100000) / 100);
         UI_PrintStringSmallBold(buf, 0, 0, 0);
 
-        char counter[8];
-        sprintf_(counter, "%u/64", (uint8_t)strlen(cw_compose));
-        uint8_t ctr_x = (uint8_t)(128 - strlen(counter) * 7);
-        UI_PrintStringSmallNormal(counter, ctr_x, 0, 0);
+        /* Remaining chars — countdown, right-aligned, inverted 3×5 font */
+        uint8_t remain = (uint8_t)((CW_COMPOSE_MAX - 1u) - strlen(cw_compose));
+        char counter[4];
+        sprintf_(counter, "%u", remain);
+        uint8_t ctr_w = (uint8_t)(strlen(counter) * 4u);  /* 4 px per glyph */
+        uint8_t ctr_x = (uint8_t)(127u - ctr_w);          /* 1 px right margin */
+        for (uint8_t px = ctr_x - 1u; px < 128u; px++)    /* black background */
+            gFrameBuffer[0][px] |= 0xFFu;
+        GUI_DisplaySmallest(counter, ctr_x, 1, false, false); /* white glyphs */
     }
 
     /* Lines 1–5 — message history (5 visible lines) */

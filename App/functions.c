@@ -187,13 +187,22 @@ void FUNCTION_Transmit()
 
     RADIO_SetTxParameters();
 
+    const bool isCw = (gCurrentVfo != NULL && gCurrentVfo->Modulation == MODULATION_CW);
+    if (isCw) {
+        // Zero FM deviation → unmodulated carrier; PA is already enabled by RADIO_SetTxParameters
+        BK4819_WriteRegister((BK4819_REGISTER_t)0x40U, 0x0000);
+        BK4819_SetAF(BK4819_AF_MUTE);
+    }
+
     // turn the RED LED on
     BK4819_ToggleGpioOut(BK4819_GPIO5_PIN1_RED, true);
 
-    DTMF_Reply();
+    if (!isCw) {
+        DTMF_Reply();
 
-    if (gCurrentVfo->DTMF_PTT_ID_TX_MODE == PTT_ID_APOLLO)
-        BK4819_PlaySingleTone(2525, 250, 0, gEeprom.DTMF_SIDE_TONE);
+        if (gCurrentVfo->DTMF_PTT_ID_TX_MODE == PTT_ID_APOLLO)
+            BK4819_PlaySingleTone(2525, 250, 0, gEeprom.DTMF_SIDE_TONE);
+    }
 
 #if defined(ENABLE_ALARM) || defined(ENABLE_TX1750)
     if (gAlarmState != ALARM_STATE_OFF) {

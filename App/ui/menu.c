@@ -172,6 +172,13 @@ const t_menu_item MenuList[] =
     {"SetScn",      MENU_SET_SCN       },
 #endif
 #endif
+#ifdef ENABLE_FEAT_ELW_CW
+    {"CWSpd",       MENU_CW_SPEED      }, // CW speed in WPM (OOK + AF CW)
+    {"CWTone",      MENU_CW_TONE       }, // CW sidetone frequency (AF CW only)
+    {"CWPset",      MENU_CW_PRESET     }, // CW parameter presets
+    {"CWRHst",      MENU_CW_RECALL_HIST}, // CW log recalled TX to history
+    {"CWMode",      MENU_CW_MODE       }, // CW TX mode: OOK or AFCW
+#endif
     // hidden menu items from here on
     // enabled if pressing both the PTT and upper side button at power-on
     {"F Lock",      MENU_F_LOCK        },
@@ -191,12 +198,6 @@ const t_menu_item MenuList[] =
     {"BatTyp",      MENU_BATTYP        }, // battery type 1600/2200mAh
     {"SetNav",      MENU_SET_NAV       }, // set navigation (LEFT / RIGHT or UP / DOWN)
     {"Reset",       MENU_RESET         }, // might be better to move this to the hidden menu items ?
-#ifdef ENABLE_FEAT_ELW_CW
-    {"AFSpd",       MENU_CW_SPEED      }, // AF CW speed in WPM
-    {"AFTone",      MENU_CW_TONE       }, // AF CW sidetone frequency
-    {"AFPst",       MENU_CW_PRESET     }, // AF CW parameter presets
-    {"AFRHs",       MENU_CW_RECALL_HIST}, // AF CW log recalled TX to history
-#endif
 
     {"",                              0xff               }  // end of list - DO NOT delete or move this this
 };
@@ -1388,9 +1389,10 @@ void UI_DisplayMenu(void)
                     strcpy(String, gSubMenu_SET_AUD_AM[gSubMenuSelection]);
                     strcpy(top_right_badge, "AM");
                 }
-                else if (gTxVfo->Modulation == MODULATION_USB) {
-                    strcpy(String, "USB");
-                    strcpy(top_right_badge, "USB");
+                else if (gTxVfo->Modulation == MODULATION_USB || gTxVfo->Modulation == MODULATION_CW) {
+                    const char *label = (gTxVfo->Modulation == MODULATION_CW) ? "CW" : "USB";
+                    strcpy(String, label);
+                    strcpy(top_right_badge, label);
                 }
                 else {
                     strcpy(String, gSubMenu_SET_AUD_FM[gSubMenuSelection]);
@@ -1457,6 +1459,9 @@ void UI_DisplayMenu(void)
 
         case MENU_CW_RECALL_HIST:
             strcpy(String, gSubMenuSelection ? "ON" : "OFF");
+            break;
+        case MENU_CW_MODE:
+            strcpy(String, gSubMenuSelection ? "OOK" : "AFCW");
             break;
 #endif
 

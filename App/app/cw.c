@@ -10,6 +10,9 @@
 #include "app/generic.h"
 #include "functions.h"
 #include "misc.h"
+#include "app/menu.h"
+#include "ui/menu.h"
+#include "ui/ui.h"
 
 /* ------------------------------------------------------------------ */
 /* Morse table                                                         */
@@ -120,7 +123,10 @@ static void cw_tx_tick(void)
     /* PTT released mid-message — abort cleanly.
        Skip this check while ARMING: TX isn't active yet, that's expected. */
     if (tx_state != CW_TX_ARMING && gCurrentFunction != FUNCTION_TRANSMIT) {
-        BK4819_ExitDTMF_TX(false);
+        if (gCurrentVfo != NULL && gCurrentVfo->Modulation == MODULATION_CW)
+            BK4819_CW_KeyUp();
+        else
+            BK4819_ExitDTMF_TX(false);
         tx_state = CW_TX_IDLE;
         gRequestDisplayScreen = DISPLAY_CW_CHAT;
         return;
@@ -128,19 +134,27 @@ static void cw_tx_tick(void)
 
     if (tx_tick > 0) { tx_tick--; return; }
 
+    const bool ook = (gCurrentVfo != NULL && gCurrentVfo->Modulation == MODULATION_CW);
+
     switch (tx_state) {
 
     case CW_TX_ARMING:
         /* Wait here until FUNCTION_TRANSMIT becomes active */
         if (gCurrentFunction != FUNCTION_TRANSMIT) break;
-        /* TX just became active — init tone generator */
-        BK4819_EnterTxMute();
-        BK4819_WriteRegister(BK4819_REG_70,
-            BK4819_REG_70_MASK_ENABLE_TONE1 | (66u << BK4819_REG_70_SHIFT_TONE1_TUNING_GAIN));
-        BK4819_WriteRegister(BK4819_REG_71,
-            (uint16_t)(((uint32_t)gEeprom.CW_TONE_HZ * 1353245u + (1u << 16)) >> 17));
-        BK4819_SetAF(BK4819_AF_MUTE);
-        BK4819_EnableTXLink();
+        if (ook) {
+            /* OOK CW: FUNCTION_Transmit already armed the PA with unmodulated carrier.
+               PA starts muted (KeyUp) — first ELEMENT_ON will key it down. */
+            BK4819_CW_KeyUp();
+        } else {
+            /* AF CW: set up tone generator in TX mute mode */
+            BK4819_EnterTxMute();
+            BK4819_WriteRegister(BK4819_REG_70,
+                BK4819_REG_70_MASK_ENABLE_TONE1 | (66u << BK4819_REG_70_SHIFT_TONE1_TUNING_GAIN));
+            BK4819_WriteRegister(BK4819_REG_71,
+                (uint16_t)(((uint32_t)gEeprom.CW_TONE_HZ * 1353245u + (1u << 16)) >> 17));
+            BK4819_SetAF(BK4819_AF_MUTE);
+            BK4819_EnableTXLink();
+        }
         tx_tick = 5;    /* 50ms settle before first element */
         tx_state = CW_TX_ELEMENT_ON;
         cw_tx_load_next_char();
@@ -148,14 +162,20 @@ static void cw_tx_tick(void)
 
     case CW_TX_ELEMENT_ON: {
         bool is_dah = (tx_elem_code >> (tx_elem_len - 1 - tx_elem_idx)) & 1;
-        BK4819_ExitTxMute();
+        if (ook)
+            BK4819_CW_KeyDown();
+        else
+            BK4819_ExitTxMute();
         tx_tick  = is_dah ? dah_ticks : dit_ticks;
         tx_state = CW_TX_ELEMENT_OFF;
         break;
     }
 
     case CW_TX_ELEMENT_OFF:
-        BK4819_EnterTxMute();
+        if (ook)
+            BK4819_CW_KeyUp();
+        else
+            BK4819_EnterTxMute();
         tx_elem_idx++;
         if (tx_elem_idx >= tx_elem_len) {
             tx_state = CW_TX_CHAR_GAP;
@@ -172,9 +192,14 @@ static void cw_tx_tick(void)
         break;
 
     case CW_TX_DONE:
-        /* Message finished — stop tone, keep TX up until user releases PTT */
-        BK4819_ExitDTMF_TX(false);
+        /* Message finished — stop carrier then release PTT programmatically */
+        if (ook)
+            BK4819_CW_KeyUp();
+        else
+            BK4819_ExitDTMF_TX(false);
         tx_state = CW_TX_IDLE;
+        GENERIC_Key_PTT(false);   /* triggers APP_HandleEndTransmission → RADIO_SendEndOfTransmission */
+        gPttIsPressed = false;    /* prevent polling loop from restarting TX if button still held */
         gRequestDisplayScreen = DISPLAY_CW_CHAT;
         break;
 
@@ -319,6 +344,7 @@ void CW_TX_Start(const char *text)
     tx_buf[CW_COMPOSE_MAX - 1] = '\0';
     tx_ptr  = tx_buf;
     tx_tick = 0;
+
     tx_state = CW_TX_ARMING;
     /* TX hardware is armed by GENERIC_Key_PTT(true) called from CW_ProcessKeys */
 }
@@ -371,9 +397,12 @@ void CW_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
         break;
 
     case KEY_PTT:
-        if (bKeyPressed && !bKeyHeld && !CW_TX_Active()) {
+        if (!bKeyPressed) {
+            GENERIC_Key_PTT(false);
+        } else if (!bKeyHeld && !CW_TX_Active()) {
+            /* Only arm TX if there is actually something to send */
+            bool started = false;
             if (cw_tx_recall >= 0) {
-                /* Re-transmit recalled history entry */
                 char recall_buf[CW_COMPOSE_MAX];
                 cw_recall_build(recall_buf, sizeof(recall_buf), (uint8_t)cw_tx_recall);
                 if (recall_buf[0] != '\0') {
@@ -381,6 +410,7 @@ void CW_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
                         cw_history_push(recall_buf, CW_MSG_TX);
                     CW_TX_Start(recall_buf);
                     cw_tx_recall = -1;
+                    started = true;
                 }
             } else {
                 T9_Commit(&cw_t9);
@@ -388,21 +418,30 @@ void CW_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
                     cw_history_push(cw_compose, CW_MSG_TX);
                     CW_TX_Start(cw_compose);
                     T9_Reset(&cw_t9);
+                    started = true;
                 }
             }
+            if (started)
+                GENERIC_Key_PTT(true);
         }
-        GENERIC_Key_PTT(bKeyPressed);
         gRequestDisplayScreen = DISPLAY_CW_CHAT;
         return;
 
     case KEY_MENU:
         if (!bKeyHeld) {
-            cw_tx_recall = -1;
-            T9_Reset(&cw_t9);
+            gMenuCursor = UI_MENU_GetMenuIdx(MENU_CW_SPEED);
+            MENU_ShowCurrentSetting();
+            gRequestDisplayScreen = DISPLAY_MENU;
+            return;
         }
         break;
 
     case KEY_UP: {
+        if (bKeyHeld) {
+            cw_scroll    = 0;
+            cw_tx_recall = -1;
+            break;
+        }
         /* Navigate to the next older TX entry; fallback to plain scroll */
         int8_t start = (cw_tx_recall > 0) ? (int8_t)(cw_tx_recall - 1)
                                            : (int8_t)(cw_history_count - 1);
@@ -422,6 +461,12 @@ void CW_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
     }
 
     case KEY_DOWN: {
+        if (bKeyHeld) {
+            cw_scroll    = (cw_history_count > CW_VISIBLE_LINES)
+                           ? cw_history_count - CW_VISIBLE_LINES : 0;
+            cw_tx_recall = -1;
+            break;
+        }
         /* Navigate to the next newer TX entry; fallback to plain scroll */
         uint8_t start = (cw_tx_recall >= 0) ? (uint8_t)(cw_tx_recall + 1) : 0;
         bool found = false;
