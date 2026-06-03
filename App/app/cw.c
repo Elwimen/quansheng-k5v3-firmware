@@ -189,12 +189,14 @@ static void cw_tx_tick(void)
         break;
 
     case CW_TX_DONE:
-        /* Message finished — ensure carrier off, keep TX armed until PTT release */
+        /* Message finished — stop carrier then release PTT programmatically */
         if (ook)
             BK4819_CW_KeyUp();
         else
             BK4819_ExitDTMF_TX(false);
         tx_state = CW_TX_IDLE;
+        GENERIC_Key_PTT(false);   /* triggers APP_HandleEndTransmission → RADIO_SendEndOfTransmission */
+        gPttIsPressed = false;    /* prevent polling loop from restarting TX if button still held */
         gRequestDisplayScreen = DISPLAY_CW_CHAT;
         break;
 
@@ -391,9 +393,12 @@ void CW_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
         break;
 
     case KEY_PTT:
-        if (bKeyPressed && !bKeyHeld && !CW_TX_Active()) {
+        if (!bKeyPressed) {
+            GENERIC_Key_PTT(false);
+        } else if (!bKeyHeld && !CW_TX_Active()) {
+            /* Only arm TX if there is actually something to send */
+            bool started = false;
             if (cw_tx_recall >= 0) {
-                /* Re-transmit recalled history entry */
                 char recall_buf[CW_COMPOSE_MAX];
                 cw_recall_build(recall_buf, sizeof(recall_buf), (uint8_t)cw_tx_recall);
                 if (recall_buf[0] != '\0') {
@@ -401,6 +406,7 @@ void CW_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
                         cw_history_push(recall_buf, CW_MSG_TX);
                     CW_TX_Start(recall_buf);
                     cw_tx_recall = -1;
+                    started = true;
                 }
             } else {
                 T9_Commit(&cw_t9);
@@ -408,10 +414,12 @@ void CW_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
                     cw_history_push(cw_compose, CW_MSG_TX);
                     CW_TX_Start(cw_compose);
                     T9_Reset(&cw_t9);
+                    started = true;
                 }
             }
+            if (started)
+                GENERIC_Key_PTT(true);
         }
-        GENERIC_Key_PTT(bKeyPressed);
         gRequestDisplayScreen = DISPLAY_CW_CHAT;
         return;
 
