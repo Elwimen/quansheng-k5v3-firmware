@@ -1057,6 +1057,16 @@ void BK4819_PlaySingleTone(const unsigned int tone_Hz, const unsigned int delay,
     BK4819_ExitTxMute();
 }
 
+void BK4819_CW_KeyDown(void)
+{
+    BK4819_ToggleGpioOut(BK4819_GPIO1_PIN29_PA_ENABLE, true);
+}
+
+void BK4819_CW_KeyUp(void)
+{
+    BK4819_ToggleGpioOut(BK4819_GPIO1_PIN29_PA_ENABLE, false);
+}
+
 void BK4819_EnterTxMute(void)
 {
     BK4819_WriteRegister(BK4819_REG_50, 0xBB20);
