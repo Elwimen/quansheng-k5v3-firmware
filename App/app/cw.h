@@ -62,5 +62,11 @@ bool CW_TX_Active(void);
 /* Phase 4 */
 void CW_RX_SetThreshold(uint16_t rssi_threshold);
 
+/* Prediction popup accessors (used by ui/cw.c) */
+bool        CW_PopupActive(void);
+uint8_t     CW_PopupSel(void);
+const char *CW_PopupItemText(uint8_t display_idx);
+uint8_t     CW_PopupItemCount(uint8_t display_idx);
+
 #endif /* ENABLE_FEAT_ELW_CW */
 #endif /* APP_CW_H */

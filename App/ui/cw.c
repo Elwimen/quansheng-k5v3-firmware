@@ -36,8 +36,9 @@ void UI_DisplayCwChat(void)
         GUI_DisplaySmallest(counter, ctr_x, 1, false, false); /* white glyphs */
     }
 
-    /* Lines 1–5 — message history (5 visible lines) */
-    for (uint8_t i = 0; i < 5; i++) {
+    /* Lines 1–(4 or 5) — message history; popup steals line 5 when active */
+    uint8_t hist_lines = CW_PopupActive() ? 4u : (uint8_t)CW_VISIBLE_LINES;
+    for (uint8_t i = 0; i < hist_lines; i++) {
         uint8_t idx = cw_scroll + i;
         if (idx >= cw_history_count)
             break;
@@ -57,17 +58,29 @@ void UI_DisplayCwChat(void)
         }
     }
 
-    /* Scroll bar (x=126-127, y=8-47) — only when history exceeds visible lines */
-    if (cw_history_count > CW_VISIBLE_LINES) {
+    /* Popup row (line 5) — shown instead of 5th history line when popup active */
+    if (CW_PopupActive()) {
+        char popup_buf[12];
+        sprintf_(popup_buf, "> %s", CW_PopupItemText(CW_PopupSel()));
+        UI_PrintStringSmallNormalInverse(popup_buf, 0, 0, 5);
+        uint8_t cnt = CW_PopupItemCount(CW_PopupSel());
+        if (cnt > 0) {
+            char cnt_buf[4];
+            sprintf_(cnt_buf, "%u", cnt);
+            uint8_t cnt_x = (uint8_t)(127u - (uint8_t)strlen(cnt_buf) * 4u);
+            GUI_DisplaySmallest(cnt_buf, cnt_x, 41, false, false);
+        }
+    }
+
+    /* Scroll bar — track covers the visible history area */
+    if (cw_history_count > hist_lines) {
         const uint8_t track_top = 8;
-        const uint8_t track_h   = 40;  /* 5 lines × 8px */
-        uint8_t thumb_h = (uint8_t)((uint16_t)track_h * CW_VISIBLE_LINES / cw_history_count);
+        const uint8_t track_h   = (uint8_t)(hist_lines * 8u);
+        uint8_t thumb_h = (uint8_t)((uint16_t)track_h * hist_lines / cw_history_count);
         if (thumb_h < 4) thumb_h = 4;
         uint8_t thumb_y = track_top + (uint8_t)((uint16_t)(track_h - thumb_h) * cw_scroll
-                          / (cw_history_count - CW_VISIBLE_LINES));
-        /* track */
+                          / (cw_history_count - hist_lines));
         UI_DrawLineBuffer(gFrameBuffer, 127, track_top, 127, track_top + track_h - 1, true);
-        /* thumb */
         UI_DrawLineBuffer(gFrameBuffer, 126, thumb_y, 126, thumb_y + thumb_h - 1, true);
         UI_DrawLineBuffer(gFrameBuffer, 127, thumb_y, 127, thumb_y + thumb_h - 1, true);
     }
