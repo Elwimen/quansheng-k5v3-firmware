@@ -172,6 +172,13 @@ const t_menu_item MenuList[] =
     {"SetScn",      MENU_SET_SCN       },
 #endif
 #endif
+#ifdef ENABLE_FEAT_ELW_CW
+    {"CWSpd",       MENU_CW_SPEED      }, // CW speed in WPM (OOK + AF CW)
+    {"CWTone",      MENU_CW_TONE       }, // CW sidetone frequency (AF CW only)
+    {"CWPset",      MENU_CW_PRESET     }, // CW parameter presets
+    {"CWRHst",      MENU_CW_RECALL_HIST}, // CW log recalled TX to history
+    {"CWMode",      MENU_CW_MODE       }, // CW TX mode: OOK or AFCW
+#endif
     // hidden menu items from here on
     // enabled if pressing both the PTT and upper side button at power-on
     {"F Lock",      MENU_F_LOCK        },
@@ -191,12 +198,6 @@ const t_menu_item MenuList[] =
     {"BatTyp",      MENU_BATTYP        }, // battery type 1600/2200mAh
     {"SetNav",      MENU_SET_NAV       }, // set navigation (LEFT / RIGHT or UP / DOWN)
     {"Reset",       MENU_RESET         }, // might be better to move this to the hidden menu items ?
-#ifdef ENABLE_FEAT_ELW_CW
-    {"CWSpd",       MENU_CW_SPEED      }, // CW speed in WPM (OOK + AF CW)
-    {"CWTone",      MENU_CW_TONE       }, // CW sidetone frequency (AF CW only)
-    {"CWPset",      MENU_CW_PRESET     }, // CW parameter presets
-    {"CWRHst",      MENU_CW_RECALL_HIST}, // CW log recalled TX to history
-#endif
 
     {"",                              0xff               }  // end of list - DO NOT delete or move this this
 };
@@ -1458,6 +1459,9 @@ void UI_DisplayMenu(void)
 
         case MENU_CW_RECALL_HIST:
             strcpy(String, gSubMenuSelection ? "ON" : "OFF");
+            break;
+        case MENU_CW_MODE:
+            strcpy(String, gSubMenuSelection ? "OOK" : "AFCW");
             break;
 #endif
 
