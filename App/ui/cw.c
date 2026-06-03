@@ -34,9 +34,13 @@ void UI_DisplayCwChat(void)
         uint8_t idx = cw_scroll + i;
         if (idx >= cw_history_count)
             break;
+        bool selected = (cw_tx_recall >= 0 && (uint8_t)cw_tx_recall == idx);
         if (cw_history[idx].tag == CW_MSG_TX) {
-            UI_PrintStringSmallBold("TX", 0, 0, 1 + i);
-            UI_PrintStringSmallNormal(cw_history[idx].text, 21, 0, 1 + i);
+            UI_PrintStringSmallBold(selected ? ">>" : "TX", 0, 0, 1 + i);
+            if (selected)
+                UI_PrintStringSmallBold(cw_history[idx].text, 21, 0, 1 + i);
+            else
+                UI_PrintStringSmallNormal(cw_history[idx].text, 21, 0, 1 + i);
         } else if (cw_history[idx].tag == CW_MSG_RX) {
             UI_PrintStringSmallNormal("RX", 0, 0, 1 + i);
             UI_PrintStringSmallNormal(cw_history[idx].text, 21, 0, 1 + i);
@@ -61,19 +65,32 @@ void UI_DisplayCwChat(void)
         UI_DrawLineBuffer(gFrameBuffer, 127, thumb_y, 127, thumb_y + thumb_h - 1, true);
     }
 
-    /* Line 6 — compose line, full width, scrolling tail */
+    /* Line 6 — compose line (or recall preview when a TX entry is selected) */
     {
-        uint8_t dlen = (uint8_t)strlen(cw_compose);
-        /* visible window: ">" + up to 16 chars + cursor = 18 chars × 7px = 126px */
         const uint8_t visible = 16;
-        const char *tail = cw_compose + (dlen > visible ? dlen - visible : 0);
         char disp[visible + 3];
         uint8_t i = 0;
-        disp[i++] = '>';
-        while (*tail) disp[i++] = *tail++;
-        disp[i++] = cw_cursor_visible ? '_' : ' ';
-        disp[i]   = '\0';
-        UI_PrintStringSmallNormal(disp, 0, 0, 6);
+
+        if (cw_tx_recall >= 0) {
+            /* Show recalled text with '*' prefix — bold to signal re-send mode */
+            char recall[CW_COMPOSE_MAX];
+            CW_RecallText(recall, sizeof(recall));
+            uint8_t dlen = (uint8_t)strlen(recall);
+            const char *tail = recall + (dlen > visible ? dlen - visible : 0);
+            disp[i++] = '*';
+            while (*tail) disp[i++] = *tail++;
+            disp[i] = '\0';
+            UI_PrintStringSmallBold(disp, 0, 0, 6);
+        } else {
+            /* Normal compose line: ">" + text + blinking cursor */
+            uint8_t dlen = (uint8_t)strlen(cw_compose);
+            const char *tail = cw_compose + (dlen > visible ? dlen - visible : 0);
+            disp[i++] = '>';
+            while (*tail) disp[i++] = *tail++;
+            disp[i++] = cw_cursor_visible ? '_' : ' ';
+            disp[i]   = '\0';
+            UI_PrintStringSmallNormal(disp, 0, 0, 6);
+        }
     }
 
     ST7565_BlitFullScreen();
