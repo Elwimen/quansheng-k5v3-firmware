@@ -52,6 +52,10 @@ void ACTION_SwitchDemodul(void);
     #endif
 #endif
 
+#ifdef ENABLE_FEAT_ELW_CW
+    void ACTION_CwChat(void);
+#endif
+
 void ACTION_Handle(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld);
 
 #endif
