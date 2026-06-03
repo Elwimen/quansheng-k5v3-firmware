@@ -1388,9 +1388,10 @@ void UI_DisplayMenu(void)
                     strcpy(String, gSubMenu_SET_AUD_AM[gSubMenuSelection]);
                     strcpy(top_right_badge, "AM");
                 }
-                else if (gTxVfo->Modulation == MODULATION_USB) {
-                    strcpy(String, "USB");
-                    strcpy(top_right_badge, "USB");
+                else if (gTxVfo->Modulation == MODULATION_USB || gTxVfo->Modulation == MODULATION_CW) {
+                    const char *label = (gTxVfo->Modulation == MODULATION_CW) ? "CW" : "USB";
+                    strcpy(String, label);
+                    strcpy(top_right_badge, label);
                 }
                 else {
                     strcpy(String, gSubMenu_SET_AUD_FM[gSubMenuSelection]);
