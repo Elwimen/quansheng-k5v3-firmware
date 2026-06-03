@@ -31,6 +31,7 @@ typedef struct {
 extern CwHistoryEntry_t cw_history[CW_HISTORY_LINES];
 extern uint8_t          cw_history_count;
 extern uint8_t          cw_scroll;
+extern int8_t           cw_tx_recall;
 
 extern char      cw_compose[CW_COMPOSE_MAX];
 extern T9State_t cw_t9;
@@ -43,6 +44,7 @@ extern bool    cw_cursor_visible;
 /* ------------------------------------------------------------------ */
 
 void cw_history_push(const char *text, CwMsgTag_t tag);
+void CW_RecallText(char *out, uint8_t max);
 
 /* ------------------------------------------------------------------ */
 /* Public API                                                          */
