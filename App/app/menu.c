@@ -505,6 +505,10 @@ int MENU_GetLimits(uint8_t menu_id, int32_t *pMin, int32_t *pMax)
             *pMin = 0;
             *pMax = 4;  /* 5 presets */
             break;
+        case MENU_CW_RECALL_HIST:
+            *pMin = 0;
+            *pMax = 1;
+            break;
 #endif
 
         default:
@@ -1089,6 +1093,13 @@ void MENU_AcceptSetting(void)
             gEeprom.CW_TONE_HZ = presets[gSubMenuSelection].tone;
             break;
         }
+
+        case MENU_CW_RECALL_HIST:
+            if (gSubMenuSelection)
+                gEeprom.CW_FLAGS |=  CW_FLAG_RECALL_HISTORY;
+            else
+                gEeprom.CW_FLAGS &= ~CW_FLAG_RECALL_HISTORY;
+            break;
 #endif
     }
 
@@ -1583,6 +1594,10 @@ void MENU_ShowCurrentSetting(void)
 
         case MENU_CW_PRESET:
             gSubMenuSelection = 1; /* default to STD */
+            break;
+
+        case MENU_CW_RECALL_HIST:
+            gSubMenuSelection = (gEeprom.CW_FLAGS & CW_FLAG_RECALL_HISTORY) ? 1 : 0;
             break;
 #endif
 
