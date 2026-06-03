@@ -444,7 +444,7 @@ int MENU_GetLimits(uint8_t menu_id, int32_t *pMin, int32_t *pMax)
             //*pMin = 0;
             if(gTxVfo->Modulation == MODULATION_AM)
                 *pMax = ARRAY_SIZE(gSubMenu_SET_AUD_AM) - 1;
-            else if (gTxVfo->Modulation == MODULATION_USB)
+            else if (gTxVfo->Modulation == MODULATION_USB || gTxVfo->Modulation == MODULATION_CW)
                 *pMax = 0;
             else
                 *pMax = ARRAY_SIZE(gSubMenu_SET_AUD_FM) - 1;
@@ -508,6 +508,10 @@ int MENU_GetLimits(uint8_t menu_id, int32_t *pMin, int32_t *pMax)
         case MENU_CW_RECALL_HIST:
             *pMin = 0;
             *pMax = 1;
+            break;
+        case MENU_CW_MODE:
+            *pMin = 0;
+            *pMax = 1;  /* 0 = AFCW (FM), 1 = OOK (CW) */
             break;
 #endif
 
@@ -1100,6 +1104,11 @@ void MENU_AcceptSetting(void)
             else
                 gEeprom.CW_FLAGS &= ~CW_FLAG_RECALL_HISTORY;
             break;
+        case MENU_CW_MODE:
+            /* 0 = AFCW → FM modulation, 1 = OOK → CW modulation */
+            gTxVfo->Modulation = gSubMenuSelection ? MODULATION_CW : MODULATION_FM;
+            gRequestSaveChannel = 1;
+            return;
 #endif
     }
 
@@ -1539,7 +1548,7 @@ void MENU_ShowCurrentSetting(void)
         case MENU_SET_AUD:
             if(gTxVfo->Modulation == MODULATION_AM)
                 gSubMenuSelection = gSetting_set_audio_am;
-            else if (gTxVfo->Modulation == MODULATION_USB)
+            else if (gTxVfo->Modulation == MODULATION_USB || gTxVfo->Modulation == MODULATION_CW)
                 gSubMenuSelection = 0;
             else
                 gSubMenuSelection = gSetting_set_audio_fm;
@@ -1598,6 +1607,9 @@ void MENU_ShowCurrentSetting(void)
 
         case MENU_CW_RECALL_HIST:
             gSubMenuSelection = (gEeprom.CW_FLAGS & CW_FLAG_RECALL_HISTORY) ? 1 : 0;
+            break;
+        case MENU_CW_MODE:
+            gSubMenuSelection = (gTxVfo->Modulation == MODULATION_CW) ? 1 : 0;
             break;
 #endif
 
