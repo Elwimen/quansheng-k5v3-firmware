@@ -496,13 +496,25 @@ gEeprom.FreqChannel[1]   = IS_FREQ_CHANNEL(Data16[5]) ? Data16[5] : (FREQ_CHANNE
 
         gSetting_set_tmr = Data[4] & 0x01;
 #ifdef ENABLE_FEAT_F4HWN_SLEEP
-        gSetting_set_off = (Data[4] >> 1) > 120 ? 60 : (Data[4] >> 1); 
+        gSetting_set_off = (Data[4] >> 1) > 120 ? 60 : (Data[4] >> 1);
 #endif
 
         // And set special session settings for actions
         gSetting_set_ptt_session = gSetting_set_ptt;
         gEeprom.KEY_LOCK_PTT = gSetting_set_lck;
     #endif
+
+#ifdef ENABLE_FEAT_ELW_CW
+    {
+        uint8_t cw_buf[4] = {0};
+        PY25Q16_ReadBuffer(0x00A170, cw_buf, sizeof(cw_buf));
+        gEeprom.CW_WPM     = (cw_buf[0] >= 5 && cw_buf[0] <= 40) ? cw_buf[0] : 15;
+        gEeprom.CW_TONE_HZ = ((uint16_t)cw_buf[1] << 8) | cw_buf[2];
+        if (gEeprom.CW_TONE_HZ < 400 || gEeprom.CW_TONE_HZ > 1000)
+            gEeprom.CW_TONE_HZ = 700;
+        gEeprom.CW_FLAGS   = cw_buf[3];
+    }
+#endif
 }
 
 void SETTINGS_LoadCalibration(void)
@@ -1146,6 +1158,18 @@ void SETTINGS_SaveSettings(void)
 
 #ifdef ENABLE_FEAT_F4HWN_VOL
     SETTINGS_WriteCurrentVol();
+#endif
+
+#ifdef ENABLE_FEAT_ELW_CW
+    {
+        uint8_t cw_buf[4] = {
+            gEeprom.CW_WPM,
+            (uint8_t)(gEeprom.CW_TONE_HZ >> 8),
+            (uint8_t)(gEeprom.CW_TONE_HZ & 0xFF),
+            gEeprom.CW_FLAGS
+        };
+        PY25Q16_WriteBuffer(0x00A170, cw_buf, sizeof(cw_buf), false);
+    }
 #endif
 }
 

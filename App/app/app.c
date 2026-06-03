@@ -27,6 +27,9 @@
 #ifdef ENABLE_FEAT_F4HWN_BEAM
     #include "app/beam.h"
 #endif
+#ifdef ENABLE_FEAT_ELW_CW
+    #include "app/cw.h"
+#endif
 #include "app/app.h"
 #include "app/chFrScanner.h"
 #include "app/dtmf.h"
@@ -100,6 +103,10 @@ void (*ProcessKeysFunctions[])(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld) 
 
 #ifdef ENABLE_AIRCOPY
     [DISPLAY_AIRCOPY] = &AIRCOPY_ProcessKeys,
+#endif
+
+#ifdef ENABLE_FEAT_ELW_CW
+    [DISPLAY_CW_CHAT] = &CW_ProcessKeys,
 #endif
 };
 
@@ -1521,6 +1528,10 @@ void APP_TimeSlice10ms(void)
 
     SCANNER_TimeSlice10ms();
 
+#ifdef ENABLE_FEAT_ELW_CW
+    CW_TimeSlice10ms();
+#endif
+
 #ifdef ENABLE_AIRCOPY
     if (gScreenToDisplay == DISPLAY_AIRCOPY && gAircopyState == AIRCOPY_TRANSFER && gAirCopyIsSendMode == 1) {
         if (!AIRCOPY_SendMessage()) {
@@ -1818,6 +1829,10 @@ void APP_TimeSlice500ms(void)
     BATTERY_TimeSlice500ms();
     SCANNER_TimeSlice500ms();
     UI_MAIN_TimeSlice500ms();
+
+#ifdef ENABLE_FEAT_ELW_CW
+    CW_TimeSlice500ms();
+#endif
 
 #ifdef ENABLE_DTMF_CALLING
     if (gCurrentFunction != FUNCTION_TRANSMIT) {
