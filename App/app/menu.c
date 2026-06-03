@@ -492,6 +492,21 @@ int MENU_GetLimits(uint8_t menu_id, int32_t *pMin, int32_t *pMax)
             break;
         }
 
+#ifdef ENABLE_FEAT_ELW_CW
+        case MENU_CW_SPEED:
+            *pMin = 5;
+            *pMax = 40;
+            break;
+        case MENU_CW_TONE:
+            *pMin = 0;
+            *pMax = 6;  /* indices into cw_tone_table[] */
+            break;
+        case MENU_CW_PRESET:
+            *pMin = 0;
+            *pMax = 4;  /* 5 presets */
+            break;
+#endif
+
         default:
             return -1;
     }
@@ -1047,6 +1062,34 @@ void MENU_AcceptSetting(void)
             gRequestSaveChannel       = 1;
             return;
 #endif
+
+#ifdef ENABLE_FEAT_ELW_CW
+        case MENU_CW_SPEED:
+            gEeprom.CW_WPM = (uint8_t)gSubMenuSelection;
+            break;
+
+        case MENU_CW_TONE: {
+            static const uint16_t cw_tone_table[] = {
+                400, 500, 600, 700, 800, 900, 1000
+            };
+            gEeprom.CW_TONE_HZ = cw_tone_table[gSubMenuSelection];
+            break;
+        }
+
+        case MENU_CW_PRESET: {
+            typedef struct { uint8_t wpm; uint16_t tone; } CwPreset_t;
+            static const CwPreset_t presets[] = {
+                {10, 600},   /* SLOW    */
+                {15, 700},   /* STD     */
+                {20, 700},   /* QSO     */
+                {25, 800},   /* FAST    */
+                {35, 900},   /* CONTEST */
+            };
+            gEeprom.CW_WPM     = presets[gSubMenuSelection].wpm;
+            gEeprom.CW_TONE_HZ = presets[gSubMenuSelection].tone;
+            break;
+        }
+#endif
     }
 
     gRequestSaveSettings = true;
@@ -1516,6 +1559,30 @@ void MENU_ShowCurrentSetting(void)
 #endif
         case MENU_TX_LOCK:
             gSubMenuSelection = gTxVfo->TX_LOCK;
+            break;
+#endif
+
+#ifdef ENABLE_FEAT_ELW_CW
+        case MENU_CW_SPEED:
+            gSubMenuSelection = gEeprom.CW_WPM;
+            break;
+
+        case MENU_CW_TONE: {
+            static const uint16_t cw_tone_table[] = {
+                400, 500, 600, 700, 800, 900, 1000
+            };
+            gSubMenuSelection = 3; /* default: 700 Hz (index 3) */
+            for (int i = 0; i < 7; i++) {
+                if (cw_tone_table[i] == gEeprom.CW_TONE_HZ) {
+                    gSubMenuSelection = i;
+                    break;
+                }
+            }
+            break;
+        }
+
+        case MENU_CW_PRESET:
+            gSubMenuSelection = 1; /* default to STD */
             break;
 #endif
 

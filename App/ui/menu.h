@@ -165,7 +165,12 @@ enum
     MENU_MLONG,
     MENU_BATTYP,
 #if defined(ENABLE_FEAT_F4HWN) && defined(ENABLE_FEAT_F4HWN_LOGO_SAV)
-    MENU_SET_SAV
+    MENU_SET_SAV,
+#endif
+#ifdef ENABLE_FEAT_ELW_CW
+    MENU_CW_SPEED,
+    MENU_CW_TONE,
+    MENU_CW_PRESET,
 #endif
 };
 
