@@ -523,11 +523,21 @@ gEeprom.FreqChannel[1]   = IS_FREQ_CHANNEL(Data16[5]) ? Data16[5] : (FREQ_CHANNE
             gEeprom.CW_TONE_HZ = 700;
         gEeprom.CW_FLAGS   = cw_buf[3];
 
-        /* prediction popup usage counters — 14 bytes at 0x00A174 */
+        /* prediction popup usage counters — 15 bytes at 0x00A174 */
         uint8_t pred_buf[CW_PRED_COUNT];
         PY25Q16_ReadBuffer(0x00A174, pred_buf, sizeof(pred_buf));
         for (uint8_t i = 0; i < CW_PRED_COUNT; i++)
             gEeprom.CW_PRED_COUNTS[i] = (pred_buf[i] == 0xFFu) ? 0u : pred_buf[i];
+
+        /* user callsign — 12 bytes at 0x00A183 */
+        uint8_t call_buf[CW_CALLSIGN_MAX];
+        PY25Q16_ReadBuffer(0x00A183, call_buf, sizeof(call_buf));
+        if (call_buf[0] == 0xFFu) {
+            gEeprom.CW_CALLSIGN[0] = '\0';
+        } else {
+            memcpy(gEeprom.CW_CALLSIGN, call_buf, CW_CALLSIGN_MAX);
+            gEeprom.CW_CALLSIGN[CW_CALLSIGN_MAX - 1] = '\0';
+        }
     }
 #endif
 }
@@ -1266,6 +1276,11 @@ void SETTINGS_SaveChannel(uint16_t Channel, uint8_t VFO, const VFO_Info_t *pVFO,
 void SETTINGS_SaveCwPredCounts(void)
 {
     PY25Q16_WriteBuffer(0x00A174, gEeprom.CW_PRED_COUNTS, CW_PRED_COUNT, false);
+}
+
+void SETTINGS_SaveCwCallsign(void)
+{
+    PY25Q16_WriteBuffer(0x00A183, (const uint8_t *)gEeprom.CW_CALLSIGN, CW_CALLSIGN_MAX, false);
 }
 #endif
 

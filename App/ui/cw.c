@@ -60,16 +60,14 @@ void UI_DisplayCwChat(void)
 
     /* Popup row (line 5) — shown instead of 5th history line when popup active */
     if (CW_PopupActive()) {
-        char popup_buf[12];
+        char popup_buf[16];
         sprintf_(popup_buf, "> %s", CW_PopupItemText(CW_PopupSel()));
         UI_PrintStringSmallNormalInverse(popup_buf, 0, 0, 5);
-        uint8_t cnt = CW_PopupItemCount(CW_PopupSel());
-        if (cnt > 0) {
-            char cnt_buf[4];
-            sprintf_(cnt_buf, "%u", cnt);
-            uint8_t cnt_x = (uint8_t)(127u - (uint8_t)strlen(cnt_buf) * 4u);
-            GUI_DisplaySmallest(cnt_buf, cnt_x, 41, false, false);
-        }
+        /* position indicator: sel+1 / total, right-aligned in 3x5 font */
+        char pos_buf[8];
+        sprintf_(pos_buf, "%u/%u", CW_PopupSel() + 1u, CW_PopupEffectiveCount());
+        uint8_t pos_x = (uint8_t)(127u - (uint8_t)strlen(pos_buf) * 4u);
+        GUI_DisplaySmallest(pos_buf, pos_x, 41, false, false);
     }
 
     /* Scroll bar — track covers the visible history area */

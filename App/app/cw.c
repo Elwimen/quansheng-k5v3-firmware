@@ -96,20 +96,31 @@ static uint16_t dit_ticks;
 /* Prediction popup                                                    */
 /* ------------------------------------------------------------------ */
 
+/* Index 0-13: static items. Index 14: callsign (text from gEeprom.CW_CALLSIGN) */
 static const char * const cw_pred_text[CW_PRED_COUNT] = {
     "CQ", "DE", "K", "73", "KN", "AR", "SK",
-    "QSL", "QRZ?", "BK", "TNX", "FB", "QTH", "HI"
+    "QSL", "QRZ?", "BK", "TNX", "FB", "QTH", "HI",
+    NULL    /* placeholder — callsign text comes from gEeprom.CW_CALLSIGN */
 };
+#define CW_CALLSIGN_IDX  (CW_PRED_COUNT - 1u)  /* = 14 */
 
-static bool    cw_popup_active              = false;
-static uint8_t cw_popup_sel                = 0;
+static bool    cw_popup_active = false;
+static uint8_t cw_popup_sel   = 0;
 static uint8_t cw_pred_order[CW_PRED_COUNT];
 static uint8_t cw_pred_count[CW_PRED_COUNT];
 
+/* effective count: 14 static items always, plus callsign if set */
+static uint8_t cw_pred_effective(void)
+{
+    return (gEeprom.CW_CALLSIGN[0] != '\0') ? (uint8_t)CW_PRED_COUNT
+                                             : (uint8_t)(CW_PRED_COUNT - 1u);
+}
+
 static void cw_pred_sort(void)
 {
-    for (uint8_t i = 0; i < CW_PRED_COUNT; i++) cw_pred_order[i] = i;
-    for (uint8_t i = 1; i < CW_PRED_COUNT; i++) {
+    uint8_t n = cw_pred_effective();
+    for (uint8_t i = 0; i < n; i++) cw_pred_order[i] = i;
+    for (uint8_t i = 1; i < n; i++) {
         uint8_t key = cw_pred_order[i];
         int8_t  j   = (int8_t)i - 1;
         while (j >= 0 && cw_pred_count[cw_pred_order[(uint8_t)j]] < cw_pred_count[key]) {
@@ -136,9 +147,13 @@ static void cw_pred_save(void)
 
 static void cw_pred_insert(uint8_t item_idx)
 {
-    const char *text = cw_pred_text[item_idx];
-    uint8_t     tlen = (uint8_t)strlen(text);
-    uint8_t     clen = (uint8_t)strlen(cw_compose);
+    const char *text = (item_idx == CW_CALLSIGN_IDX)
+                       ? gEeprom.CW_CALLSIGN
+                       : cw_pred_text[item_idx];
+    if (!text || !text[0]) return;
+
+    uint8_t tlen = (uint8_t)strlen(text);
+    uint8_t clen = (uint8_t)strlen(cw_compose);
 
     T9_Commit(&cw_t9);  /* finalise any pending T9 character first */
 
@@ -156,16 +171,28 @@ static void cw_pred_insert(uint8_t item_idx)
     cw_pred_save();
 
     /* keep selection on the same item after re-sort */
-    for (uint8_t i = 0; i < CW_PRED_COUNT; i++) {
+    uint8_t n = cw_pred_effective();
+    for (uint8_t i = 0; i < n; i++) {
         if (cw_pred_order[i] == item_idx) { cw_popup_sel = i; break; }
     }
 }
 
 /* accessors for ui/cw.c */
-bool        CW_PopupActive(void)                      { return cw_popup_active; }
-uint8_t     CW_PopupSel(void)                         { return cw_popup_sel; }
-const char *CW_PopupItemText(uint8_t display_idx)     { return cw_pred_text[cw_pred_order[display_idx]]; }
-uint8_t     CW_PopupItemCount(uint8_t display_idx)    { return cw_pred_count[cw_pred_order[display_idx]]; }
+bool        CW_PopupActive(void)                   { return cw_popup_active; }
+uint8_t     CW_PopupSel(void)                      { return cw_popup_sel; }
+uint8_t     CW_PopupEffectiveCount(void)           { return cw_pred_effective(); }
+const char *CW_PopupItemText(uint8_t display_idx)  {
+    uint8_t idx = cw_pred_order[display_idx];
+    return (idx == CW_CALLSIGN_IDX) ? gEeprom.CW_CALLSIGN : cw_pred_text[idx];
+}
+uint8_t     CW_PopupItemCount(uint8_t display_idx) { return cw_pred_count[cw_pred_order[display_idx]]; }
+
+/* ------------------------------------------------------------------ */
+/* Callsign entry screen                                               */
+/* ------------------------------------------------------------------ */
+
+/* Called by menu after saving callsign so the popup re-sorts */
+void CW_PredResort(void) { cw_pred_sort(); }
 static uint16_t dah_ticks;
 static uint16_t cgap_ticks;
 static uint16_t wgap_ticks;
@@ -466,6 +493,8 @@ void CW_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
             if (!cw_popup_active) {
                 cw_popup_active = true;
                 cw_popup_sel    = 0;
+                /* clamp in case effective count shrank since last open */
+                if (cw_popup_sel >= cw_pred_effective()) cw_popup_sel = 0;
             } else {
                 cw_pred_insert(cw_pred_order[cw_popup_sel]);
             }
@@ -529,7 +558,8 @@ void CW_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
 
     case KEY_UP: {
         if (!bKeyHeld && cw_popup_active) {
-            cw_popup_sel = (cw_popup_sel == 0) ? (uint8_t)(CW_PRED_COUNT - 1u) : cw_popup_sel - 1u;
+            uint8_t n = cw_pred_effective();
+            cw_popup_sel = (cw_popup_sel == 0) ? (uint8_t)(n - 1u) : cw_popup_sel - 1u;
             break;
         }
         if (bKeyHeld) {
@@ -557,7 +587,8 @@ void CW_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
 
     case KEY_DOWN: {
         if (!bKeyHeld && cw_popup_active) {
-            cw_popup_sel = (cw_popup_sel >= (uint8_t)(CW_PRED_COUNT - 1u)) ? 0u : cw_popup_sel + 1u;
+            uint8_t n = cw_pred_effective();
+            cw_popup_sel = (cw_popup_sel >= (uint8_t)(n - 1u)) ? 0u : cw_popup_sel + 1u;
             break;
         }
         if (bKeyHeld) {
