@@ -17,9 +17,9 @@
 #define CW_COMPOSE_MAX      65  /* 64 chars + NUL */
 #define CW_HISTORY_LINES    16
 #define CW_HISTORY_WIDTH    43  /* 42 chars + NUL */
-#define CW_VISIBLE_LINES     5  /* history lines shown on screen */
-#define CW_TEXT_COLS_FIRST  15  /* chars visible after TX/RX prefix (128-21-2)/7 */
-#define CW_TEXT_COLS_CONT   17  /* chars visible on continuation line (128-7-2)/7 */
+#define CW_VISIBLE_LINES     6  /* history lines shown on screen (gFont5x7 layout) */
+#define CW_TEXT_COLS_FIRST  20  /* chars after prefix: (128-6)/6 */
+#define CW_TEXT_COLS_CONT   21  /* chars on continuation line: 128/6 */
 
 typedef enum { CW_MSG_RX = 0, CW_MSG_TX = 1, CW_MSG_CONT = 2 } CwMsgTag_t;
 

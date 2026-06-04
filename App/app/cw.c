@@ -442,7 +442,9 @@ static void cw_rx_tick(void)
 {
     if (gScreenToDisplay != DISPLAY_CW_CHAT) return;
 
-    rx_last_amp = cw_get_af_amp();
+    uint8_t raw_amp = cw_get_af_amp();
+    rx_last_amp = (rx_last_amp == 0u) ? raw_amp
+                : (uint8_t)((rx_last_amp * 3u + raw_amp) / 4u);
 
     /* Refresh bar at 20 Hz (every 5 ticks) — blitting costs ~7.5 ms at 1 MHz SPI.
        Set gUpdateDisplay directly; gRequestDisplayScreen can be swallowed if
