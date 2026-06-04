@@ -641,7 +641,13 @@ void CW_Init(void)
     cw_cursor_visible = true;
     rx_state          = CW_RX_IDLE;
     rx_dit_est        = 0;
-    cw_rx_calibrate_threshold();   /* sample noise floor each time screen is entered */
+    if (gEeprom.CW_RX_THRESHOLD > 0u) {
+        rx_threshold = gEeprom.CW_RX_THRESHOLD;
+    } else {
+        cw_rx_calibrate_threshold();
+        gEeprom.CW_RX_THRESHOLD = rx_threshold;
+        SETTINGS_SaveCwThreshold();
+    }
     T9_Init(&cw_t9, cw_compose, CW_COMPOSE_MAX, cw_char_map);
 }
 
@@ -856,6 +862,8 @@ void CW_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
         } else {
             if (rx_threshold > 2u)  rx_threshold -= 2u;
         }
+        gEeprom.CW_RX_THRESHOLD = rx_threshold;
+        SETTINGS_SaveCwThreshold();
         break;
 
     default:
