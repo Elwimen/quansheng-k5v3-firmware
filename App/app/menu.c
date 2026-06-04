@@ -41,6 +41,9 @@
 #include "ui/inputbox.h"
 #include "ui/menu.h"
 #include "ui/ui.h"
+#ifdef ENABLE_FEAT_ELW_CW
+    #include "app/cw.h"
+#endif
 
 
 uint8_t gUnlockAllTxConfCnt;
@@ -513,6 +516,10 @@ int MENU_GetLimits(uint8_t menu_id, int32_t *pMin, int32_t *pMax)
             *pMin = 0;
             *pMax = 1;  /* 0 = AFCW (FM), 1 = OOK (CW) */
             break;
+        case MENU_CW_CALLSIGN:
+            *pMin = 0;
+            *pMax = 0;  /* text field — no numeric range */
+            break;
 #endif
 
         default:
@@ -659,6 +666,19 @@ void MENU_AcceptSetting(void)
 
             SETTINGS_SaveChannelName(gSubMenuSelection, edit);
             return;
+
+#ifdef ENABLE_FEAT_ELW_CW
+        case MENU_CW_CALLSIGN:
+            strncpy(gEeprom.CW_CALLSIGN, edit, CW_CALLSIGN_MAX - 1u);
+            gEeprom.CW_CALLSIGN[CW_CALLSIGN_MAX - 1u] = '\0';
+            /* strip trailing spaces left by the padded edit buffer */
+            for (int i = (int)strlen(gEeprom.CW_CALLSIGN) - 1;
+                 i >= 0 && gEeprom.CW_CALLSIGN[i] == ' '; i--)
+                gEeprom.CW_CALLSIGN[i] = '\0';
+            SETTINGS_SaveCwCallsign();
+            CW_PredResort();
+            return;
+#endif
 
         case MENU_S_PRI_CH_1:
             gEeprom.SCANLIST_PRIORITY_CH[0] = gSubMenuSelection;
@@ -1611,6 +1631,9 @@ void MENU_ShowCurrentSetting(void)
         case MENU_CW_MODE:
             gSubMenuSelection = (gTxVfo->Modulation == MODULATION_CW) ? 1 : 0;
             break;
+        case MENU_CW_CALLSIGN:
+            gSubMenuSelection = 0;  /* text field, no selection index */
+            break;
 #endif
 
         default:
@@ -1620,6 +1643,15 @@ void MENU_ShowCurrentSetting(void)
 
 static KEY_Code_t edit_last_key = 255;
 static uint8_t edit_char_index = 0;
+
+/* Returns true for any menu item that uses the character edit mechanism */
+static bool MENU_IsTextEditId(int id) {
+    return id == MENU_MEM_NAME
+#ifdef ENABLE_FEAT_ELW_CW
+        || id == MENU_CW_CALLSIGN
+#endif
+    ;
+}
 
 static const char* const char_map[10] = {
     " 0",                           // KEY_0
@@ -1636,7 +1668,7 @@ static const char* const char_map[10] = {
 
 static bool MENU_IsEditingName() {
     return !gCssBackgroundScan
-        && UI_MENU_GetCurrentMenuId() == MENU_MEM_NAME
+        && MENU_IsTextEditId(UI_MENU_GetCurrentMenuId())
         && gIsInSubMenu
         && edit_index >= 0;
 }
@@ -1653,8 +1685,8 @@ static void MENU_Key_0_to_9(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
 
     gBeepToPlay = BEEP_1KHZ_60MS_OPTIONAL;
 
-    if (UI_MENU_GetCurrentMenuId() == MENU_MEM_NAME && edit_index >= 0)
-    {   // currently editing the channel name
+    if (MENU_IsTextEditId(UI_MENU_GetCurrentMenuId()) && edit_index >= 0)
+    {   // currently editing text
         if (edit_index >= 10)
             return;
 
@@ -1981,10 +2013,24 @@ static void MENU_Key_MENU(const bool bKeyPressed, const bool bKeyHeld)
         return;
     }
 
-    if (UI_MENU_GetCurrentMenuId() == MENU_MEM_NAME)
+    if (MENU_IsTextEditId(UI_MENU_GetCurrentMenuId()))
     {
         if (edit_index < 0)
-        {   // enter channel name edit mode
+        {   // enter text edit mode
+#ifdef ENABLE_FEAT_ELW_CW
+            if (UI_MENU_GetCurrentMenuId() == MENU_CW_CALLSIGN) {
+                strncpy(edit, gEeprom.CW_CALLSIGN, CW_CALLSIGN_MAX - 1u);
+                edit[CW_CALLSIGN_MAX - 1u] = '\0';
+                size_t clen = strlen(edit);
+                if (clen < 10) { memset(edit + clen, ' ', 10 - clen); edit[10] = '\0'; }
+                edit_index        = 0;
+                edit_last_key     = 255;
+                edit_char_index   = 0;
+                edit_is_uppercase = true;  /* callsigns are uppercase */
+                memcpy(edit_original, edit, sizeof(edit_original));
+                return;
+            }
+#endif
             if (!RADIO_CheckValidChannel(gSubMenuSelection, false, 0))
                 return;
 
@@ -2099,8 +2145,8 @@ static void MENU_Key_STAR(const bool bKeyPressed, const bool bKeyHeld)
 
     gBeepToPlay = BEEP_1KHZ_60MS_OPTIONAL;
 
-    if (UI_MENU_GetCurrentMenuId() == MENU_MEM_NAME && edit_index >= 0)
-    {   // currently editing the channel name
+    if (MENU_IsTextEditId(UI_MENU_GetCurrentMenuId()) && edit_index >= 0)
+    {   // currently editing text
 
         if (edit_index < 10)
         {
@@ -2158,7 +2204,7 @@ static void MENU_Key_UP_DOWN(bool bKeyPressed, bool bKeyHeld, int8_t Direction)
         Direction = -Direction;
     }
 
-    if (UI_MENU_GetCurrentMenuId() == MENU_MEM_NAME && gIsInSubMenu && edit_index >= 0)
+    if (MENU_IsTextEditId(UI_MENU_GetCurrentMenuId()) && gIsInSubMenu && edit_index >= 0)
     {   // change the character
         if (edit_index < 10 && Direction != 0)
         {
@@ -2309,8 +2355,8 @@ void MENU_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
             MENU_Key_STAR(bKeyPressed, bKeyHeld);
             break;
         case KEY_F:
-            if (UI_MENU_GetCurrentMenuId() == MENU_MEM_NAME && edit_index >= 0)
-            {   // currently editing the channel name
+            if (MENU_IsTextEditId(UI_MENU_GetCurrentMenuId()) && edit_index >= 0)
+            {   // currently editing text
                 if (!bKeyPressed)
                     break;
 
