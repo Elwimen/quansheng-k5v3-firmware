@@ -18,6 +18,7 @@
 #define APP_MENU_H
 
 #include "driver/keyboard.h"
+#include "ui/ui.h"
 
 #ifdef ENABLE_F_CAL_MENU
     void writeXtalFreqCal(const int32_t value, const bool update_eeprom);
@@ -33,6 +34,7 @@ void MENU_CssScanFound(void);
 void MENU_StopCssScan(void);
 
 void MENU_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld);
+void MENU_SetReturnDisplay(GUI_DisplayType_t display);
 
 #endif
 
