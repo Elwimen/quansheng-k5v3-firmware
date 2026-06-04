@@ -322,6 +322,7 @@ typedef struct {
     #define CW_CALLSIGN_MAX         12u          /* 11 chars + NUL */
     uint8_t               CW_PRED_COUNTS[CW_PRED_COUNT]; /* usage counters, 0x00A174 (15 bytes) */
     char                  CW_CALLSIGN[CW_CALLSIGN_MAX];  /* user callsign,  0x00A183 */
+    uint16_t              CW_RX_THRESHOLD;               /* RX det threshold, 0x00A18F */
 #endif
 } EEPROM_Config_t;
 
@@ -365,6 +366,7 @@ void SETTINGS_SaveBatteryCalibration(const uint16_t * batteryCalibration);
 #ifdef ENABLE_FEAT_ELW_CW
 void SETTINGS_SaveCwPredCounts(void);
 void SETTINGS_SaveCwCallsign(void);
+void SETTINGS_SaveCwThreshold(void);
 #endif
 void SETTINGS_UpdateChannel(uint16_t channel, const VFO_Info_t *pVFO, bool keep, bool check, bool save);
 void SETTINGS_WriteBuildOptions(void);

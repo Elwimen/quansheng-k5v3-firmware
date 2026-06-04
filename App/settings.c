@@ -538,6 +538,12 @@ gEeprom.FreqChannel[1]   = IS_FREQ_CHANNEL(Data16[5]) ? Data16[5] : (FREQ_CHANNE
             memcpy(gEeprom.CW_CALLSIGN, call_buf, CW_CALLSIGN_MAX);
             gEeprom.CW_CALLSIGN[CW_CALLSIGN_MAX - 1] = '\0';
         }
+
+        /* RX detection threshold — 2 bytes at 0x00A18F */
+        uint8_t thr_buf[2];
+        PY25Q16_ReadBuffer(0x00A18F, thr_buf, sizeof(thr_buf));
+        uint16_t thr = ((uint16_t)thr_buf[0] << 8) | thr_buf[1];
+        gEeprom.CW_RX_THRESHOLD = (thr == 0xFFFFu) ? 0u : thr;
     }
 #endif
 }
@@ -1281,6 +1287,15 @@ void SETTINGS_SaveCwPredCounts(void)
 void SETTINGS_SaveCwCallsign(void)
 {
     PY25Q16_WriteBuffer(0x00A183, (const uint8_t *)gEeprom.CW_CALLSIGN, CW_CALLSIGN_MAX, false);
+}
+
+void SETTINGS_SaveCwThreshold(void)
+{
+    uint8_t buf[2] = {
+        (uint8_t)(gEeprom.CW_RX_THRESHOLD >> 8),
+        (uint8_t)(gEeprom.CW_RX_THRESHOLD & 0xFFu)
+    };
+    PY25Q16_WriteBuffer(0x00A18F, buf, sizeof(buf), false);
 }
 #endif
 
