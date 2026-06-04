@@ -6,6 +6,7 @@
 #include "settings.h"
 #include "driver/bk4819.h"
 #include "driver/bk4819-regs.h"
+#include "driver/systick.h"
 #include "radio.h"
 #include "app/generic.h"
 #include "functions.h"
@@ -310,6 +311,217 @@ static void cw_tx_tick(void)
     }
 }
 
+/* forward declaration — defined in the History section below */
+static void cw_push_raw(const char *text, CwMsgTag_t tag);
+
+/* ------------------------------------------------------------------ */
+/* RX state machine                                                    */
+/* ------------------------------------------------------------------ */
+
+typedef enum {
+    CW_RX_IDLE,
+    CW_RX_MARK,
+    CW_RX_SPACE,
+} CwRxState_t;
+
+static CwRxState_t rx_state       = CW_RX_IDLE;
+static uint16_t    rx_mark_ticks  = 0;
+static uint16_t    rx_space_ticks = 0;
+static uint16_t    rx_bit_accum   = 0;
+static uint8_t     rx_bit_count   = 0;
+static uint16_t    rx_dit_est     = 0;
+static uint16_t    rx_threshold   = 0;
+static uint8_t     rx_last_amp    = 0;
+
+#define CW_RX_TIMEOUT_MULT  10u
+
+/* REG_6F<6:0>: AF TX/RX input amplitude in dB — works for both OOK (beat note)
+   and AF CW (keyed tone). No AGC guard needed; DSP updates it continuously. */
+static uint8_t cw_get_af_amp(void)
+{
+    return BK4819_GetAfTxRx();
+}
+
+static void cw_rx_calibrate_threshold(void)
+{
+    uint32_t sum = 0;
+    for (uint8_t i = 0; i < 10; i++) {
+        sum += cw_get_af_amp();
+        SYSTICK_DelayUs(500);
+    }
+    rx_threshold = (uint16_t)(sum / 10) + 10;   /* +10 dB headroom above noise floor */
+}
+
+static void cw_rx_update_dit_est(uint16_t new_dit)
+{
+    if (rx_dit_est == 0)
+        rx_dit_est = new_dit;
+    else
+        rx_dit_est = (uint16_t)((rx_dit_est * 3u + new_dit) / 4u);
+}
+
+static uint16_t cw_dit_ref(void)
+{
+    if (rx_dit_est > 0) return rx_dit_est;
+    uint16_t t = (uint16_t)(1200u / ((uint32_t)gEeprom.CW_WPM * 10u));
+    return t > 0 ? t : 1;
+}
+
+static char cw_rx_decode(uint8_t len, uint16_t code)
+{
+    for (uint8_t i = 0; i < 26; i++) {
+        if (morse_table[i].len == len && morse_table[i].code == code)
+            return (char)('A' + i);
+    }
+    for (uint8_t i = 0; i < 10; i++) {
+        if (morse_table[26 + i].len == len && morse_table[26 + i].code == code)
+            return (char)('0' + i);
+    }
+    return '?';
+}
+
+static void cw_rx_decode_element(void)
+{
+    uint16_t dit    = cw_dit_ref();
+    uint8_t  is_dah = (rx_mark_ticks >= dit * 2u) ? 1u : 0u;
+
+    if (is_dah == 0)
+        cw_rx_update_dit_est(rx_mark_ticks);
+
+    if (rx_bit_count < 7) {
+        rx_bit_accum = (uint16_t)((rx_bit_accum << 1) | is_dah);
+        rx_bit_count++;
+    }
+}
+
+static void cw_rx_commit_char(void)
+{
+    if (rx_bit_count == 0) return;
+
+    char decoded  = cw_rx_decode(rx_bit_count, rx_bit_accum);
+    cw_live_char  = decoded;
+    rx_bit_accum  = 0;
+    rx_bit_count  = 0;
+
+    bool appended = false;
+    if (cw_history_count > 0 &&
+        cw_history[cw_history_count - 1].tag == CW_MSG_RX) {
+        uint8_t idx = (uint8_t)(cw_history_count - 1u);
+        uint8_t len = (uint8_t)strlen(cw_history[idx].text);
+        if (len < CW_TEXT_COLS_FIRST) {
+            cw_history[idx].text[len]     = decoded;
+            cw_history[idx].text[len + 1] = '\0';
+            appended = true;
+        }
+    }
+    if (!appended) {
+        char tmp[2] = { decoded, '\0' };
+        cw_push_raw(tmp, CW_MSG_RX);
+        if (cw_history_count > CW_VISIBLE_LINES)
+            cw_scroll = (uint8_t)(cw_history_count - CW_VISIBLE_LINES);
+    }
+    gRequestDisplayScreen = DISPLAY_CW_CHAT;
+}
+
+static void cw_rx_commit_word_space(void)
+{
+    cw_rx_commit_char();
+    if (cw_history_count > 0 &&
+        cw_history[cw_history_count - 1].tag == CW_MSG_RX) {
+        uint8_t idx = (uint8_t)(cw_history_count - 1u);
+        uint8_t len = (uint8_t)strlen(cw_history[idx].text);
+        if (len > 0 && cw_history[idx].text[len - 1] != ' ' &&
+            len < CW_TEXT_COLS_FIRST) {
+            cw_history[idx].text[len]     = ' ';
+            cw_history[idx].text[len + 1] = '\0';
+        }
+    }
+}
+
+static void cw_rx_tick(void)
+{
+    if (gScreenToDisplay != DISPLAY_CW_CHAT) return;
+
+    uint8_t raw_amp = cw_get_af_amp();
+    rx_last_amp = (rx_last_amp == 0u) ? raw_amp
+                : (uint8_t)((rx_last_amp * 3u + raw_amp) / 4u);
+
+    /* Refresh bar at 20 Hz (every 5 ticks) — blitting costs ~7.5 ms at 1 MHz SPI.
+       Set gUpdateDisplay directly; gRequestDisplayScreen can be swallowed if
+       APP_Update() already cleared it earlier in the same loop iteration. */
+    static uint8_t bar_refresh_ctr = 0;
+    if (++bar_refresh_ctr >= 5u) {
+        bar_refresh_ctr = 0;
+        gUpdateDisplay = true;
+    }
+
+    if (tx_state != CW_TX_IDLE) return;
+
+    uint16_t amp   = rx_last_amp;
+    uint16_t dit   = cw_dit_ref();
+    bool     above = (amp > rx_threshold);
+
+    switch (rx_state) {
+
+    case CW_RX_IDLE:
+        if (above) {
+            rx_mark_ticks  = 1;
+            rx_space_ticks = 0;
+            rx_state       = CW_RX_MARK;
+        }
+        break;
+
+    case CW_RX_MARK:
+        if (above) {
+            rx_mark_ticks++;
+        } else {
+            rx_space_ticks = 1;
+            rx_state       = CW_RX_SPACE;
+        }
+        break;
+
+    case CW_RX_SPACE:
+        if (above) {
+            cw_rx_decode_element();
+            if (rx_space_ticks >= dit * 8u)
+                cw_rx_commit_word_space();
+            else if (rx_space_ticks >= dit * 4u)
+                cw_rx_commit_char();
+            rx_mark_ticks  = 1;
+            rx_space_ticks = 0;
+            rx_state       = CW_RX_MARK;
+        } else {
+            rx_space_ticks++;
+            if (rx_space_ticks >= dit * CW_RX_TIMEOUT_MULT) {
+                cw_rx_decode_element();
+                cw_rx_commit_word_space();
+                rx_mark_ticks  = 0;
+                rx_space_ticks = 0;
+                rx_state       = CW_RX_IDLE;
+                cw_live_char   = '\0';
+            }
+        }
+        break;
+    }
+}
+
+void CW_RX_SetThreshold(uint16_t rssi_threshold)
+{
+    rx_threshold = rssi_threshold;
+    if (rx_threshold == 0)
+        cw_rx_calibrate_threshold();
+}
+
+uint16_t CW_RX_GetThreshold(void)
+{
+    return rx_threshold;
+}
+
+uint8_t CW_RX_GetLastAmp(void)
+{
+    return rx_last_amp;
+}
+
 /* ------------------------------------------------------------------ */
 /* State                                                               */
 /* ------------------------------------------------------------------ */
@@ -427,6 +639,15 @@ void CW_Init(void)
     cw_tx_recall      = -1;
     cw_live_char      = '\0';
     cw_cursor_visible = true;
+    rx_state          = CW_RX_IDLE;
+    rx_dit_est        = 0;
+    if (gEeprom.CW_RX_THRESHOLD > 0u) {
+        rx_threshold = gEeprom.CW_RX_THRESHOLD;
+    } else {
+        cw_rx_calibrate_threshold();
+        gEeprom.CW_RX_THRESHOLD = rx_threshold;
+        SETTINGS_SaveCwThreshold();
+    }
     T9_Init(&cw_t9, cw_compose, CW_COMPOSE_MAX, cw_char_map);
 }
 
@@ -467,7 +688,7 @@ void CW_TimeSlice10ms(void)
         }
     }
     cw_tx_tick();
-    /* Phase 4: cw_rx_tick(); */
+    cw_rx_tick();
 }
 
 void CW_TimeSlice500ms(void)
@@ -549,6 +770,7 @@ void CW_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
 
     case KEY_MENU:
         if (!bKeyHeld) {
+            MENU_SetReturnDisplay(DISPLAY_CW_CHAT);
             gMenuCursor = UI_MENU_GetMenuIdx(MENU_CW_SPEED);
             MENU_ShowCurrentSetting();
             gRequestDisplayScreen = DISPLAY_MENU;
@@ -632,6 +854,17 @@ void CW_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld)
             gRequestDisplayScreen = DISPLAY_MAIN;
         }
         return;
+
+    case KEY_F:
+        /* Manual RX threshold adjustment: short press = +2 dB, held = -2 dB */
+        if (!bKeyHeld) {
+            if (rx_threshold < 61u) rx_threshold += 2u;
+        } else {
+            if (rx_threshold > 2u)  rx_threshold -= 2u;
+        }
+        gEeprom.CW_RX_THRESHOLD = rx_threshold;
+        SETTINGS_SaveCwThreshold();
+        break;
 
     default:
         break;

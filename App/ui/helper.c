@@ -342,6 +342,24 @@ static void sort(int16_t *a, int16_t *b)
         buffer[end] ^= 0x3E;
     }
 
+    void GUI_Display5x7(const char *pString, uint8_t x, uint8_t y, bool fill) {
+        uint8_t c;
+        const uint8_t *p = (const uint8_t *)pString;
+        while ((c = *p++) != '\0') {
+            if (c < 0x20u || c > 0x7Fu) c = '?';
+            c -= 0x20u;
+            for (int col = 0; col < 5; col++) {
+                uint8_t pixels = gFont5x7[c][col];
+                for (int row = 0; row < 7; row++) {
+                    if (pixels & 1u)
+                        PutPixel(x + (uint8_t)col, y + (uint8_t)row, fill);
+                    pixels >>= 1;
+                }
+            }
+            x += 6u;
+        }
+    }
+
     void UI_DisplayUnlockKeyboard(uint8_t shift) {
         if (gEeprom.KEY_LOCK && gKeypadLocked > 0)
         {   // tell user how to unlock the keyboard
