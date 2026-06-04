@@ -178,6 +178,7 @@ const t_menu_item MenuList[] =
     {"CWPset",      MENU_CW_PRESET     }, // CW parameter presets
     {"CWRHst",      MENU_CW_RECALL_HIST}, // CW log recalled TX to history
     {"CWMode",      MENU_CW_MODE       }, // CW TX mode: OOK or AFCW
+    {"CWCall",      MENU_CW_CALLSIGN   }, // user callsign for prediction
 #endif
     // hidden menu items from here on
     // enabled if pressing both the PTT and upper side button at power-on
@@ -522,7 +523,7 @@ const t_sidefunction gSubMenu_SIDEFUNCTIONS[] =
         {"BEAM",            ACTION_OPT_BEAM},
     #endif
     #ifdef ENABLE_FEAT_ELW_CW
-        {"AF\nCW",          ACTION_OPT_CW_CHAT},
+        {"CW",          ACTION_OPT_CW_CHAT},
     #endif
 #endif
 };
@@ -1025,6 +1026,41 @@ void UI_DisplayMenu(void)
             break;
         }
 
+#ifdef ENABLE_FEAT_ELW_CW
+        case MENU_CW_CALLSIGN:
+        {
+            if (!gIsInSubMenu)
+                edit_index = -1;
+            if (edit_index < 0)
+            {   // not editing — show current callsign centered, same layout as ChName
+                const char *cs = gEeprom.CW_CALLSIGN[0] ? gEeprom.CW_CALLSIGN : "--";
+                UI_PrintString(cs, menu_item_x1, menu_item_x2, 2, 8);
+                already_printed = true;
+            }
+            else
+            {   // show callsign edit buffer with cursor — mirrors MENU_MEM_NAME layout
+                UI_PrintString("CALLSIGN", menu_item_x1, menu_item_x2, 0, 8);
+                UI_PrintString(edit, menu_item_x1, menu_item_x2, 2, 8);
+                if (edit_index < 10) {
+                    uint8_t x = menu_item_x1 - 1;
+                    for (uint8_t i = 0; i < 10; i++) {
+                        if (i != edit_index) {
+                            if (edit[i] != 'g' && edit[i] != 'j')
+                                UI_DrawLineBuffer(gFrameBuffer, x, 29, x + 6, 29, 1);
+                        } else {
+                            UI_DrawLineBuffer(gFrameBuffer, x + 2, 30, x + 4, 30, 1);
+                            UI_DrawPixelBuffer(gFrameBuffer, x + 3, 29, 1);
+                        }
+                        x += 8;
+                    }
+                    UI_PrintStringSmallNormal(edit_is_uppercase ? "ABC" : "abc", 77, 0, 4);
+                }
+                already_printed = true;
+            }
+            break;
+        }
+#endif
+
         case MENU_SAVE:
             sprintf(String, gSubMenuSelection == 0 ? gSubMenu_OFF_ON[0] : "1:%u", gSubMenuSelection);
             break;
@@ -1463,6 +1499,7 @@ void UI_DisplayMenu(void)
         case MENU_CW_MODE:
             strcpy(String, gSubMenuSelection ? "OOK" : "AFCW");
             break;
+        /* MENU_CW_CALLSIGN display is handled in the special-case block above */
 #endif
 
     }
