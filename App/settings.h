@@ -318,8 +318,10 @@ typedef struct {
     uint8_t               CW_FLAGS;
     /* CW_FLAGS bits */
     #define CW_FLAG_RECALL_HISTORY  (1u << 0)   /* push recalled TX back to history */
-    #define CW_PRED_COUNT           14u          /* number of prediction popup items */
-    uint8_t               CW_PRED_COUNTS[CW_PRED_COUNT]; /* usage counters, 0x00A174 */
+    #define CW_PRED_COUNT           15u          /* 14 static + 1 callsign slot */
+    #define CW_CALLSIGN_MAX         12u          /* 11 chars + NUL */
+    uint8_t               CW_PRED_COUNTS[CW_PRED_COUNT]; /* usage counters, 0x00A174 (15 bytes) */
+    char                  CW_CALLSIGN[CW_CALLSIGN_MAX];  /* user callsign,  0x00A183 */
 #endif
 } EEPROM_Config_t;
 
@@ -362,6 +364,7 @@ void SETTINGS_SaveChannel(uint16_t Channel, uint8_t VFO, const VFO_Info_t *pVFO,
 void SETTINGS_SaveBatteryCalibration(const uint16_t * batteryCalibration);
 #ifdef ENABLE_FEAT_ELW_CW
 void SETTINGS_SaveCwPredCounts(void);
+void SETTINGS_SaveCwCallsign(void);
 #endif
 void SETTINGS_UpdateChannel(uint16_t channel, const VFO_Info_t *pVFO, bool keep, bool check, bool save);
 void SETTINGS_WriteBuildOptions(void);
