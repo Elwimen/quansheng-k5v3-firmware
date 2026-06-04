@@ -25,15 +25,27 @@ void UI_DisplayCwChat(void)
                  (freq % 100000) / 100);
         UI_PrintStringSmallBold(buf, 0, 0, 0);
 
-        /* Remaining chars — countdown, right-aligned, inverted 3×5 font */
+        /* Right side — {threshold}[chars_remaining], inverted 3×5 font */
         uint8_t remain = (uint8_t)((CW_COMPOSE_MAX - 1u) - strlen(cw_compose));
-        char counter[4];
-        sprintf_(counter, "%u", remain);
-        uint8_t ctr_w = (uint8_t)(strlen(counter) * 4u);  /* 4 px per glyph */
-        uint8_t ctr_x = (uint8_t)(127u - ctr_w);          /* 1 px right margin */
-        for (uint8_t px = ctr_x - 1u; px < 128u; px++)    /* black background */
+        char indicator[12];
+        sprintf_(indicator, "%u %u", CW_RX_GetThreshold(), remain);
+        uint8_t ind_w = (uint8_t)(strlen(indicator) * 4u);  /* 4 px per glyph */
+        uint8_t ind_x = (uint8_t)(128u - ind_w);
+        for (uint8_t px = ind_x - 1u; px < 128u; px++)     /* black background */
             gFrameBuffer[0][px] |= 0xFFu;
-        GUI_DisplaySmallest(counter, ctr_x, 1, false, false); /* white glyphs */
+        GUI_DisplaySmallest(indicator, ind_x, 1, false, false); /* white glyphs */
+
+        /* AF amplitude bar — 3px strip at the top of the history area (bits 0-2 of
+           gFrameBuffer[1]), 1px below the status row. Drawn last so it separates
+           status from history. Threshold shown as XOR notch. */
+        uint8_t amp_v   = CW_RX_GetLastAmp();
+        uint8_t thr_v   = (uint8_t)(CW_RX_GetThreshold() > 63u ? 63u : CW_RX_GetThreshold());
+        uint8_t bar_end = (uint8_t)(amp_v * 2u);                    /* 0-126 px */
+        uint8_t thr_x   = (uint8_t)(thr_v * 2u);
+        for (uint8_t x = 0; x < bar_end && x < 128u; x++)
+            gFrameBuffer[1][x] |= 0x07u;                            /* bits 0-2 */
+        if (thr_x < 128u)
+            gFrameBuffer[1][thr_x] ^= 0x07u;                        /* notch */
     }
 
     /* Lines 1–(4 or 5) — message history; popup steals line 5 when active */

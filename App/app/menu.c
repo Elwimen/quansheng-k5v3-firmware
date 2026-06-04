@@ -1627,6 +1627,13 @@ void MENU_ShowCurrentSetting(void)
 static KEY_Code_t edit_last_key = 255;
 static uint8_t edit_char_index = 0;
 
+static GUI_DisplayType_t menu_return_display = DISPLAY_MAIN;
+
+void MENU_SetReturnDisplay(GUI_DisplayType_t display)
+{
+    menu_return_display = display;
+}
+
 /* Returns true for any menu item that uses the character edit mechanism */
 static bool MENU_IsTextEditId(int id) {
     return id == MENU_MEM_NAME
@@ -1934,7 +1941,8 @@ Skip:
             gAnotherVoiceID = VOICE_ID_CANCEL;
         #endif
 
-        gRequestDisplayScreen = DISPLAY_MAIN;
+        gRequestDisplayScreen = menu_return_display;
+        menu_return_display   = DISPLAY_MAIN;   /* consume — next menu open defaults to main */
 
         if (gEeprom.BACKLIGHT_TIME == 0) // backlight set to always off
         {
