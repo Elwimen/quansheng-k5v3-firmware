@@ -8,6 +8,9 @@
 #include "radio.h"
 #include "external/printf/printf.h"
 
+#define CW_HIST_Y0  12u   /* framebuffer-relative y of first history line */
+#define CW_HIST_DY   7u   /* pixels per history line (gFont5x7)           */
+
 void UI_DisplayCwChat(void)
 {
     char buf[48];
@@ -19,7 +22,7 @@ void UI_DisplayCwChat(void)
         const uint32_t freq = gCurrentVfo->pRX->Frequency;
         const bool ook = (gCurrentVfo->Modulation == MODULATION_CW);
         sprintf_(buf, "%s %uW %u.%03u",
-                 ook ? "CW" : "AFCW",
+                 ook ? "CW" : "aCW",
                  gEeprom.CW_WPM,
                  freq / 100000,
                  (freq % 100000) / 100);
@@ -48,29 +51,38 @@ void UI_DisplayCwChat(void)
             gFrameBuffer[1][thr_x] ^= 0x07u;                        /* notch */
     }
 
-    /* Lines 1–(4 or 5) — message history; popup steals line 5 when active */
+    /* History — gFont5x7, y=12 (just below AF bar+gap), 7px pitch
+     * popup steals gFontSmall Line=5 (y=40-47) when active */
     uint8_t hist_lines = CW_PopupActive() ? 4u : (uint8_t)CW_VISIBLE_LINES;
     for (uint8_t i = 0; i < hist_lines; i++) {
         uint8_t idx = cw_scroll + i;
         if (idx >= cw_history_count)
             break;
+        uint8_t ly = (uint8_t)(CW_HIST_Y0 + i * CW_HIST_DY);
         bool selected = (cw_tx_recall >= 0 && (uint8_t)cw_tx_recall == idx);
+
         if (cw_history[idx].tag == CW_MSG_TX) {
-            UI_PrintStringSmallBold(selected ? ">>" : "TX", 0, 0, 1 + i);
-            if (selected)
-                UI_PrintStringSmallBold(cw_history[idx].text, 21, 0, 1 + i);
-            else
-                UI_PrintStringSmallNormal(cw_history[idx].text, 21, 0, 1 + i);
+            if (selected) {
+                /* Inverted prefix block (6×7) then white '>' glyph */
+                for (uint8_t bx = 0u; bx < 6u; bx++)
+                    for (uint8_t by = 0u; by < CW_HIST_DY; by++)
+                        gFrameBuffer[(ly + by) / 8u][bx] |=
+                            (uint8_t)(1u << ((ly + by) % 8u));
+                GUI_Display5x7(">", 0, ly, false);
+            } else {
+                GUI_Display5x7(">", 0, ly, true);
+            }
+            GUI_Display5x7(cw_history[idx].text, 6, ly, true);
         } else if (cw_history[idx].tag == CW_MSG_RX) {
-            UI_PrintStringSmallNormal("RX", 0, 0, 1 + i);
-            UI_PrintStringSmallNormal(cw_history[idx].text, 21, 0, 1 + i);
+            GUI_Display5x7("<", 0, ly, true);
+            GUI_Display5x7(cw_history[idx].text, 6, ly, true);
         } else {
-            /* CW_MSG_CONT — text already has leading space for indentation */
-            UI_PrintStringSmallNormal(cw_history[idx].text, 0, 0, 1 + i);
+            /* CW_MSG_CONT — indented continuation, no prefix */
+            GUI_Display5x7(cw_history[idx].text, 0, ly, true);
         }
     }
 
-    /* Popup row (line 5) — shown instead of 5th history line when popup active */
+    /* Popup row — gFontSmall at Line=5 (y=40-47), shown when popup active */
     if (CW_PopupActive()) {
         char popup_buf[16];
         sprintf_(popup_buf, "> %s", CW_PopupItemText(CW_PopupSel()));
@@ -82,12 +94,12 @@ void UI_DisplayCwChat(void)
         GUI_DisplaySmallest(pos_buf, pos_x, 41, false, false);
     }
 
-    /* Scroll bar — track covers the visible history area */
+    /* Scroll bar — track covers the gFont5x7 history area */
     if (cw_history_count > hist_lines) {
-        const uint8_t track_top = 8;
-        const uint8_t track_h   = (uint8_t)(hist_lines * 8u);
+        const uint8_t track_top = CW_HIST_Y0;
+        const uint8_t track_h   = (uint8_t)(hist_lines * CW_HIST_DY);
         uint8_t thumb_h = (uint8_t)((uint16_t)track_h * hist_lines / cw_history_count);
-        if (thumb_h < 4) thumb_h = 4;
+        if (thumb_h < 4u) thumb_h = 4u;
         uint8_t thumb_y = track_top + (uint8_t)((uint16_t)(track_h - thumb_h) * cw_scroll
                           / (cw_history_count - hist_lines));
         UI_DrawLineBuffer(gFrameBuffer, 127, track_top, 127, track_top + track_h - 1, true);
