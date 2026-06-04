@@ -60,7 +60,9 @@ void CW_TX_Start(const char *text);
 bool CW_TX_Active(void);
 
 /* Phase 4 */
-void CW_RX_SetThreshold(uint16_t rssi_threshold);
+void     CW_RX_SetThreshold(uint16_t rssi_threshold);
+uint16_t CW_RX_GetThreshold(void);
+uint8_t  CW_RX_GetLastAmp(void);
 
 /* Prediction popup accessors (used by ui/cw.c) */
 bool        CW_PopupActive(void);
