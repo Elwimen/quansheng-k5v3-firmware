@@ -341,7 +341,8 @@ void SCANNER_Start(bool singleFreq)
         gScanCssState  = SCAN_CSS_STATE_OFF;
         gScanFrequency = 0xFFFFFFFF;
 
-        BK4819_PickRXFilterPathBasedOnFrequency(gScanFrequency);
+        // Keep the RX input path selected by RADIO_SetupRegisters().
+        // 0xFFFFFFFF means "unknown frequency" here and would turn both LNAs off.
         BK4819_SetFrequencyScan(true);
 
         gUpdateStatus = true;
