@@ -696,11 +696,11 @@ void BK4819_SetFilterBandwidth(const BK4819_FilterBandwidth_t Bandwidth, const b
             break;
 
         case BK4819_FILTER_BW_NARROWER: // 6.25kHz
-            // 0x205C = (0b010 << 12) | (0b000 << 9) | (0b001 << 6) |
-            //          (0b01 << 4)  | (1 << 3)     | (1 << 2)
+            // 0x2058 = (0b010 << 12) | (0b000 << 9) | (0b001 << 6) |
+            //          (0b01 << 4)  | (1 << 3)
             //        = RF 3.0 kHz, weak-RF 2.0 kHz, AF Tx LPF2 2.5 kHz,
-            //          6.25k mode, FM gain +6 dB.
-            val = 0x205C;
+            //          6.25k mode, FM gain 0 dB.
+            val = 0x2058;
             break;
 
         case BK4819_FILTER_BW_AM:   // Stock AM preset
