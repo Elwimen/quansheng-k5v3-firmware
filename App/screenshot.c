@@ -36,8 +36,11 @@
 // transforming each transmitted chunk twice (negligible next to the
 // blocking UART transfer).
 static uint16_t previousHash[128];
+static uint8_t previousStateFlags = 0xFF;
 static uint8_t forcedBlock = 0;
 static uint8_t keepAlive = 3;
+static bool hasConnectionPing = false;
+static bool wasConnected = false;
 
 // FNV-1a over one 8-byte chunk, folded to 16 bits
 static uint16_t SCREENSHOT_Hash(const uint8_t *data)
@@ -56,10 +59,12 @@ void SCREENSHOT_ParseInput(void)
 
     if (UART_IsCableConnected()) {
         keepAlive = 15;
+        hasConnectionPing = true;
         gUSB_ScreenshotEnabled = false;
     }
     else if (VCP_ScreenshotPing()) {
         keepAlive = 15;
+        hasConnectionPing = true;
         gUSB_ScreenshotEnabled = true;
     }
 }
@@ -101,6 +106,14 @@ static uint8_t SCREENSHOT_StateFlags(void)
     return flags;
 }
 
+bool SCREENSHOT_HasPendingStateChange(void)
+{
+    if (gUART_LockScreenshot > 0 || keepAlive == 0 || !hasConnectionPing)
+        return false;
+
+    return !wasConnected || SCREENSHOT_StateFlags() != previousStateFlags;
+}
+
 // Compute one 8-byte output chunk directly from the display buffers.
 // Frame layout: per line (status + 7 frame lines), 8 bit layers of
 // 16 bytes each. Each bit layer is split into two 64-column chunks.
@@ -124,8 +137,6 @@ static void SCREENSHOT_Chunk(uint8_t chunkIdx, uint8_t *dest)
 
 void SCREENSHOT_Update(bool force)
 {
-    static bool wasConnected = false;
-
     if (SCREENSHOT_IsLocked())
         return;
 
@@ -133,6 +144,8 @@ void SCREENSHOT_Update(bool force)
         if (--keepAlive == 0) {
             // Connection just lost → reset state for next reconnection
             wasConnected = false;
+            hasConnectionPing = false;
+            previousStateFlags = 0xFF;
             return;
         }
     } else {
@@ -142,8 +155,10 @@ void SCREENSHOT_Update(bool force)
     // Connection is alive — detect reconnection and force full frame
     if (!wasConnected) {
         force = true;
-        wasConnected = true;
     }
+
+    const uint8_t stateFlags = SCREENSHOT_StateFlags();
+    const bool stateChanged = (stateFlags != previousStateFlags);
 
     // ==== FIRST PASS: Count changed chunks ====
     uint16_t deltaLen = 0;
@@ -164,7 +179,7 @@ void SCREENSHOT_Update(bool force)
 
     forcedBlock = (forcedBlock + 1) % 128;
 
-    if (deltaLen == 0)
+    if (deltaLen == 0 && !stateChanged)
         return;
 
     // Skip transmission if a key is currently pressed
@@ -174,7 +189,7 @@ void SCREENSHOT_Update(bool force)
 
     // ==== Send version marker and state flags ====
     // 0xF0 keeps a resync-safe marker before the standard AA 55 header.
-    uint8_t versionMarker = SCREENSHOT_MARKER_BASE | SCREENSHOT_StateFlags();
+    uint8_t versionMarker = SCREENSHOT_MARKER_BASE | stateFlags;
     SCREENSHOT_Send(&versionMarker, 1);
 
     // ==== Send header ====
@@ -205,4 +220,7 @@ void SCREENSHOT_Update(bool force)
 
     uint8_t end = 0x0A;
     SCREENSHOT_Send(&end, 1);
+
+    previousStateFlags = stateFlags;
+    wasConnected = true;
 }

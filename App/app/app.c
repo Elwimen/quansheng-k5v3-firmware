@@ -1663,6 +1663,8 @@ void APP_TimeSlice10ms(void)
 #endif
         ) {
         SCREENSHOT_Update(false);
+    } else if (SCREENSHOT_HasPendingStateChange()) {
+        SCREENSHOT_Update(false);
     }
     #endif
 
