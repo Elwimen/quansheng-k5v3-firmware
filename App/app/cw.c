@@ -109,6 +109,7 @@ static bool    cw_popup_active = false;
 static uint8_t cw_popup_sel   = 0;
 static uint8_t cw_pred_order[CW_PRED_COUNT];
 static uint8_t cw_pred_count[CW_PRED_COUNT];
+static bool    cw_pred_dirty  = false;   /* pending save — flushed at TX end */
 
 /* effective count: 14 static items always, plus callsign if set */
 static uint8_t cw_pred_effective(void)
@@ -169,7 +170,7 @@ static void cw_pred_insert(uint8_t item_idx)
 
     if (cw_pred_count[item_idx] < 255u) cw_pred_count[item_idx]++;
     cw_pred_sort();
-    cw_pred_save();
+    cw_pred_dirty = true;   /* flush to EEPROM at TX end, away from SPI/keyboard conflicts */
 
     /* keep selection on the same item after re-sort */
     uint8_t n = cw_pred_effective();
@@ -300,6 +301,10 @@ static void cw_tx_tick(void)
             BK4819_CW_KeyUp();
         else
             BK4819_ExitDTMF_TX(false);
+        if (cw_pred_dirty) {
+            cw_pred_save();
+            cw_pred_dirty = false;
+        }
         tx_state = CW_TX_IDLE;
         GENERIC_Key_PTT(false);   /* triggers APP_HandleEndTransmission → RADIO_SendEndOfTransmission */
         gPttIsPressed = false;    /* prevent polling loop from restarting TX if button still held */
@@ -693,8 +698,21 @@ void CW_TimeSlice10ms(void)
 
 void CW_TimeSlice500ms(void)
 {
-    if (gScreenToDisplay != DISPLAY_CW_CHAT)
+    if (gScreenToDisplay != DISPLAY_CW_CHAT) {
+        /* Screen exited — flush any unsaved prediction weights */
+        if (cw_pred_dirty) {
+            cw_pred_save();
+            cw_pred_dirty = false;
+        }
         return;
+    }
+
+    /* Also flush weights at idle (covers popup use without transmitting) */
+    if (cw_pred_dirty && tx_state == CW_TX_IDLE) {
+        cw_pred_save();
+        cw_pred_dirty = false;
+    }
+
     cw_cursor_visible     = !cw_cursor_visible;
     gRequestDisplayScreen = DISPLAY_CW_CHAT;
 }
