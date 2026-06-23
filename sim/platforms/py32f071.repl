@@ -1,0 +1,29 @@
+// Renode platform for the Puya PY32F071 (ARM Cortex-M0+) as used on the
+// Quansheng UV-K5 V3 / UV-K1. Minimal model: core + memories + NVIC/SysTick +
+// USART1. Bit-banged external ICs (BK4819, EEPROM, BK1080) are NOT modelled —
+// the firmware's ENABLE_SIM build redirects those to RAM/file-backed state.
+// Other on-chip peripherals are stubbed via `sysbus Tag` in the .resc script.
+
+cpu: CPU.CortexM @ sysbus
+    cpuType: "cortex-m0+"
+    nvic: nvic
+
+nvic: IRQControllers.NVIC @ sysbus 0xE000E000
+    systickFrequency: 64000000
+    IRQ -> cpu@0
+
+// 128 KB flash @ 0x08000000 (app vector table lives at 0x08002800).
+flash: Memory.MappedMemory @ sysbus 0x08000000
+    size: 0x20000
+
+// 16 KB SRAM @ 0x20000000.
+sram: Memory.MappedMemory @ sysbus 0x20000000
+    size: 0x4000
+
+// USART1 @ 0x40013800 — STM32F1-style SR/DR/BRR/CR1 register layout, which is
+// exactly what the PY32F071 USART uses.
+usart1: UART.STM32_UART @ sysbus <0x40013800, +0x100>
+    IRQ -> nvic@27
+
+// PY32F071 ADC (STM32F1-style). Custom model in sim/renode/PY32_ADC.cs.
+adc1: Analog.PY32_ADC @ sysbus <0x40012400, +0x400>

@@ -1,0 +1,19 @@
+:name: boot smoke test
+:description: Loads the firmware, runs 0.5s of guest time, reports CPU state.
+
+include $ORIGIN/run.resc
+
+echo "=== reset vector / initial state ==="
+cpu PC
+cpu SP
+
+echo "=== running 0.5s of guest time ==="
+emulation RunFor "0.5"
+
+echo "=== state after run ==="
+cpu PC
+cpu IsHalted
+echo "=== executed instructions ==="
+cpu ExecutedInstructions
+
+quit

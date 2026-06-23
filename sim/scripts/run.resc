@@ -1,0 +1,49 @@
+:name: UV-K5 V3 (PY32F071) simulator
+:description: Boots the f4hwn.sim firmware under Renode with a UART socket + GDB server.
+
+# The shipping firmware itself (built from this branch) is run unmodified.
+# Override with: renode -e "$elf=@/path/to.elf; i @run.resc"
+$elf ?= @build/Fusion/f4hwn.fusion.elf
+
+using sysbus
+mach create "uvk5v3"
+
+# Compile + load custom PY32F071 peripheral models before the platform that
+# references them.
+i $ORIGIN/../renode/PY32_ADC.cs
+
+machine LoadPlatformDescription $ORIGIN/../platforms/py32f071.repl
+
+# --- Stub on-chip peripherals the firmware pokes but we don't model ---
+# Returning all-ones makes every "ready"/"flag" poll pass (clocks locked, SPI
+# TXE/RXNE set, etc.) so init code never spins. Writes are ignored.
+# TIM1 (ADC1 is now a real model — see platform .repl)
+sysbus Tag <0x40012C00 0x400>  "TIM1"    0xFFFFFFFF
+# SPI1 = ST7565 LCD bus (display is read via serial, not this bus); SPI2 = PY25Q16 flash.
+# Return 0x03 = TXE|RXNE set, BSY clear, so "wait for ready / not-busy" loops exit.
+sysbus Tag <0x40013000 0x400>  "SPI1"    0x00000003
+sysbus Tag <0x40003800 0x400>  "SPI2"    0x00000003
+# DMA1 (UART RX DMA): NDTR reads as 0 for now
+sysbus Tag <0x40020000 0x400>  "DMA1"    0x00000000
+# RCC: all clock-ready bits set so init never spins
+sysbus Tag <0x40021000 0x400>  "RCC"     0xFFFFFFFF
+# FLASH controller: not busy
+sysbus Tag <0x40022000 0x400>  "FLASH"   0x00000000
+sysbus Tag <0x40005400 0x800>  "I2C_USB" 0xFFFFFFFF
+# GPIO: keyboard rows read high = no key pressed (active-low matrix)
+sysbus Tag <0x50000000 0x2000> "GPIO"    0xFFFFFFFF
+
+# --- Load firmware; point the core at the app vector table (no bootloader) ---
+macro reset
+"""
+    sysbus LoadELF $elf
+    cpu VectorTableOffset 0x08002800
+"""
+runMacro $reset
+
+# --- Expose USART1 as a TCP socket terminal on :3456 (the MCP serial backend) ---
+emulation CreateServerSocketTerminal 3456 "uart1socket"
+connector Connect usart1 uart1socket
+
+# --- GDB server on :3333 ---
+machine StartGdbServer 3333
