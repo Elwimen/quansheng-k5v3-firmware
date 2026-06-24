@@ -37,31 +37,23 @@ dma1: DMA.STM32LDMA @ sysbus <0x40020000, +0x400>
     // transfer regardless of the TC-interrupt-enable bit.
     3 -> nvic@11
 
-// SPI2 drives the PY25Q16 serial flash (DMA-based reads in PY25Q16_ReadBuffer).
-// STM32LDMA performs the transfer + fires the channel IRQ synchronously when the
-// firmware enables the DMA channel, so the flash read's TC wait completes; no
-// SPI DMA-request wiring is needed for this version.
-spi2: SPI.STM32SPI @ sysbus <0x40003800, +0x400>
-    IRQ -> nvic@26
-
 // Backing store for the flash, also visible on the bus at 0x90000000 so the
 // host can load/dump it as an external file (sim/data/spi_PY25Q16.bin).
 spiFlashMem: Memory.MappedMemory @ sysbus 0x90000000
     size: 0x200000
 
-// PY25Q16 (16 Mbit) — generic 25-series serial NOR flash.
-py25q16: SPI.GenericSpiFlash @ spi2
-    underlyingMemory: spiFlashMem
-    manufacturerId: 0x85
-    memoryType: 0x60
-    capacityCode: 0x15
+// SPI2 + PY25Q16 serial flash as one custom model: stock STM32SPI mis-serves the
+// firmware's RX-FIFO flush and the DMA read ordering. CS is bit-banged on PA3.
+// The DMA1 RX channel reads SPI2 DR (0x4000380C) and gets sequential flash bytes.
+spiFlash: SPI.PY32_SPIFlash @ sysbus <0x40003800, +0x400>
+    flashMemory: spiFlashMem
 
 // GPIOA — PY32 GPIO is STM32F0-style (MODER/IDR/ODR/BSRR). Modelled mainly to
 // frame PY25Q16 transactions: the firmware bit-bangs the flash chip-select on
 // PA3, and GenericSpiFlash.OnGPIO(0, high) = CS deasserted -> FinishTransmission.
 // (GPIOB/C/F stay stubbed high for now so the keyboard rows read "no key".)
 gpioPortA: GPIOPort.STM32_GPIOPort @ sysbus <0x50000000, +0x400>
-    3 -> py25q16@0
+    3 -> spiFlash@0
 
 // GPIOB carries the BK4819 SCL (PB8) + SDA (PB9), the keyboard matrix
 // (cols PB3..6, rows PB12..15) and PTT (PB10).
