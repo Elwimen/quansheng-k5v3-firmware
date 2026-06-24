@@ -50,13 +50,24 @@ renode --console --plain sim/scripts/boottest.resc   # headless smoke test
 | GPIOC | mmio 0x50000800 | stubbed high | not yet needed |
 | BK4819 radio | bit-bang GPIO PF9/PB8/PB9 | `PY32_BK4819.cs` | done — boots through RADIO_SetupRegisters |
 | keyboard matrix | GPIOB cols/rows + PTT | `PY32_KeyMatrix.cs` | done — holds "no key" (injection via serial) |
-| 24Cxx EEPROM / BK1080 | bit-bang I2C PF5/PF6 | TODO (custom + `GenericI2cEeprom`) | next — needed for battery calib / settings |
+| 24Cxx EEPROM / BK1080 | bit-bang I2C PF5/PF6 | `PY32_I2CBus.cs` | done — decoder + 8 KB EEPROM (file) + BK1080 stub |
 
-**Boot status:** the unmodified firmware now boots all the way into the main
-loop (`Main`/`APP_Update`/`APP_TimeSlice10ms` cycling, SysTick ticking). The
-display is blank only because, without the EEPROM, the battery calibration reads
-garbage → `gReducedService` mode. Modeling the I2C EEPROM (backed by a real dump)
-is the next step.
+**Boot status:** the unmodified firmware boots all the way into the main loop
+(`Main`/`APP_Update`/`APP_TimeSlice10ms`, SysTick ticking). Display is still blank
+because of the PY25Q16 flash, not the I2C bus:
+
+- On V3 the **settings + calibration live in the PY25Q16 SPI flash** (`settings.c`
+  reads via `PY25Q16_ReadBuffer`; `eeprom_compat.c` maps the logical EEPROM layout
+  onto flash sectors). The I2C bus only carries the BK1080 (FM) actively.
+- The stock Renode `STM32SPI` can't serve this flash faithfully: polling reads come
+  back **offset by ~3 bytes** (the firmware flushes the RX FIFO via
+  `LL_SPI_GetRxFIFOLevel`/FRLVL, which `STM32SPI` doesn't model), and DMA reads
+  (≥16 B) return zeros (the firmware enables the RX channel before the TX channel
+  that clocks data out). So `gBatteryCalibration` is garbage → `gReducedService`.
+
+**Next:** a custom **PY32 SPI2 flash controller** that frames on the PA3 CS, models
+the RX FIFO, and serves the file-backed flash correctly on both polling and DMA
+reads — plus seeding the flash image with real settings/calibration.
 
 The flash backing image is `sim/data/spi_PY25Q16.bin` (2 MB, blank = 0xFF),
 loaded at start and visible on the bus at 0x90000000 for host inspection.

@@ -13,6 +13,7 @@ mach create "uvk5v3"
 i $ORIGIN/../renode/PY32_ADC.cs
 i $ORIGIN/../renode/PY32_BK4819.cs
 i $ORIGIN/../renode/PY32_KeyMatrix.cs
+i $ORIGIN/../renode/PY32_I2CBus.cs
 
 # Monitor commands save_flash / load_flash for the PY25Q16 image.
 i $ORIGIN/../renode/flash_persist.py
@@ -47,6 +48,9 @@ runMacro $reset
 # Seed the PY25Q16 serial flash from its external image (channel attributes,
 # voice clips, ...). Blank (0xFF) flash is fine; the firmware uses defaults.
 sysbus LoadBinary $ORIGIN/../data/spi_PY25Q16.bin 0x90000000
+
+# Seed the EEPROM from a real device dump (calibration + settings).
+sysbus LoadBinary $ORIGIN/../data/eeprom.bin 0x90200000
 
 # --- Expose USART1 as a TCP socket terminal on :3456 (the MCP serial backend) ---
 emulation CreateServerSocketTerminal 3456 "uart1socket"

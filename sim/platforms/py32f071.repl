@@ -73,9 +73,22 @@ gpioPortB: GPIOPort.STM32_GPIOPort @ sysbus <0x50000400, +0x400>
     5 -> keyMatrix@2
     6 -> keyMatrix@3
 
-// GPIOF carries the BK4819 chip-select (PF9).
+// GPIOF carries the BK4819 chip-select (PF9) and the bit-banged I2C bus
+// (SCL=PF5, SDA=PF6) shared by the EEPROM and the BK1080.
 gpioPortF: GPIOPort.STM32_GPIOPort @ sysbus <0x50001400, +0x400>
     9 -> bk4819@0
+    5 -> i2cBus@0
+    6 -> i2cBus@1
+
+// 8 KB / 24C64 EEPROM backing store, file-seeded; also on the bus at 0x90200000
+// for host inspection / persistence.
+eepromMem: Memory.MappedMemory @ sysbus 0x90200000
+    size: 0x2000
+
+// Bit-banged I2C bus decoder: EEPROM (0xA0) + BK1080 stub (0x80).
+i2cBus: Miscellaneous.PY32_I2CBus @ none
+    eepromMemory: eepromMem
+    SdaOut -> gpioPortF@6
 
 // BK4819 RF transceiver — 3-wire bit-banged. Custom model.
 // SdaOut drives the SDA line back to the MCU (GPIOB pin 9 input).
