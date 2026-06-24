@@ -53,6 +53,17 @@ renode --console --plain sim/scripts/boottest.resc   # headless smoke test
 
 The flash backing image is `sim/data/spi_PY25Q16.bin` (2 MB, blank = 0xFF),
 loaded at start and visible on the bus at 0x90000000 for host inspection.
+It is in-RAM, so firmware writes are not written through to disk; persist on
+demand / on exit / periodically with the monitor commands from
+`sim/renode/flash_persist.py`:
+
+```
+(monitor) save_flash @sim/data/spi_PY25Q16.bin   # snapshot flash -> file
+(monitor) load_flash @sim/data/spi_PY25Q16.bin   # restore file  -> flash
+```
+
+(Renode's `Save`/`Load` can snapshot the *entire* machine incl. RAM, but that
+is an opaque whole-emulation blob, not a raw flash image.)
 
 Unmodelled on-chip registers (RCC, FLASH, SPI status, etc.) are stubbed with
 `sysbus Tag` in `run.resc` and will be replaced by real models as needed.

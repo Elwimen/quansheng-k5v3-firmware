@@ -12,6 +12,9 @@ mach create "uvk5v3"
 # references them.
 i $ORIGIN/../renode/PY32_ADC.cs
 
+# Monitor commands save_flash / load_flash for the PY25Q16 image.
+i $ORIGIN/../renode/flash_persist.py
+
 machine LoadPlatformDescription $ORIGIN/../platforms/py32f071.repl
 
 # --- Stub on-chip peripherals the firmware pokes but we don't model ---
