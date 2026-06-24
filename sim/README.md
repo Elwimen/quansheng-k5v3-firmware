@@ -45,9 +45,10 @@ renode --console --plain sim/scripts/boottest.resc   # headless smoke test
 | USART1 | mmio 0x40013800 | Renode `STM32_UART` | done (TX; RX/DMA pending) |
 | DMA1 | mmio 0x40020000 | Renode `STM32LDMA` | done (channel-enable transfer + TC IRQ) |
 | SPI2 | mmio 0x40003800 | Renode `STM32SPI` | done |
-| PY25Q16 flash | SPI2 | Renode `GenericSpiFlash`, file-backed | partial — DMA read OK; status/write needs CS GPIO |
-| GPIO A/B/C/F | mmio 0x50000000 | TODO (Renode `STM32_GPIOPort`) | next (CS framing, keyboard, bit-bang CS) |
-| BK4819 radio | bit-bang GPIO PF9/PB8/PB9 | TODO (custom C#) | pending |
+| PY25Q16 flash | SPI2 | Renode `GenericSpiFlash`, file-backed | read+write framed via GPIOA CS; DMA read returns 0s (content correctness pending custom SPI2/DMA) |
+| GPIOA | mmio 0x50000000 | Renode `STM32_GPIOPort` | done — PA3 wired to flash CS |
+| GPIOB/C/F | mmio 0x50000400+ | stubbed high (keyboard reads "no key") | model with keyboard + BK4819/EEPROM CS later |
+| BK4819 radio | bit-bang GPIO PF9/PB8/PB9 | TODO (custom C#) | next — current boot blocker |
 | 24Cxx EEPROM / BK1080 | bit-bang I2C PF5/PF6 | TODO (custom + `GenericI2cEeprom`) | pending |
 
 The flash backing image is `sim/data/spi_PY25Q16.bin` (2 MB, blank = 0xFF),

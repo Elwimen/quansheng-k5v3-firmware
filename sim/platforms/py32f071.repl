@@ -55,3 +55,10 @@ py25q16: SPI.GenericSpiFlash @ spi2
     manufacturerId: 0x85
     memoryType: 0x60
     capacityCode: 0x15
+
+// GPIOA — PY32 GPIO is STM32F0-style (MODER/IDR/ODR/BSRR). Modelled mainly to
+// frame PY25Q16 transactions: the firmware bit-bangs the flash chip-select on
+// PA3, and GenericSpiFlash.OnGPIO(0, high) = CS deasserted -> FinishTransmission.
+// (GPIOB/C/F stay stubbed high for now so the keyboard rows read "no key".)
+gpioPortA: GPIOPort.STM32_GPIOPort @ sysbus <0x50000000, +0x400>
+    3 -> py25q16@0

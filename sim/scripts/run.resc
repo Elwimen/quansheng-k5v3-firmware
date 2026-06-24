@@ -28,8 +28,9 @@ sysbus Tag <0x40021000 0x400>  "RCC"     0xFFFFFFFF
 # FLASH controller: not busy
 sysbus Tag <0x40022000 0x400>  "FLASH"   0x00000000
 sysbus Tag <0x40005400 0x800>  "I2C_USB" 0xFFFFFFFF
-# GPIO: keyboard rows read high = no key pressed (active-low matrix)
-sysbus Tag <0x50000000 0x2000> "GPIO"    0xFFFFFFFF
+# GPIOB/C/F still stubbed high (keyboard rows read high = no key pressed).
+# GPIOA (0x50000000) is now a real model — see platform .repl.
+sysbus Tag <0x50000400 0x1C00> "GPIO_BCF" 0xFFFFFFFF
 
 # --- Load firmware; point the core at the app vector table (no bootloader) ---
 macro reset
