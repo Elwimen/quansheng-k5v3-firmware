@@ -22,8 +22,9 @@ sram: Memory.MappedMemory @ sysbus 0x20000000
 
 // USART1 @ 0x40013800 — STM32F1-style SR/DR/BRR/CR1 register layout, which is
 // exactly what the PY32F071 USART uses.
-usart1: UART.STM32_UART @ sysbus <0x40013800, +0x100>
-    IRQ -> nvic@27
+// USART1 with the firmware's circular RX DMA emulated (custom model). The
+// firmware uses DMA for RX and polled TX, so no UART interrupt is needed.
+usart1: UART.PY32_UART @ sysbus <0x40013800, +0x100>
 
 // PY32F071 ADC (STM32F1-style). Custom model in sim/renode/PY32_ADC.cs.
 adc1: Analog.PY32_ADC @ sysbus <0x40012400, +0x400>

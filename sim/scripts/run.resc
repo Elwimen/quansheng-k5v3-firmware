@@ -11,6 +11,7 @@ mach create "uvk5v3"
 # Compile + load custom PY32F071 peripheral models before the platform that
 # references them.
 i $ORIGIN/../renode/PY32_ADC.cs
+i $ORIGIN/../renode/PY32_UART.cs
 i $ORIGIN/../renode/PY32_SPIFlash.cs
 i $ORIGIN/../renode/PY32_BK4819.cs
 i $ORIGIN/../renode/PY32_KeyMatrix.cs
