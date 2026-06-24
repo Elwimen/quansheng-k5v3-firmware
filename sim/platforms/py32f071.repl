@@ -62,3 +62,31 @@ py25q16: SPI.GenericSpiFlash @ spi2
 // (GPIOB/C/F stay stubbed high for now so the keyboard rows read "no key".)
 gpioPortA: GPIOPort.STM32_GPIOPort @ sysbus <0x50000000, +0x400>
     3 -> py25q16@0
+
+// GPIOB carries the BK4819 SCL (PB8) + SDA (PB9), the keyboard matrix
+// (cols PB3..6, rows PB12..15) and PTT (PB10).
+gpioPortB: GPIOPort.STM32_GPIOPort @ sysbus <0x50000400, +0x400>
+    8 -> bk4819@1
+    9 -> bk4819@2
+    3 -> keyMatrix@0
+    4 -> keyMatrix@1
+    5 -> keyMatrix@2
+    6 -> keyMatrix@3
+
+// GPIOF carries the BK4819 chip-select (PF9).
+gpioPortF: GPIOPort.STM32_GPIOPort @ sysbus <0x50001400, +0x400>
+    9 -> bk4819@0
+
+// BK4819 RF transceiver — 3-wire bit-banged. Custom model.
+// SdaOut drives the SDA line back to the MCU (GPIOB pin 9 input).
+bk4819: Miscellaneous.PY32_BK4819 @ none
+    SdaOut -> gpioPortB@9
+
+// Key-matrix stub: holds rows + PTT high ("no key") so the firmware doesn't see
+// phantom presses. Key injection goes through the serial protocol instead.
+keyMatrix: Miscellaneous.PY32_KeyMatrix @ none
+    Row0 -> gpioPortB@12
+    Row1 -> gpioPortB@13
+    Row2 -> gpioPortB@14
+    Row3 -> gpioPortB@15
+    Ptt -> gpioPortB@10

@@ -46,10 +46,17 @@ renode --console --plain sim/scripts/boottest.resc   # headless smoke test
 | DMA1 | mmio 0x40020000 | Renode `STM32LDMA` | done (channel-enable transfer + TC IRQ) |
 | SPI2 | mmio 0x40003800 | Renode `STM32SPI` | done |
 | PY25Q16 flash | SPI2 | Renode `GenericSpiFlash`, file-backed | read+write framed via GPIOA CS; DMA read returns 0s (content correctness pending custom SPI2/DMA) |
-| GPIOA | mmio 0x50000000 | Renode `STM32_GPIOPort` | done — PA3 wired to flash CS |
-| GPIOB/C/F | mmio 0x50000400+ | stubbed high (keyboard reads "no key") | model with keyboard + BK4819/EEPROM CS later |
-| BK4819 radio | bit-bang GPIO PF9/PB8/PB9 | TODO (custom C#) | next — current boot blocker |
-| 24Cxx EEPROM / BK1080 | bit-bang I2C PF5/PF6 | TODO (custom + `GenericI2cEeprom`) | pending |
+| GPIOA / GPIOB / GPIOF | mmio 0x50000000+ | Renode `STM32_GPIOPort` | done (flash CS, BK4819, keyboard) |
+| GPIOC | mmio 0x50000800 | stubbed high | not yet needed |
+| BK4819 radio | bit-bang GPIO PF9/PB8/PB9 | `PY32_BK4819.cs` | done — boots through RADIO_SetupRegisters |
+| keyboard matrix | GPIOB cols/rows + PTT | `PY32_KeyMatrix.cs` | done — holds "no key" (injection via serial) |
+| 24Cxx EEPROM / BK1080 | bit-bang I2C PF5/PF6 | TODO (custom + `GenericI2cEeprom`) | next — needed for battery calib / settings |
+
+**Boot status:** the unmodified firmware now boots all the way into the main
+loop (`Main`/`APP_Update`/`APP_TimeSlice10ms` cycling, SysTick ticking). The
+display is blank only because, without the EEPROM, the battery calibration reads
+garbage → `gReducedService` mode. Modeling the I2C EEPROM (backed by a real dump)
+is the next step.
 
 The flash backing image is `sim/data/spi_PY25Q16.bin` (2 MB, blank = 0xFF),
 loaded at start and visible on the bus at 0x90000000 for host inspection.
