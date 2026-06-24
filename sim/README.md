@@ -42,7 +42,7 @@ renode --console --plain sim/scripts/boottest.resc   # headless smoke test
 | Peripheral | Bus | Model | State |
 |---|---|---|---|
 | ADC1 (battery) | mmio 0x40012400 | `PY32_ADC.cs` | done — calibration + conversion |
-| USART1 | mmio 0x40013800 | Renode `STM32_UART` | done (TX; RX/DMA pending) |
+| USART1 | mmio 0x40013800 | `PY32_UART.cs` | done — TX + circular RX DMA (bidirectional serial) |
 | DMA1 | mmio 0x40020000 | Renode `STM32LDMA` | done (channel-enable transfer + TC IRQ) |
 | SPI2 + PY25Q16 flash | mmio 0x40003800 + PA3 CS | `PY32_SPIFlash.cs`, file-backed | done — correct polling + DMA reads, program/erase |
 | GPIOA / GPIOB / GPIOF | mmio 0x50000000+ | Renode `STM32_GPIOPort` | done (flash CS, BK4819, keyboard) |
