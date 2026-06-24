@@ -53,9 +53,13 @@ sysbus LoadBinary $ORIGIN/../data/spi_PY25Q16.bin 0x90000000
 # Seed the EEPROM from a real device dump (calibration + settings).
 sysbus LoadBinary $ORIGIN/../data/eeprom.bin 0x90200000
 
-# --- Expose USART1 as a TCP socket terminal on :3456 (the MCP serial backend) ---
-emulation CreateServerSocketTerminal 3456 "uart1socket"
-connector Connect usart1 uart1socket
+# --- Expose USART1 as a host serial device (PTY symlinked to $uartDev) ---
+# No root needed for a user-writable path; tools (CHIRP, k5viewer.py, the MCP)
+# open $uartDev as if it were the radio's serial port. For a literal /dev/ttyUV0
+# add a one-time:  sudo ln -sf $uartDev /dev/ttyUV0
+$uartDev ?= "/tmp/ttyUV0"
+emulation CreateUartPtyTerminal "uvuart" $uartDev true
+connector Connect usart1 uvuart
 
 # --- GDB server on :3333 ---
 machine StartGdbServer 3333
