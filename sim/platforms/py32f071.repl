@@ -27,3 +27,31 @@ usart1: UART.STM32_UART @ sysbus <0x40013800, +0x100>
 
 // PY32F071 ADC (STM32F1-style). Custom model in sim/renode/PY32_ADC.cs.
 adc1: Analog.PY32_ADC @ sysbus <0x40012400, +0x400>
+
+// DMA1 — PY32F0 uses the channel-based STM32F0/L0 layout (CCR/CNDTR/CPAR/CMAR,
+// channel N at 0x08 + (N-1)*0x14), matched by STM32LDMA.
+dma1: DMA.STM32LDMA @ sysbus <0x40020000, +0x400>
+    // DMA1 channels 4..7 share IRQ 11. Only the flash RX channel (ch4 = index 3)
+    // has its TC interrupt enabled by the firmware; wiring the TX channel (ch5)
+    // too would storm, because this STM32LDMA asserts the channel IRQ on every
+    // transfer regardless of the TC-interrupt-enable bit.
+    3 -> nvic@11
+
+// SPI2 drives the PY25Q16 serial flash (DMA-based reads in PY25Q16_ReadBuffer).
+// STM32LDMA performs the transfer + fires the channel IRQ synchronously when the
+// firmware enables the DMA channel, so the flash read's TC wait completes; no
+// SPI DMA-request wiring is needed for this version.
+spi2: SPI.STM32SPI @ sysbus <0x40003800, +0x400>
+    IRQ -> nvic@26
+
+// Backing store for the flash, also visible on the bus at 0x90000000 so the
+// host can load/dump it as an external file (sim/data/spi_PY25Q16.bin).
+spiFlashMem: Memory.MappedMemory @ sysbus 0x90000000
+    size: 0x200000
+
+// PY25Q16 (16 Mbit) — generic 25-series serial NOR flash.
+py25q16: SPI.GenericSpiFlash @ spi2
+    underlyingMemory: spiFlashMem
+    manufacturerId: 0x85
+    memoryType: 0x60
+    capacityCode: 0x15

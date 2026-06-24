@@ -43,10 +43,15 @@ renode --console --plain sim/scripts/boottest.resc   # headless smoke test
 |---|---|---|---|
 | ADC1 (battery) | mmio 0x40012400 | `PY32_ADC.cs` | done — calibration + conversion |
 | USART1 | mmio 0x40013800 | Renode `STM32_UART` | done (TX; RX/DMA pending) |
-| PY25Q16 flash | SPI2 + DMA1 | TODO (Renode `GenericSpiFlash` + `STM32G0DMA`) | next |
-| GPIO A/B/C/F | mmio 0x50000000 | TODO (Renode `STM32_GPIOPort`) | pending |
-| BK4819 radio | bit-bang GPIO PF9/PB8/PB9 | TODO (custom) | pending |
+| DMA1 | mmio 0x40020000 | Renode `STM32LDMA` | done (channel-enable transfer + TC IRQ) |
+| SPI2 | mmio 0x40003800 | Renode `STM32SPI` | done |
+| PY25Q16 flash | SPI2 | Renode `GenericSpiFlash`, file-backed | partial — DMA read OK; status/write needs CS GPIO |
+| GPIO A/B/C/F | mmio 0x50000000 | TODO (Renode `STM32_GPIOPort`) | next (CS framing, keyboard, bit-bang CS) |
+| BK4819 radio | bit-bang GPIO PF9/PB8/PB9 | TODO (custom C#) | pending |
 | 24Cxx EEPROM / BK1080 | bit-bang I2C PF5/PF6 | TODO (custom + `GenericI2cEeprom`) | pending |
+
+The flash backing image is `sim/data/spi_PY25Q16.bin` (2 MB, blank = 0xFF),
+loaded at start and visible on the bus at 0x90000000 for host inspection.
 
 Unmodelled on-chip registers (RCC, FLASH, SPI status, etc.) are stubbed with
 `sysbus Tag` in `run.resc` and will be replaced by real models as needed.
