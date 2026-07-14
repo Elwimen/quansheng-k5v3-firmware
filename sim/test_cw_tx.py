@@ -30,7 +30,12 @@ FLASH_IMAGE = os.path.join(SANDBOX, "spi_PY25Q16.bin")
 KEY_LOG = os.path.join(SANDBOX, "keying.csv")
 
 ACTION_CW_CHAT = 24          # ACTION_OPT_CW_CHAT
-TOLERANCE_MS = 12            # one 10ms scheduler tick, plus a little
+DISPLAY_CW_CHAT = 5          # gScreenToDisplay when the CW chat screen is up
+# Tight on purpose. Elements are whole 10ms ticks and the measured jitter is a few ms
+# below nominal, so anything approaching a full tick of error is a real bug -- a tolerance
+# of a whole tick would have happily accepted the off-by-one that made every element 10ms
+# long (dash/dot 2.78 instead of 3).
+TOLERANCE_MS = 6
 
 # The letter 'A' is dot-dash: the shortest thing that pins down both element lengths and
 # the gap between them. Key '2' types it (T9: "ABC2", first press).
@@ -71,10 +76,34 @@ def boot(wpm):
     return mon
 
 
+def wait_for(predicate, what, timeout=10):
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if predicate():
+            return
+        time.sleep(0.4)
+    sys.exit(f"radio never {what}")
+
+
 def transmit(mon):
-    """Open CW chat, type the letter, and hit PTT. Returns the keyed/unkeyed durations."""
-    uvctl.press(["SIDE1"], delay=1.2)          # CW chat screen
-    uvctl.press([LETTER_KEY], delay=1.8)       # T9 -> the letter
+    """Open CW chat, type the letter, and hit PTT. Returns the keyed/unkeyed durations.
+
+    Each step is confirmed against the firmware's own state rather than assumed: pressing
+    PTT with no letter composed, or on the wrong screen, transmits nothing at all, which
+    would look like a timing failure.
+    """
+    screen = uvctl.symbol("gScreenToDisplay")
+    compose = uvctl.symbol("cw_compose")
+
+    for _ in range(3):
+        uvctl.press(["SIDE1"], delay=1.2)                       # CW chat screen
+        if mon.read_bytes(screen, 1)[0] == DISPLAY_CW_CHAT:
+            break
+    wait_for(lambda: mon.read_bytes(screen, 1)[0] == DISPLAY_CW_CHAT, "reached the CW screen")
+
+    uvctl.press([LETTER_KEY], delay=1.2)                        # T9 -> the letter
+    wait_for(lambda: mon.read_bytes(compose, 1)[0] == ord(LETTER),
+             f"composed '{LETTER}'")
     before = len(rows())
 
     # PTT cannot be injected over serial (the firmware blocks it), so pull the real line.
@@ -99,43 +128,67 @@ def transmit(mon):
 
 def check(wpm):
     print(f"  {wpm:2d} WPM  ", end="", flush=True)
+
+    ideal = 1200 // wpm
+    # The firmware counts its 10ms scheduler ticks, so it can only produce whole ticks:
+    # dit_ticks = 1200/(WPM*10). At 25 WPM that is 4 ticks = 40ms, not the ideal 48ms.
+    # That quantisation is inherent, so the elements are checked against what the firmware
+    # can actually key, and the quantisation error is reported separately below.
+    dot = max(1, ideal // 10) * 10
+
     mon = boot(wpm)
     intervals = transmit(mon)
     mon.close()
 
-    dot = 1200 // wpm
-    # Arming toggles the PA and the mute a few ms apart; a real element is never that
-    # short, so anything under a third of a dot is not an element.
-    elements = [(ms, keyed) for ms, keyed in intervals if ms > dot // 3]
+    # Arming toggles the PA and the TX mute a few ms apart, which shows up as a short blip
+    # before the first element. A real element is a whole number of 10ms ticks, so anything
+    # shorter than most of a dot is not one -- and the run starts at the first real element.
+    floor = max(25, dot * 6 // 10)
+    start = next((i for i, (ms, on) in enumerate(intervals) if on and ms >= floor), None)
+    if start is None:
+        print(f"FAIL — nothing was keyed for longer than {floor}ms: {intervals}")
+        return False
+    elements = [(ms, on) for ms, on in intervals[start:] if ms >= floor]
+
     keyed = [ms for ms, on in elements if on]
     gaps = [ms for ms, on in elements if not on]
-
     if len(keyed) < 2:
         print(f"FAIL — expected 2 elements for '{LETTER}' ({PATTERN}), got {len(keyed)}: {keyed}")
         return False
 
     sent = "".join("-" if ms > 2 * dot else "." for ms in keyed[:2])
     if sent != PATTERN:
-        print(f"FAIL — sent '{sent}', expected '{PATTERN}' for '{LETTER}'")
+        print(f"FAIL — sent '{sent}' ({keyed[:2]} ms), expected '{PATTERN}' for '{LETTER}'")
         return False
 
-    problems = []
-    if abs(keyed[0] - dot) > TOLERANCE_MS:
-        problems.append(f"dot {keyed[0]}ms, expected {dot}ms")
-    if abs(keyed[1] - 3 * dot) > TOLERANCE_MS:
-        problems.append(f"dash {keyed[1]}ms, expected {3 * dot}ms")
-    if gaps and abs(gaps[0] - dot) > TOLERANCE_MS:
-        problems.append(f"element gap {gaps[0]}ms, expected {dot}ms")
+    if not gaps:
+        print(f"FAIL — no gap between the elements: {elements}")
+        return False
 
-    ratio = keyed[1] / keyed[0]
-    if abs(ratio - 3.0) > 0.25:
+    # An edge is written when the firmware gets round to keying it, which wobbles a few ms
+    # inside the tick -- and on a 4-tick dot (25 WPM) that wobble is a big fraction of the
+    # element. It cancels over a whole cycle, though: a dot that starts late ends late, so
+    # the gap that follows absorbs it. So measure the cycle (dot + gap = two dots) and take
+    # the unit from that. It is stable to ~1ms, while the off-by-one shifts it by a full
+    # tick, which is exactly the discrimination this test needs.
+    unit = (keyed[0] + gaps[0]) / 2
+
+    problems = []
+    if abs(unit - dot) > TOLERANCE_MS:
+        problems.append(f"dot {unit:.0f}ms (from dot+gap), expected {dot}ms")
+    if abs(keyed[1] - 3 * dot) > TOLERANCE_MS + 2:
+        problems.append(f"dash {keyed[1]}ms, expected {3 * dot}ms")
+
+    ratio = keyed[1] / unit
+    if abs(ratio - 3.0) > 0.4:
         problems.append(f"dash/dot = {ratio:.2f}, expected 3.00")
 
     if problems:
         print("FAIL — " + "; ".join(problems))
         return False
 
-    print(f"ok — '{PATTERN}'  dot {keyed[0]}ms  dash {keyed[1]}ms  ratio {ratio:.2f}")
+    drift = f"  [{dot}ms dot vs {ideal}ms ideal: 10ms tick]" if dot != ideal else ""
+    print(f"ok — '{PATTERN}'  dot {unit:.0f}ms  dash {keyed[1]}ms  ratio {ratio:.2f}{drift}")
     return True
 
 

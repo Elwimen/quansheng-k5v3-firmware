@@ -42,6 +42,11 @@ jobs:
     - name: Settings survive a power cycle
       run: ./sim/test_persist.py
 
+    # Type a letter into the CW chat screen, press PTT, and measure the keying the firmware
+    # sends to the BK4819 against the definition of Morse (a dot is 1200/WPM ms).
+    - name: CW keying is correct Morse
+      run: ./sim/test_cw_tx.py
+
     - name: Upload failing screens
       if: failure()
       uses: actions/upload-artifact@v4

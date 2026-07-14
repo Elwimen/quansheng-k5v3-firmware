@@ -133,6 +133,27 @@ SPI2 → the image, and back. Verified to catch a real regression by deleting th
 write from `settings.c`: both CW cases failed, naming the flash address, while the
 unrelated squelch case still passed.
 
+`sim/test_cw_tx.py` checks the radio actually sends correct Morse:
+
+```bash
+./sim/test_cw_tx.py            # types a letter, presses PTT, measures the keying
+./sim/test_cw_tx.py --only 15
+```
+
+The keying is recorded from the BK4819 as the firmware keys it -- the PA on REG_33 (OOK)
+or the TX mute on REG_50 (AFCW) -- with *emulated* timestamps, so the measurement does not
+depend on how fast Renode runs (`UVK5_CW_KEYLOG=<file>` switches the recording on). A dot
+is 1200/WPM ms, a dash is three dots, the gap between elements is one dot; the test asserts
+that shape at several speeds. PTT cannot be injected over serial (the firmware blocks it on
+purpose), so the key matrix pulls the real pin via the `ptt_press` / `ptt_release` monitor
+commands.
+
+It found a real bug: every element and gap ran one 10ms tick long, so a 15 WPM dot was 90ms
+instead of 80 and dash/dot was 2.78 rather than 3 -- worse at speed, since at 25 WPM that
+tick is +25%. Note the firmware can only key whole 10ms ticks, so above ~20 WPM the dot is
+quantised (at 25 WPM `dit_ticks` is 4, i.e. 40ms rather than the ideal 48ms); the test
+checks what the firmware can actually produce and reports the quantisation.
+
 `sim/test_ui.py` uses it for golden-screen tests:
 
 ```bash

@@ -236,7 +236,15 @@ static void cw_tx_tick(void)
         return;
     }
 
-    if (tx_tick > 0) { tx_tick--; return; }
+    /* A loaded tx_tick of N must last N ticks. The tick that ends the wait also runs the
+       next state, so decrement first and fall through on the tick that reaches zero --
+       returning here as well would spend one extra tick, making every element and gap
+       10ms too long (a 15 WPM dot came out 90ms instead of 80, and a dash 250ms instead
+       of 240, so dash/dot was 2.78 rather than 3). */
+    if (tx_tick > 0) {
+        if (--tx_tick > 0)
+            return;
+    }
 
     const bool ook = (gCurrentVfo != NULL && gCurrentVfo->Modulation == MODULATION_CW);
 
