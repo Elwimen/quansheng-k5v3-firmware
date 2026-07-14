@@ -51,6 +51,11 @@ class Monitor:
         self.command("mach set 0")
 
     def command(self, cmd):
+        # Discard anything still pending first. Renode's connect banner ends in a prompt
+        # of its own, so a reply read "up to the next prompt" can be one command behind
+        # -- and then every read after it returns the *previous* command's output, which
+        # is a race that silently hands back plausible-looking garbage.
+        self._drain()
         self.sock.sendall((cmd + "\n").encode())
         out = ""
         while "(uvk5v3)" not in out:
@@ -60,6 +65,16 @@ class Monitor:
             out += data.decode(errors="replace")
         return out
 
+    def _drain(self):
+        self.sock.settimeout(0.05)
+        try:
+            while self.sock.recv(65536):
+                pass
+        except OSError:
+            pass
+        finally:
+            self.sock.settimeout(15)
+
     def read_bytes(self, addr, count):
         out = self.command(f"sysbus ReadBytes 0x{addr:08X} {count}")
         return bytes(int(b, 16) for b in re.findall(r"0x([0-9A-Fa-f]{2})[,\]]", out))
@@ -68,20 +83,44 @@ class Monitor:
         self.sock.close()
 
 
+_symbols = None
+
+
 def symbols():
-    """gFrameBuffer/gStatusLine move with every build, so read them from the ELF."""
-    if not os.path.isfile(ELF):
-        sys.exit(f"no firmware at {ELF} — build first")
-    nm = subprocess.run(["arm-none-eabi-nm", ELF], capture_output=True, text=True).stdout
-    found = {}
-    for line in nm.splitlines():
-        parts = line.split()
-        if len(parts) == 3 and parts[2] in ("gFrameBuffer", "gStatusLine"):
-            found[parts[2]] = int(parts[0], 16)
-    missing = {"gFrameBuffer", "gStatusLine"} - set(found)
-    if missing:
-        sys.exit(f"symbols not found in {ELF}: {', '.join(sorted(missing))}")
-    return found
+    """Every symbol moves with every build, so read them from the ELF each time."""
+    global _symbols
+    if _symbols is None:
+        if not os.path.isfile(ELF):
+            sys.exit(f"no firmware at {ELF} — build first")
+        nm = subprocess.run(["arm-none-eabi-nm", ELF], capture_output=True, text=True).stdout
+        _symbols = {p[2]: int(p[0], 16)
+                    for p in (line.split() for line in nm.splitlines()) if len(p) == 3}
+    return _symbols
+
+
+def symbol(name):
+    addr = symbols().get(name)
+    if addr is None:
+        sys.exit(f"symbol '{name}' not found in {ELF}")
+    return addr
+
+
+def field_offset(struct, field):
+    """Offset of a field, straight out of the DWARF -- no hand-counted struct layouts."""
+    out = subprocess.run(
+        ["arm-none-eabi-gdb", "-q", ELF, "-batch",
+         "-ex", f"print (int)&(({struct} *)0)->{field}"],
+        capture_output=True, text=True).stdout
+    match = re.search(r"=\s*(\d+)", out)
+    if not match:
+        sys.exit(f"could not find {struct}.{field} in the debug info: {out.strip()}")
+    return int(match.group(1))
+
+
+def read_setting(mon, field, size=1):
+    """Read a gEeprom field out of the running radio's RAM."""
+    raw = mon.read_bytes(symbol("gEeprom") + field_offset("EEPROM_Config_t", field), size)
+    return int.from_bytes(raw, "little")
 
 
 def grab(mon):
@@ -130,6 +169,30 @@ def press(keys, long_press=False, delay=0.4):
             ser.write(bytes([0xAA, 0x55, kind, KEYS[key]]))
             ser.flush()
             time.sleep(delay)
+
+
+def menu_item(mon):
+    """The menu entry the cursor is on, read from MenuList[] rather than the screen.
+
+    Driving menus by counting keypresses is guesswork: the list wraps, entries are
+    hidden depending on the build, and the screen lags a keypress behind. The firmware
+    knows exactly where it is, so ask it. t_menu_item is { char name[7]; uint8_t id; }.
+    """
+    cursor = mon.read_bytes(symbol("gMenuCursor"), 1)[0]
+    entry = mon.read_bytes(symbol("MenuList") + cursor * 8, 8)
+    return entry[:7].split(b"\x00")[0].decode(errors="replace")
+
+
+def menu_goto(mon, target, steps=90):
+    """Open the menu and walk to a named entry (UP wraps, so the CW block is near)."""
+    press(["MENU"], delay=0.4)
+    time.sleep(0.5)
+    for _ in range(steps):   # the menu has ~77 entries, so allow a full lap
+        if menu_item(mon) == target:
+            return
+        press(["UP"], delay=0.35)
+        time.sleep(0.3)
+    sys.exit(f"could not reach menu entry '{target}' (stuck on '{menu_item(mon)}')")
 
 
 def wait_ready(mon, timeout=120):

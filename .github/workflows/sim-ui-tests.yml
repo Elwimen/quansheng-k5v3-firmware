@@ -37,6 +37,11 @@ jobs:
     - name: Golden-screen UI tests
       run: ./sim/test_ui.py
 
+    # Change a setting through the real UI, power-cycle the radio, and check the firmware
+    # reads it back: settings.c -> eeprom_compat.c -> PY25Q16 -> flash and back again.
+    - name: Settings survive a power cycle
+      run: ./sim/test_persist.py
+
     - name: Upload failing screens
       if: failure()
       uses: actions/upload-artifact@v4

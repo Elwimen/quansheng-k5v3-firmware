@@ -111,6 +111,28 @@ split matters: two readers on the port would split the byte stream and steal fra
 from a watching browser, but writing is harmless — so this works with the viewer open,
 and you can watch scripted keypresses land on screen.
 
+`uvctl` can also read the firmware's own state, which makes scripted UI work deterministic:
+`menu_goto()` walks to a named menu entry by reading `MenuList[gMenuCursor]` instead of
+counting keypresses (the list wraps, the screen lags a press behind, and entries are hidden
+per build), and `read_setting()` reads a `gEeprom` field using the field offset out of the
+DWARF, so nothing hand-counts a struct layout.
+
+`sim/test_persist.py` checks that a setting the user changes actually survives a power
+cycle — the regression that otherwise only shows up on real hardware, weeks later, when a
+radio forgets everything as its battery comes out:
+
+```bash
+./sim/test_persist.py            # change it in the menu, cold-restart, read it back
+./sim/test_persist.py --only cw
+```
+
+Each case changes a setting through the real UI, asserts it reached the flash image on
+disk, then kills the simulator, cold-starts it, and asserts the firmware parsed the value
+back. Nothing is stubbed: it goes settings.c → eeprom_compat.c → PY25Q16_WriteBuffer →
+SPI2 → the image, and back. Verified to catch a real regression by deleting the CW block's
+write from `settings.c`: both CW cases failed, naming the flash address, while the
+unrelated squelch case still passed.
+
 `sim/test_ui.py` uses it for golden-screen tests:
 
 ```bash
