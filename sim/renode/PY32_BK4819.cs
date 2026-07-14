@@ -310,7 +310,13 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         // BK4819_GetAfTxRx reads REG_6F<5:0>: the AF input amplitude in dB, 0..63.
         private const int AfAmplitudeRegister = 0x6F;
         private const ushort RxNoiseFloor = 3;
-        private const ushort RxTone = 40;
+        // The firmware auto-calibrates its threshold to (noise + 10) and then smooths the
+        // amplitude with an IIR whose decay is slower than its rise. If the tone sits far
+        // above the threshold the decay takes many ticks to fall back through it, every mark
+        // is stretched, dots read as dashes and the text comes out as "?". The crossings are
+        // symmetric when the threshold sits near the middle of the span, so key the tone at
+        // roughly twice the auto-calibrated threshold.
+        private const ushort RxTone = 24;
 
         private List<Tuple<double, double>> keying;
 
