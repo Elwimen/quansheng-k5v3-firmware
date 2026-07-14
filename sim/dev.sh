@@ -28,7 +28,6 @@ mkdir -p "$LOG_DIR"
 # it, so the radio remembers across restarts. Point these elsewhere for a throwaway radio
 # (the UI tests do, so they get a pristine one and never touch your configuration).
 FLASH_IMAGE=$(realpath -m "${FLASH_IMAGE:-sim/data/spi_PY25Q16.bin}")
-EEPROM_IMAGE=$(realpath -m "${EEPROM_IMAGE:-sim/data/eeprom.bin}")
 
 step() { printf '  %-24s' "$1"; }
 ok()   { printf 'ok%s\n' "${1:+ ($1)}"; }
@@ -111,7 +110,6 @@ if [[ $FORCE_RESTART -eq 0 ]] && sim_is_live; then
     monitor "pause" \
             "machine Reset" \
             "sysbus LoadBinary @${FLASH_IMAGE} 0x90000000" \
-            "sysbus LoadBinary @${EEPROM_IMAGE} 0x90200000" \
             "start"
     RELOADED=1
     ok "$((SECONDS - start))s"
@@ -136,7 +134,7 @@ rm -f "$PTY"
 # PY32 -- fine for UI work (screen, keys and a 122-channel CHIRP round trip all
 # verified), but use run.resc directly if you are chasing a timing-sensitive bug.
 nohup sh -c "tail -f /dev/null | renode --disable-xwt --port ${MONITOR_PORT} \
-    -e '\$flashImage=@${FLASH_IMAGE}; \$eepromImage=@${EEPROM_IMAGE}; include @sim/scripts/run.resc; logLevel 3; cpu PerformanceInMips ${MIPS}; start'" \
+    -e '\$flashImage=@${FLASH_IMAGE}; include @sim/scripts/run.resc; logLevel 3; cpu PerformanceInMips ${MIPS}; start'" \
     > "$LOG_DIR/renode.log" 2>&1 &
     for _ in $(seq 90); do
         [[ -e "$PTY" ]] && break

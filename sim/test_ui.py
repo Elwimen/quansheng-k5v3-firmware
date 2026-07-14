@@ -30,17 +30,24 @@ FAILED_DIR = os.path.join(HERE, "golden", "failed")
 # they generate their own images and boot the simulator on those.
 SANDBOX = os.path.join(os.environ.get("TMPDIR", "/tmp"), "uvk5-sim", "test")
 FLASH_IMAGE = os.path.join(SANDBOX, "spi_PY25Q16.bin")
-EEPROM_IMAGE = os.path.join(SANDBOX, "eeprom.bin")
 
 
 def start_pristine_sim():
     subprocess.run([sys.executable, os.path.join(HERE, "make_flash_image.py"),
                     "--out-dir", SANDBOX], check=True, capture_output=True)
-    env = dict(os.environ, FLASH_IMAGE=FLASH_IMAGE, EEPROM_IMAGE=EEPROM_IMAGE)
+    env = dict(os.environ, FLASH_IMAGE=FLASH_IMAGE)
     result = subprocess.run([os.path.join(HERE, "dev.sh"), "--restart", "--no-viewer"],
                             env=env, capture_output=True, text=True)
     if result.returncode != 0:
         sys.exit(f"could not start the simulator:\n{result.stdout}\n{result.stderr}")
+
+    # Turn persistence off for the run. The firmware writes to its flash as it boots, and
+    # with write-through on it would dirty the very image each case re-seeds from, so the
+    # radio would drift out from under the goldens as the suite ran. With no backing file
+    # the writes stay in emulated RAM, and every reboot starts from the pristine image.
+    mon = uvctl.Monitor()
+    mon.command('spiFlash ImagePath ""')
+    mon.close()
 
 # name -> keys pressed from a freshly booted radio.
 CASES = {
@@ -54,11 +61,17 @@ CASES = {
 
 
 def reboot(mon):
-    """A known starting point: reset, re-seed the stores, wait for the screen to settle."""
+    """A cold power cycle, so no case can inherit the state of the one before it.
+
+    A plain `machine Reset` is not enough: Renode's MappedMemory.Reset() is a no-op, so
+    both the SRAM and the emulated flash keep whatever the last case left in them, and
+    the radio drifts out from under the goldens as the suite runs. Wipe the RAM and
+    re-seed the flash from the pristine image by hand.
+    """
     mon.command("pause")
     mon.command("machine Reset")
-    mon.command(f"sysbus LoadBinary @{FLASH_IMAGE} 0x90000000")
-    mon.command(f"sysbus LoadBinary @{EEPROM_IMAGE} 0x90200000")
+    mon.command("sysbus ZeroRange 0x20000000 0x4000")            # SRAM
+    mon.command(f"sysbus LoadBinary @{FLASH_IMAGE} 0x90000000")  # flash
     mon.command("start")
     if not uvctl.wait_ready(mon):
         sys.exit("radio never settled after reset")

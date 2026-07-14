@@ -48,11 +48,7 @@ with open(OUT, "wb") as f:
     f.write(img)
 print("wrote", OUT, SIZE, "bytes with synthesized battery calibration")
 
-# The 24Cxx I2C EEPROM. On V3 the settings and calibration live in the SPI flash above,
-# so an erased part is enough for the firmware to boot on its defaults -- and it keeps
-# the simulator reproducible from the repo alone (a real device dump is per-unit, and
-# carries the radio's serial number, so it must not be a dependency of the UI tests).
-EEPROM = os.path.join(args.out_dir, "eeprom.bin")
-with open(EEPROM, "wb") as f:
-    f.write(b"\xff" * 0x2000)
-print("wrote", EEPROM, 0x2000, "bytes (erased)")
+# Nothing generates an EEPROM image any more: nothing reads it. The only code that
+# addresses the I2C EEPROM (0xA0) is App/driver/eeprom.c, which is not compiled on V3 --
+# eeprom_compat.c takes its place and maps the logical EEPROM layout onto the SPI flash
+# above. Verified: the radio renders identically with that part erased, 0x5A or 0x00.

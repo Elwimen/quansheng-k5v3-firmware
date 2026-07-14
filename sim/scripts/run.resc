@@ -56,10 +56,11 @@ $flashImage ?= $ORIGIN/../data/spi_PY25Q16.bin
 sysbus LoadBinary $flashImage 0x90000000
 spiFlash ImagePath $flashImage
 
-# The 24Cxx I2C EEPROM. Vestigial on V3 -- the settings moved to the SPI flash above and
-# this bus only really carries the BK1080 -- but the part is still there, so model it.
-$eepromImage ?= $ORIGIN/../data/eeprom.bin
-sysbus LoadBinary $eepromImage 0x90200000
+# No image for the 24Cxx I2C EEPROM: nothing reads it. The only code that addresses 0xA0
+# is App/driver/eeprom.c, which is not compiled on V3 -- eeprom_compat.c takes its place
+# and puts everything on the SPI flash, and the I2C bus is left carrying just the BK1080.
+# (Checked: the radio renders identically with that part erased, 0x5A or 0x00.) The model
+# stays, backed by RAM, so the part is still there if some future code path talks to it.
 
 # --- Expose USART1 as a host serial device (PTY symlinked to $uartDev) ---
 # No root needed for a user-writable path; tools (CHIRP, k5viewer.py, the MCP)
