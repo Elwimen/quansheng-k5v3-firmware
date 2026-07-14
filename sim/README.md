@@ -94,6 +94,37 @@ at defaults.
 Capture the screen by reading `gStatusLine` (128 B) + `gFrameBuffer` (896 B) over
 the monitor/GDB and piping into `sim/renode/fb_to_png.py`.
 
+## Scripting the radio, and UI regression tests
+
+`sim/uvctl.py` drives the radio from a script — no browser needed:
+
+```bash
+./sim/uvctl.py screenshot --text      # the LCD as block art on stdout
+./sim/uvctl.py screenshot -o s.png
+./sim/uvctl.py press MENU 1 EXIT      # inject keys (--long for a long press)
+./sim/uvctl.py wait-ready
+```
+
+It reads the screen out of emulated RAM over the Renode monitor (`gStatusLine` +
+`gFrameBuffer`, resolved from the ELF) and only *writes* keys to the serial port. That
+split matters: two readers on the port would split the byte stream and steal frames
+from a watching browser, but writing is harmless — so this works with the viewer open,
+and you can watch scripted keypresses land on screen.
+
+`sim/test_ui.py` uses it for golden-screen tests:
+
+```bash
+./sim/test_ui.py            # compare each screen against sim/golden/*.png
+./sim/test_ui.py --update   # re-record the goldens (review the diff!)
+./sim/test_ui.py --only menu
+```
+
+Each case reboots the radio first, so cases cannot inherit each other's state. The
+rendered screen is deterministic to the pixel, so a mismatch is a real change: a
+failure writes the actual screen and a red-highlighted diff to `sim/golden/failed/`.
+Verified by breaking a menu label on purpose — the three menu screens failed and the
+other three passed.
+
 ## Web viewer (live screen + keyboard)
 
 `sim/webviewer/bridge.py` runs the **K5Viewer** web app against the simulator: the
