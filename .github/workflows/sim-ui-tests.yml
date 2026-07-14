@@ -1,0 +1,54 @@
+name: Simulator UI tests
+
+on:
+  push:
+    branches: [ main, develop, 'feature/**' ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  ui-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install toolchain
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc-arm-none-eabi cmake ninja-build
+        pip install pyserial pillow
+
+    - name: Install Renode
+      env:
+        RENODE_VERSION: 1.16.1
+      run: |
+        curl -sSL -o /tmp/renode.tar.gz \
+          "https://github.com/renode/renode/releases/download/v${RENODE_VERSION}/renode-${RENODE_VERSION}.linux-portable-dotnet.tar.gz"
+        mkdir -p "$HOME/renode" "$HOME/.local/bin"
+        tar -xzf /tmp/renode.tar.gz -C "$HOME/renode" --strip-components=1
+        ln -sf "$HOME/renode/renode" "$HOME/.local/bin/renode"
+        echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+    - name: Build firmware and boot the simulator
+      run: |
+        python3 sim/make_flash_image.py
+        # --no-viewer: nothing here drives a browser, uvctl talks to the radio directly.
+        ./sim/dev.sh --restart --no-viewer
+
+    - name: Golden-screen UI tests
+      run: ./sim/test_ui.py
+
+    - name: Upload failing screens
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: failed-screens
+        # Each failure writes the actual screen plus a diff with the changed pixels in red.
+        path: sim/golden/failed/
+        if-no-files-found: ignore
+
+    - name: Simulator log
+      if: failure()
+      run: tail -50 /tmp/uvk5-sim/renode.log || true

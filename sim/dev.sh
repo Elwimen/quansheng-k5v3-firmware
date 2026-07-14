@@ -26,11 +26,12 @@ mkdir -p "$LOG_DIR"
 step() { printf '  %-24s' "$1"; }
 ok()   { printf 'ok%s\n' "${1:+ ($1)}"; }
 
-BUILD=1; FORCE_RESTART=0
+BUILD=1; FORCE_RESTART=0; VIEWER=1
 for arg in "$@"; do
     case "$arg" in
-        --no-build) BUILD=0 ;;
-        --restart)  FORCE_RESTART=1 ;;
+        --no-build)  BUILD=0 ;;
+        --restart)   FORCE_RESTART=1 ;;
+        --no-viewer) VIEWER=0 ;;   # headless: CI drives the radio with uvctl, not a browser
         *) echo "unknown option: $arg"; exit 1 ;;
     esac
 done
@@ -190,7 +191,7 @@ PY
 ok "$((SECONDS - start))s"
 fi
 
-if [[ $RELOADED -eq 0 ]]; then
+if [[ $RELOADED -eq 0 && $VIEWER -eq 1 ]]; then
     # Restart the bridge with the sim: it holds a serial fd to the PTY the restart just
     # destroyed, and a stale one leaves the viewer "connected" to nothing. A reload
     # keeps the PTY, so the bridge (and the browser) stay as they are.
@@ -202,6 +203,6 @@ if [[ $RELOADED -eq 0 ]]; then
 fi
 
 echo
-echo "  viewer:   http://localhost:${HTTP_PORT}/   (click Connect)"
-echo "  monitor:  telnet localhost ${MONITOR_PORT}   serial: ${PTY}"
+[[ $VIEWER -eq 1 ]] && echo "  viewer:   http://localhost:${HTTP_PORT}/   (click Connect)"
+echo "  monitor:  telnet localhost ${MONITOR_PORT}   serial: ${PTY}   gdb: :3333"
 echo "  logs:     ${LOG_DIR}"
