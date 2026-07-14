@@ -9,7 +9,11 @@ cpu: CPU.CortexM @ sysbus
     nvic: nvic
 
 nvic: IRQControllers.NVIC @ sysbus 0xE000E000
-    systickFrequency: 64000000
+    // The firmware runs the core at 48 MHz (Core/Src/main.c: LL_SetSystemCoreClock) and
+    // sets SysTick to SystemCoreClock/100 for its 10ms slice. Declare the same clock here
+    // or every firmware timer runs fast: at 64 MHz that "10ms" slice fired every 7.5ms,
+    // which made CW keying come out 33% quick.
+    systickFrequency: 48000000
     IRQ -> cpu@0
 
 // 128 KB flash @ 0x08000000 (app vector table lives at 0x08002800).

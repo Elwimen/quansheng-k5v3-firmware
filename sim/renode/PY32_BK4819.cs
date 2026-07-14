@@ -13,6 +13,9 @@
 // the MCU releases SDA and reads a bit *before* each SCL pulse, so we present the
 // MSB as soon as the address phase ends and advance on each rising edge.
 //
+using System;
+using System.IO;
+
 using Antmicro.Renode.Core;
 using Antmicro.Renode.Peripherals;
 using Antmicro.Renode.Logging;
@@ -21,15 +24,73 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 {
     public class PY32_BK4819 : IGPIOReceiver, IPeripheral
     {
-        public PY32_BK4819()
+        public PY32_BK4819(IMachine machine)
         {
+            this.machine = machine;
             SdaOut = new GPIO();
             registers = new ushort[128];
+            // The monitor cannot reach a peripheral registered `@ none` by name, so the
+            // keying log is switched on with an environment variable instead of a
+            // property. Unset (the normal case) means no logging and no overhead.
+            KeyLogPath = Environment.GetEnvironmentVariable("UVK5_CW_KEYLOG");
             Reset();
         }
 
         // Chip -> MCU data line; wire to the SDA GPIO input (GPIOB pin 9).
         public GPIO SdaOut { get; }
+
+        // Where to record the transmitter's keying, as "<virtual ms>,<0|1>" per edge.
+        //
+        // CW is keyed by BK4819_CW_KeyDown/KeyUp -> BK4819_ToggleGpioOut(PA_ENABLE),
+        // which is a write to REG_33 bit 0x20 -- so the radio's Morse is already
+        // crossing this bus and we only have to write it down. Timestamps are the
+        // *emulated* clock, not the host's, so they are unaffected by how fast Renode
+        // happens to be running, and a dot is exactly 1200/WPM milliseconds.
+        public string KeyLogPath
+        {
+            get => keyLogPath;
+            set
+            {
+                keyLog?.Dispose();
+                keyLog = null;
+                keyLogPath = value;
+                if(!string.IsNullOrEmpty(value))
+                {
+                    keyLog = new StreamWriter(value, append: false) { AutoFlush = true };
+                }
+            }
+        }
+
+        // The firmware keys CW two different ways, depending on the mode (cw.c):
+        //
+        //   OOK  -- BK4819_CW_KeyDown/KeyUp, i.e. the PA on REG_33 bit 0x20. The carrier
+        //           itself is switched.
+        //   AFCW -- BK4819_ExitTxMute/EnterTxMute, i.e. REG_50. The PA stays on and the
+        //           audio tone is keyed instead.
+        //
+        // Either way the element is "on air", so record both as one keyed/not-keyed
+        // signal: that is what a receiver would hear, and what the timing tests check.
+        private void RecordKeying(int register, ushort value)
+        {
+            if(register == GpioOutRegister)
+            {
+                paOn = (value & PaEnableBit) != 0;
+            }
+            else if(register == TxMuteRegister)
+            {
+                txMuted = value == TxMuted;
+            }
+
+            var keyed = paOn && !txMuted;
+            if(keyed == lastKeyed)
+            {
+                return;
+            }
+            lastKeyed = keyed;
+            keyLog?.WriteLine("{0},{1}",
+                (long)machine.ElapsedVirtualTime.TimeElapsed.TotalMilliseconds,
+                keyed ? 1 : 0);
+        }
 
         public void Reset()
         {
@@ -138,6 +199,10 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 if(++bitCount == 16)
                 {
                     registers[address] = shifter;
+                    if(address == GpioOutRegister || address == TxMuteRegister)
+                    {
+                        RecordKeying(address, shifter);
+                    }
                     this.Log(LogLevel.Noisy, "REG 0x{0:X2} <= 0x{1:X4}", address, shifter);
                     phase = Phase.Idle;
                 }
@@ -160,6 +225,20 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         private byte address;
         private ushort outValue;
         private readonly ushort[] registers;
+
+        private readonly IMachine machine;
+        private string keyLogPath;
+        private StreamWriter keyLog;
+        private bool paOn;
+        private bool txMuted = true;
+        private bool lastKeyed;
+
+        // BK4819_ToggleGpioOut writes REG_33; PA_ENABLE is GPIO1_PIN29, i.e. 0x40 >> 1.
+        private const int GpioOutRegister = 0x33;
+        private const ushort PaEnableBit = 0x20;
+        // BK4819_EnterTxMute / ExitTxMute write REG_50 (mute = 0xBB18, unmute = 0x3B18).
+        private const int TxMuteRegister = 0x50;
+        private const ushort TxMuted = 0xBB18;
 
         private const int PinCsn = 0;
         private const int PinScl = 1;

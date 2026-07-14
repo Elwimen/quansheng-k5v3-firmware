@@ -19,6 +19,9 @@ i $ORIGIN/../renode/flash_persist.py
 # Monitor command show_screen: render the LCD as block-art in the monitor.
 i $ORIGIN/../renode/show_screen.py
 
+# Monitor commands ptt_press / ptt_release (PTT cannot be injected over serial).
+i $ORIGIN/../renode/ptt.py
+
 machine LoadPlatformDescription $ORIGIN/../platforms/py32f071.repl
 
 # --- Stub on-chip peripherals the firmware pokes but we don't model ---

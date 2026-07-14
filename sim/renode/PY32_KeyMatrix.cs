@@ -46,8 +46,25 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         public GPIO Row3 { get; }
         public GPIO Ptt { get; }
 
+        private bool pttPressed;
+
+        // PTT is the one key that cannot be injected over the serial protocol: the firmware
+        // deliberately blocks it (keyboard.c: "PTT release cannot be guaranteed over
+        // serial") and reads the real pin instead. So to transmit, the simulated radio has
+        // to pull the actual line -- that is what this does.
+        public bool PttPressed
+        {
+            get => pttPressed;
+            set
+            {
+                pttPressed = value;
+                Ptt.Set(!value);   // active low
+            }
+        }
+
         public void Reset()
         {
+            pttPressed = false;
             DriveIdle();
         }
 
@@ -63,18 +80,20 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             Row1.Set(true);
             Row2.Set(true);
             Row3.Set(true);
-            Ptt.Set(true);
+            Ptt.Set(!pttPressed);
         }
 
         // Drive the idle levels even when our GPIOs already believe they are high:
         // the low pulse makes the following Set(true) propagate to the port again.
         private void ForceIdle()
         {
-            foreach(var pin in new[] { Row0, Row1, Row2, Row3, Ptt })
+            foreach(var pin in new[] { Row0, Row1, Row2, Row3 })
             {
                 pin.Set(false);
                 pin.Set(true);
             }
+            Ptt.Set(pttPressed);
+            Ptt.Set(!pttPressed);
         }
     }
 }
