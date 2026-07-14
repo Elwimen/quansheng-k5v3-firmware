@@ -33,9 +33,28 @@ cmake --preset Fusion && cmake --build --preset Fusion -j
 ## Run
 
 ```bash
-renode sim/scripts/run.resc                 # interactive
+./sim/dev.sh                                # build + (re)start the sim + web viewer
+./sim/dev.sh --no-build                     # restart the sim on the current ELF
+renode sim/scripts/run.resc                 # interactive, hardware-faithful timing
 renode --console --plain sim/scripts/boottest.resc   # headless smoke test
 ```
+
+`dev.sh` is the GUI loop: it rebuilds, restarts Renode on the fresh ELF, waits until
+the radio has really finished booting, and leaves the web viewer serving on
+http://localhost:8088/ — about 30 seconds end to end.
+
+It also runs the core at `PerformanceInMips 10` (override with `MIPS=`). Virtual time
+advances as instructions/MIPS, so a *lower* value gets more simulated time out of the
+same host work: at Renode's default of 100 the firmware's 2.55 s boot screen costs
+~60 s of wall clock and a CHIRP round trip takes minutes; at 10 they cost ~2 s and a
+few seconds. The emulated core is then slower relative to its timers than the real
+PY32 — fine for UI work (screen, key injection and a 122-channel CHIRP round trip are
+all verified at this setting), but use `run.resc` directly when chasing a
+timing-sensitive bug.
+
+Note the firmware streams a burst during its boot screen and then goes quiet for the
+rest of the boot, so the first frame does not mean it is ready — wait for streaming
+that *stays* (`dev.sh` does).
 
 ## Peripheral model status
 

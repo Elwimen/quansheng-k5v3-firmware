@@ -74,17 +74,24 @@ async def bridge(ws, port):
         while not stop.is_set():
             try:
                 data = ser.read(256)
-            except serial.SerialException:
+            except (serial.SerialException, OSError):
+                # Restarting the simulator destroys the PTY under us. Drop the
+                # viewer rather than sit on a dead port looking connected; it can
+                # reconnect once the sim is back.
                 break
             if data:
                 asyncio.run_coroutine_threadsafe(ws.send(data), loop)
+        asyncio.run_coroutine_threadsafe(ws.close(), loop)
 
     thread = threading.Thread(target=reader, daemon=True)
     thread.start()
     try:
         async for message in ws:
             if isinstance(message, (bytes, bytearray)):
-                ser.write(message)
+                try:
+                    ser.write(message)
+                except (serial.SerialException, OSError):
+                    break
     except websockets.ConnectionClosed:
         pass
     finally:
