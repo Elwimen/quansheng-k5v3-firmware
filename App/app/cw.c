@@ -394,6 +394,99 @@ static char cw_rx_decode(uint8_t len, uint16_t code)
     return '?';
 }
 
+/* ---- speed acquisition -----------------------------------------------------------
+   The dit length is the clock of the whole message, and until it is known nothing can be
+   classified: a dah measured against a stale dit reads as a dit, and one wrong element
+   poisons the running average that produced it. So do not guess from the first element --
+   buffer the first few characters, estimate the dit from them, then decode the buffer.
+
+   The estimate uses marks *and* gaps: a dit-mark and an element gap are both exactly one
+   dit, so the shortest of either is the clock, and averaging everything close to it beats
+   trusting a single shortest sample. Each transmission re-acquires, so the decoder follows
+   a station that changes speed instead of dragging its old estimate along. */
+#define CW_RX_ACQ_MARKS  6u    /* about two or three characters */
+#define CW_RX_ACQ_MAX   24u
+
+static uint16_t rx_acq_dur[CW_RX_ACQ_MAX];
+static uint8_t  rx_acq_is_mark[CW_RX_ACQ_MAX];
+static uint8_t  rx_acq_n     = 0;
+static uint8_t  rx_acq_marks = 0;
+static bool     rx_locked    = false;
+
+static void cw_rx_acq_reset(void)
+{
+    rx_acq_n     = 0;
+    rx_acq_marks = 0;
+    rx_locked    = false;
+}
+
+static void cw_rx_acq_push(uint16_t duration, bool is_mark)
+{
+    if (rx_acq_n >= CW_RX_ACQ_MAX) return;
+    rx_acq_dur[rx_acq_n]     = duration;
+    rx_acq_is_mark[rx_acq_n] = is_mark ? 1u : 0u;
+    rx_acq_n++;
+    if (is_mark) rx_acq_marks++;
+}
+
+static uint16_t cw_rx_acq_estimate(void)
+{
+    /* The clock is the shortest thing in the message -- but not blindly: one clipped edge
+       or noise blip is shorter than any real element, and taking it as the dit halves the
+       timebase, at which point every dit measures as a dah and the message reads as a row
+       of T's. So require the candidate to be corroborated: a dit is not a dit unless at
+       least two elements agree with it. In 2-3 characters there are always several. */
+    uint16_t best = 0;
+    for (uint8_t i = 0; i < rx_acq_n; i++) {
+        uint16_t cand = rx_acq_dur[i];
+        if (cand == 0 || (best != 0 && cand >= best)) continue;
+
+        uint8_t support = 0;
+        for (uint8_t j = 0; j < rx_acq_n; j++) {
+            if (rx_acq_dur[j] * 2u <= cand * 3u)   /* within 1.5x of the candidate */
+                support++;
+        }
+        if (support >= 2u) best = cand;
+    }
+    if (best == 0) return cw_dit_ref();
+
+    /* Average the whole short class: a dit-mark and an element gap are both one dit, so
+       everything under twice the shortest is a sample of the same quantity. */
+    uint32_t sum = 0;
+    uint8_t  n   = 0;
+    for (uint8_t i = 0; i < rx_acq_n; i++) {
+        if (rx_acq_dur[i] < best * 2u) { sum += rx_acq_dur[i]; n++; }
+    }
+    return n ? (uint16_t)(sum / n) : best;
+}
+
+static void cw_rx_decode_element(void);
+static void cw_rx_commit_char(void);
+static void cw_rx_commit_word_space(void);
+
+/* Estimate the dit from what we buffered, then decode the buffer with it. */
+static void cw_rx_acq_lock(void)
+{
+    uint16_t dit = cw_rx_acq_estimate();
+    rx_dit_est = dit;
+
+    for (uint8_t i = 0; i < rx_acq_n; i++) {
+        if (rx_acq_is_mark[i]) {
+            rx_mark_ticks = rx_acq_dur[i];
+            cw_rx_decode_element();
+        } else {
+            uint16_t gap = rx_acq_dur[i];
+            if (gap * 2u >= dit * 9u)         /* 4.5 dits: a word */
+                cw_rx_commit_word_space();
+            else if (gap * 4u >= dit * 7u)    /* 1.75 dits: a character */
+                cw_rx_commit_char();
+        }
+    }
+    rx_acq_n     = 0;
+    rx_acq_marks = 0;
+    rx_locked    = true;
+}
+
 static void cw_rx_decode_element(void)
 {
     uint16_t dit    = cw_dit_ref();
@@ -515,6 +608,14 @@ void CW_RX_Sample(void)
 
     case CW_RX_SPACE:
         if (above) {
+            if (!rx_locked) {
+                /* Still learning the speed: keep the element and the gap that followed it,
+                   and decode nothing yet. */
+                cw_rx_acq_push(rx_mark_ticks, true);
+                cw_rx_acq_push(rx_space_ticks, false);
+                if (rx_acq_marks >= CW_RX_ACQ_MARKS || rx_acq_n + 2u > CW_RX_ACQ_MAX)
+                    cw_rx_acq_lock();
+            } else {
             cw_rx_decode_element();
             /* Morse spaces elements by 1 dit, characters by 3 and words by 7. The old
                thresholds (4 and 8) sat *above* the classes they were meant to separate, so
@@ -526,18 +627,30 @@ void CW_RX_Sample(void)
                 cw_rx_commit_word_space();
             else if (rx_space_ticks * 4u >= dit * 7u)    /* 1.75 dits */
                 cw_rx_commit_char();
+            }
             rx_mark_ticks  = 1;
             rx_space_ticks = 0;
             rx_state       = CW_RX_MARK;
         } else {
             rx_space_ticks++;
             if (rx_space_ticks >= dit * CW_RX_TIMEOUT_MULT) {
-                cw_rx_decode_element();
+                /* End of the transmission. If it was too short to have locked the speed --
+                   a bare "K" is three elements -- estimate from what little there is and
+                   decode it now rather than throwing it away. */
+                if (!rx_locked) {
+                    cw_rx_acq_push(rx_mark_ticks, true);
+                    cw_rx_acq_lock();
+                } else {
+                    cw_rx_decode_element();
+                }
                 cw_rx_commit_word_space();
                 rx_mark_ticks  = 0;
                 rx_space_ticks = 0;
                 rx_state       = CW_RX_IDLE;
                 cw_live_char   = '\0';
+                /* Re-acquire on the next transmission: the other station may be sending at
+                   a different speed, and the old estimate is worse than no estimate. */
+                cw_rx_acq_reset();
             }
         }
         break;
