@@ -63,6 +63,26 @@ at defaults.
 Capture the screen by reading `gStatusLine` (128 B) + `gFrameBuffer` (896 B) over
 the monitor/GDB and piping into `sim/renode/fb_to_png.py`.
 
+## Web viewer (live screen + keyboard)
+
+`sim/webviewer/bridge.py` runs the **K5Viewer** web app against the simulator: the
+live 128×64 screen in the browser, and its keypad injects real keypresses into the
+firmware. That is the fast GUI loop — edit, build, run, look.
+
+```bash
+renode -e "include @sim/scripts/run.resc; start"   # sim -> /tmp/ttyUV0
+python3 sim/webviewer/bridge.py                    # -> http://localhost:8088/
+```
+
+Then click **Connect** in the page (the serial port picker is bypassed).
+
+The viewer speaks Web Serial, and Chrome only enumerates real tty devices — it can
+never see Renode's PTY. So the bridge serves the upstream viewer with a small
+`navigator.serial` shim injected (`serial-ws-shim.js`), backed by a WebSocket that
+owns the PTY. The viewer's own code is untouched and stays updatable; it cannot tell
+it isn't talking to a radio. Because Web Serial is no longer used, this also works in
+Firefox. Point `--viewer` at any K5Viewer checkout; `--port` at another PTY.
+
 ## CHIRP
 
 CHIRP talks to the simulator exactly as it would to the radio — point it at the
