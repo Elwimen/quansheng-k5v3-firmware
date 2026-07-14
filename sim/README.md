@@ -125,6 +125,28 @@ failure writes the actual screen and a red-highlighted diff to `sim/golden/faile
 Verified by breaking a menu label on purpose — the three menu screens failed and the
 other three passed.
 
+## Debugging (GDB)
+
+```bash
+./sim/debug.sh                                   # build, load the sim, attach GDB
+./sim/debug.sh -ex "break APP_Update" -ex "continue"
+```
+
+Breakpoints, stepping, registers and typed variables all work — the release build now
+carries `-g3`, which puts DWARF in the `.elf` and leaves the flashed `.bin` byte for
+byte identical (verified: `text=103780` with and without it).
+
+Debugging is a *separate entry point* from `dev.sh` for a reason. Renode's GDB server
+is started with `autostartEmulation`, so GDB starts the emulation on attach and owns
+the CPU — which only works if nobody called `start` first. Attach to an already-running
+machine, as `dev.sh` leaves it, and GDB reports "target is running" and refuses to break
+or step, because Renode never halts the core for it. `debug.sh` therefore loads the
+machine and leaves it stopped for GDB to drive.
+
+The web viewer is served as usual, so you can watch the screen freeze on a breakpoint,
+and `uvctl.py press` still reaches the radio while GDB is attached and running — that is
+how you trigger a breakpoint that needs a keypress.
+
 ## Web viewer (live screen + keyboard)
 
 `sim/webviewer/bridge.py` runs the **K5Viewer** web app against the simulator: the

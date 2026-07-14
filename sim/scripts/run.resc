@@ -61,5 +61,10 @@ $uartDev ?= "/tmp/ttyUV0"
 emulation CreateUartPtyTerminal "uvuart" $uartDev true
 connector Connect usart1 uvuart
 
-# --- GDB server on :3333 ---
-machine StartGdbServer 3333
+# --- GDB server on :3333 (see sim/debug.sh) ---
+# autostartEmulation=true means GDB starts the emulation itself when it attaches, and
+# the CPU comes up under its control. That only works if nobody has called `start`
+# first: attach to an already-running machine and GDB reports "target is running" and
+# refuses to break or step, because Renode never halts the core for it. So debug.sh
+# leaves the machine loaded but *not* started and lets GDB drive.
+machine StartGdbServer 3333 true
