@@ -25,6 +25,9 @@ PTY=/tmp/ttyUV0
 MONITOR_PORT=4567
 GDB_PORT=3333
 MIPS=${MIPS:-10}
+# Same radio image as dev.sh, so GDB debugs the radio you have been using -- not a
+# different one (override with FLASH_IMAGE=, as the tests do).
+FLASH_IMAGE=$(realpath -m "${FLASH_IMAGE:-sim/data/spi_PY25Q16.bin}")
 LOG_DIR="${TMPDIR:-/tmp}/uvk5-sim"
 GDB=${GDB:-arm-none-eabi-gdb}
 mkdir -p "$LOG_DIR"
@@ -63,7 +66,7 @@ done
 rm -f "$PTY"
 # No `start`: GDB starts the emulation when it attaches (see run.resc).
 nohup sh -c "tail -f /dev/null | renode --disable-xwt --port ${MONITOR_PORT} \
-    -e 'include @sim/scripts/run.resc; logLevel 3; cpu PerformanceInMips ${MIPS}'" \
+    -e '\$flashImage=@${FLASH_IMAGE}; include @sim/scripts/run.resc; logLevel 3; cpu PerformanceInMips ${MIPS}'" \
     > "$LOG_DIR/renode.log" 2>&1 &
 for _ in $(seq 60); do
     [[ -e "$PTY" ]] && break
