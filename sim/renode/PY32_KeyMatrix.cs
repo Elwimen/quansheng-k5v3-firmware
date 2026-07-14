@@ -21,13 +21,22 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 {
     public class PY32_KeyMatrix : IGPIOReceiver, IPeripheral
     {
-        public PY32_KeyMatrix()
+        public PY32_KeyMatrix(IMachine machine)
         {
             Row0 = new GPIO();
             Row1 = new GPIO();
             Row2 = new GPIO();
             Row3 = new GPIO();
             Ptt = new GPIO();
+
+            // A reset of the GPIO port clears its input state to low, while our
+            // GPIOs still cache "high" -- and GPIO.Set() is a no-op when the level
+            // is unchanged, so the idle levels would never be re-propagated. The
+            // firmware would then see PTT held down at boot and sit forever in the
+            // "RELEASE ALL KEYS" loop, which short-circuits before KEYBOARD_Poll()
+            // and so never drives a column for OnGPIO() to react to. MachineReset
+            // runs once every peripheral has reset, so re-driving here sticks.
+            machine.MachineReset += _ => ForceIdle();
             Reset();
         }
 
@@ -55,6 +64,17 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             Row2.Set(true);
             Row3.Set(true);
             Ptt.Set(true);
+        }
+
+        // Drive the idle levels even when our GPIOs already believe they are high:
+        // the low pulse makes the following Set(true) propagate to the port again.
+        private void ForceIdle()
+        {
+            foreach(var pin in new[] { Row0, Row1, Row2, Row3, Ptt })
+            {
+                pin.Set(false);
+                pin.Set(true);
+            }
         }
     }
 }

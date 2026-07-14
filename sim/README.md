@@ -48,7 +48,7 @@ renode --console --plain sim/scripts/boottest.resc   # headless smoke test
 | GPIOA / GPIOB / GPIOF | mmio 0x50000000+ | Renode `STM32_GPIOPort` | done (flash CS, BK4819, keyboard) |
 | GPIOC | mmio 0x50000800 | stubbed high | not yet needed |
 | BK4819 radio | bit-bang GPIO PF9/PB8/PB9 | `PY32_BK4819.cs` | done — boots through RADIO_SetupRegisters |
-| keyboard matrix | GPIOB cols/rows + PTT | `PY32_KeyMatrix.cs` | done — holds "no key" (injection via serial) |
+| keyboard matrix | GPIOB cols/rows + PTT | `PY32_KeyMatrix.cs` | done — holds "no key" across resets (injection via serial) |
 | 24Cxx EEPROM / BK1080 | bit-bang I2C PF5/PF6 | `PY32_I2CBus.cs` | done — decoder + 8 KB EEPROM (file) + BK1080 stub |
 
 **Boot status:** the unmodified firmware boots all the way to its **rendered VFO
@@ -62,6 +62,41 @@ at defaults.
 
 Capture the screen by reading `gStatusLine` (128 B) + `gFrameBuffer` (896 B) over
 the monitor/GDB and piping into `sim/renode/fb_to_png.py`.
+
+## CHIRP
+
+CHIRP talks to the simulator exactly as it would to the radio — point it at the
+PTY. A full download → upload → reboot → download round trip reproduces the
+uploaded channels byte for byte.
+
+```bash
+cd ~/code/chirp
+R="Quansheng_UV-K1_&_UV-K5_V3_F4HWN_Fusion"
+CHIRP_TESTENV=1 python3 ./chirpc -r "$R" -s /tmp/ttyUV0 --mmap=radio.img --download-mmap
+CHIRP_TESTENV=1 python3 ./chirpc -r "$R" -s /tmp/ttyUV0 --mmap=radio.img --upload-mmap
+```
+
+`CHIRP_TESTENV=1` is needed because CHIRP otherwise redirects stdout to
+`~/.config/chirp/debug.log` when stdin is not a TTY. A successful `--upload-mmap`
+still exits 1 (upstream `chirp/cli/main.py` quirk) — trust "Upload successful",
+not the exit code.
+
+Renode runs slower than real time, so the firmware's 2.55 s boot screen takes
+tens of seconds of wall clock — and CHIRP's upload ends by rebooting the radio.
+Poll the hello until it answers rather than sleeping a fixed amount; a hello sent
+too early fails with "Header short read" and looks like a dead UART.
+
+## Gotcha: models that hold a constant GPIO level
+
+Renode's `GPIO.Set()` is a no-op when the level is unchanged. A GPIO port clears
+its input pins on reset while a driving model still caches "high", so the idle
+level is silently never re-propagated. `PY32_KeyMatrix` therefore re-drives its
+rows and PTT low→high from `IMachine.MachineReset`, which is the only hook that
+runs after every peripheral has been reset (`Machine.Reset()` is otherwise
+unordered). Without it, the firmware sees PTT held down after a reboot and sits
+forever in the "RELEASE ALL KEYS" loop, never servicing serial. Models that
+toggle their line during normal traffic (BK4819, I2C SDA) self-heal and don't
+need this.
 
 The flash backing image is `sim/data/spi_PY25Q16.bin` (2 MB, blank = 0xFF),
 loaded at start and visible on the bus at 0x90000000 for host inspection.
