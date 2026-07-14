@@ -9,10 +9,19 @@ SETTINGS_LoadCalibration() reads gBatteryCalibration (6x uint16) from flash
 land in ~[630,890] for a non-critical level. With the modelled ADC (~2400),
 cal[3] ~ 2280 gives ~800.
 """
-import os, struct
+import argparse, os, struct
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-OUT = os.path.join(HERE, "data", "spi_PY25Q16.bin")
+
+ap = argparse.ArgumentParser(description=__doc__)
+# The simulator writes the firmware's flash writes back into these files, so the radio
+# keeps its configuration. The UI tests need a pristine radio instead of whatever you
+# last configured, so they build their images somewhere else and run against those.
+ap.add_argument("--out-dir", default=os.path.join(HERE, "data"),
+                help="where to write the images (default: %(default)s)")
+args = ap.parse_args()
+
+OUT = os.path.join(args.out_dir, "spi_PY25Q16.bin")
 SIZE = 0x200000  # 16 Mbit
 
 img = bytearray(b"\xff" * SIZE)
@@ -43,7 +52,7 @@ print("wrote", OUT, SIZE, "bytes with synthesized battery calibration")
 # so an erased part is enough for the firmware to boot on its defaults -- and it keeps
 # the simulator reproducible from the repo alone (a real device dump is per-unit, and
 # carries the radio's serial number, so it must not be a dependency of the UI tests).
-EEPROM = os.path.join(HERE, "data", "eeprom.bin")
+EEPROM = os.path.join(args.out_dir, "eeprom.bin")
 with open(EEPROM, "wb") as f:
     f.write(b"\xff" * 0x2000)
 print("wrote", EEPROM, 0x2000, "bytes (erased)")

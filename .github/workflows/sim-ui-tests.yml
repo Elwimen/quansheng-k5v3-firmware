@@ -31,12 +31,9 @@ jobs:
         ln -sf "$HOME/renode/renode" "$HOME/.local/bin/renode"
         echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
-    - name: Build firmware and boot the simulator
-      run: |
-        python3 sim/make_flash_image.py
-        # --no-viewer: nothing here drives a browser, uvctl talks to the radio directly.
-        ./sim/dev.sh --restart --no-viewer
-
+    # test_ui.py builds the firmware and boots the simulator itself, on a factory-fresh
+    # flash image of its own: the simulator persists the firmware's writes into its image,
+    # so the tests must not run against a radio somebody has configured.
     - name: Golden-screen UI tests
       run: ./sim/test_ui.py
 

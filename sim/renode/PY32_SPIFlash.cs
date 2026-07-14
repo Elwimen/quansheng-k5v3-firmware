@@ -17,6 +17,8 @@
 // reads 0, so the firmware's "flush RX FIFO" loop is a no-op and reads aren't
 // shifted.
 //
+using System.IO;
+
 using Antmicro.Renode.Core;
 using Antmicro.Renode.Peripherals;
 using Antmicro.Renode.Peripherals.Bus;
@@ -27,11 +29,34 @@ namespace Antmicro.Renode.Peripherals.SPI
 {
     public class PY32_SPIFlash : IBytePeripheral, IWordPeripheral, IDoubleWordPeripheral, IKnownSize, IGPIOReceiver
     {
-        public PY32_SPIFlash(MappedMemory flashMemory)
+        public PY32_SPIFlash(MappedMemory flashMemory, string imagePath = null)
         {
             flash = flashMemory;
             flashMask = (uint)flash.Size - 1;
+            ImagePath = imagePath;
             Reset();
+        }
+
+        // Backing file for the part. The whole radio configuration lives in this flash
+        // (eeprom_compat.c maps the logical EEPROM layout onto it, so channels, settings
+        // and calibration all land here -- including everything CHIRP writes). Renode
+        // memory is not written through to disk, so without this the radio would forget
+        // everything the firmware saved as soon as the machine was reset. Every program
+        // and erase the firmware performs is mirrored into the file, at the same offset,
+        // so the config survives restarts exactly as it would on the real part.
+        public string ImagePath
+        {
+            get => imagePath;
+            set
+            {
+                image?.Dispose();
+                image = null;
+                imagePath = value;
+                if(!string.IsNullOrEmpty(value))
+                {
+                    image = new FileStream(value, FileMode.OpenOrCreate, FileAccess.ReadWrite);
+                }
+            }
         }
 
         public long Size => 0x400;
@@ -169,6 +194,7 @@ namespace Antmicro.Renode.Peripherals.SPI
 
             case Phase.ProgData:
                 flash.WriteByte(pos & flashMask, value);
+                Persist(pos & flashMask, value);
                 pos++;
                 pendingRx = 0;
                 break;
@@ -201,6 +227,27 @@ namespace Antmicro.Renode.Peripherals.SPI
             {
                 flash.WriteByte((start + i) & flashMask, 0xFF);
             }
+
+            if(image != null)
+            {
+                image.Seek(start, SeekOrigin.Begin);
+                image.Write(erased, 0, (int)SectorSize);
+                image.Flush();
+            }
+        }
+
+        private void Persist(uint offset, byte value)
+        {
+            if(image == null)
+            {
+                return;
+            }
+            image.Seek(offset, SeekOrigin.Begin);
+            image.WriteByte(value);
+            // The firmware saves in small bursts and a settings write is the last thing
+            // it does before you pull the battery, so flush eagerly rather than risk
+            // losing the write if the simulator is killed.
+            image.Flush();
         }
 
         private uint cr1;
@@ -214,6 +261,20 @@ namespace Antmicro.Renode.Peripherals.SPI
         private int addrGot;
         private uint pos;
         private bool justEnteredRead;
+
+        private string imagePath;
+        private FileStream image;
+        private static readonly byte[] erased = CreateErased();
+
+        private static byte[] CreateErased()
+        {
+            var buffer = new byte[SectorSize];
+            for(var i = 0; i < buffer.Length; i++)
+            {
+                buffer[i] = 0xFF;
+            }
+            return buffer;
+        }
 
         private readonly MappedMemory flash;
         private readonly uint flashMask;

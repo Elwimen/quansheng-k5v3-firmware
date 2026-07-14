@@ -202,19 +202,48 @@ forever in the "RELEASE ALL KEYS" loop, never servicing serial. Models that
 toggle their line during normal traffic (BK4819, I2C SDA) self-heal and don't
 need this.
 
-The flash backing image is `sim/data/spi_PY25Q16.bin` (2 MB, blank = 0xFF),
-loaded at start and visible on the bus at 0x90000000 for host inspection.
-It is in-RAM, so firmware writes are not written through to disk; persist on
-demand / on exit / periodically with the monitor commands from
-`sim/renode/flash_persist.py`:
+## Where the radio's configuration lives
+
+**All of it is in the SPI flash — `sim/data/spi_PY25Q16.bin` — and it persists.**
+
+`App/driver/eeprom.c` (the I2C 24Cxx driver) is *not compiled* on V3. The build uses
+`App/driver/eeprom_compat.c`, which keeps the logical EEPROM addresses the rest of the
+firmware knows about and translates them onto the PY25Q16 serial flash:
 
 ```
-(monitor) save_flash @sim/data/spi_PY25Q16.bin   # snapshot flash -> file
-(monitor) load_flash @sim/data/spi_PY25Q16.bin   # restore file  -> flash
+CHIRP write (UART 0x051D)   settings save          menu / channel edit
+  App/app/uart.c:468          App/settings.c            ...
+        \                         |                      /
+         \________________________|_____________________/
+                                  v
+              EEPROM_ReadBuffer / EEPROM_WriteBuffer
+              App/driver/eeprom_compat.c   (ADDR_MAPPINGS: logical EEPROM -> flash)
+                                  v
+              PY25Q16_ReadBuffer / PY25Q16_WriteBuffer   App/driver/py25q16.c
+                                  v
+              SPI2 + chip-select bit-banged on GPIOA pin 3
+                                  v
+              sim/renode/PY32_SPIFlash.cs  (0x03 read, 0x02 program, 0x20 erase)
+                                  v
+              spiFlashMem @ 0x90000000   ->  mirrored into sim/data/spi_PY25Q16.bin
 ```
 
-(Renode's `Save`/`Load` can snapshot the *entire* machine incl. RAM, but that
-is an opaque whole-emulation blob, not a raw flash image.)
+The model mirrors every page-program and sector-erase into the backing file at the same
+offset, so whatever the firmware saves — channels, settings, calibration, everything
+CHIRP uploads — survives a restart, exactly as it would on the real part. (Renode memory
+is otherwise not written through to disk, and `MappedMemory.Reset()` is a no-op, so the
+images are also re-seeded on reset.) Verified: upload 122 channels with CHIRP, cold-start
+the simulator, read them back unchanged.
+
+The I2C EEPROM (`sim/data/eeprom.bin`) is vestigial on V3 — nothing addresses 0xA0, that
+bus only really carries the BK1080 — so it is generated erased.
+
+Override the images with `FLASH_IMAGE=` / `EEPROM_IMAGE=`, which is how `test_ui.py`
+gets a factory-fresh radio without touching the one you have configured. Regenerate the
+defaults with `python3 sim/make_flash_image.py` (that resets your simulated radio).
+
+`sim/renode/flash_persist.py` still provides `save_flash` / `load_flash` monitor commands
+for taking or restoring a snapshot by hand.
 
 Unmodelled on-chip registers (RCC, FLASH, SPI status, etc.) are stubbed with
 `sysbus Tag` in `run.resc` and will be replaced by real models as needed.

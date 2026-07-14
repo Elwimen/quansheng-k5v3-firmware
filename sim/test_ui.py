@@ -13,6 +13,7 @@ diff image next to them so you can see what moved.
 
 import argparse
 import os
+import subprocess
 import sys
 import time
 
@@ -22,6 +23,24 @@ import uvctl
 HERE = os.path.dirname(os.path.abspath(__file__))
 GOLDEN_DIR = os.path.join(HERE, "golden")
 FAILED_DIR = os.path.join(HERE, "golden", "failed")
+
+# The simulator mirrors the firmware's flash writes back into its image, so the radio you
+# develop against keeps its configuration. The tests must not run against that: the
+# goldens are of a factory-fresh radio, and a test must never write to your channels. So
+# they generate their own images and boot the simulator on those.
+SANDBOX = os.path.join(os.environ.get("TMPDIR", "/tmp"), "uvk5-sim", "test")
+FLASH_IMAGE = os.path.join(SANDBOX, "spi_PY25Q16.bin")
+EEPROM_IMAGE = os.path.join(SANDBOX, "eeprom.bin")
+
+
+def start_pristine_sim():
+    subprocess.run([sys.executable, os.path.join(HERE, "make_flash_image.py"),
+                    "--out-dir", SANDBOX], check=True, capture_output=True)
+    env = dict(os.environ, FLASH_IMAGE=FLASH_IMAGE, EEPROM_IMAGE=EEPROM_IMAGE)
+    result = subprocess.run([os.path.join(HERE, "dev.sh"), "--restart", "--no-viewer"],
+                            env=env, capture_output=True, text=True)
+    if result.returncode != 0:
+        sys.exit(f"could not start the simulator:\n{result.stdout}\n{result.stderr}")
 
 # name -> keys pressed from a freshly booted radio.
 CASES = {
@@ -38,8 +57,8 @@ def reboot(mon):
     """A known starting point: reset, re-seed the stores, wait for the screen to settle."""
     mon.command("pause")
     mon.command("machine Reset")
-    mon.command("sysbus LoadBinary @sim/data/spi_PY25Q16.bin 0x90000000")
-    mon.command("sysbus LoadBinary @sim/data/eeprom.bin 0x90200000")
+    mon.command(f"sysbus LoadBinary @{FLASH_IMAGE} 0x90000000")
+    mon.command(f"sysbus LoadBinary @{EEPROM_IMAGE} 0x90200000")
     mon.command("start")
     if not uvctl.wait_ready(mon):
         sys.exit("radio never settled after reset")
@@ -82,6 +101,9 @@ def main():
     cases = {k: v for k, v in CASES.items() if not args.only or args.only in k}
     if not cases:
         sys.exit(f"no case matches '{args.only}'")
+
+    print("  starting a factory-fresh radio (your configured one is left alone)")
+    start_pristine_sim()
 
     mon = uvctl.Monitor()
     failures = []

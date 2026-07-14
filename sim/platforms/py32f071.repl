@@ -46,6 +46,9 @@ spiFlashMem: Memory.MappedMemory @ sysbus 0x90000000
 // SPI2 + PY25Q16 serial flash as one custom model: stock STM32SPI mis-serves the
 // firmware's RX-FIFO flush and the DMA read ordering. CS is bit-banged on PA3.
 // The DMA1 RX channel reads SPI2 DR (0x4000380C) and gets sequential flash bytes.
+// Firmware writes (settings, channels, anything CHIRP sends) are mirrored into a backing
+// file so the radio's configuration survives a restart -- run.resc sets that path
+// (ImagePath), because it needs to be absolute and only the script knows where it is.
 spiFlash: SPI.PY32_SPIFlash @ sysbus <0x40003800, +0x400>
     flashMemory: spiFlashMem
 

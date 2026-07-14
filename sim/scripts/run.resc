@@ -46,12 +46,20 @@ macro reset
 """
 runMacro $reset
 
-# Seed the PY25Q16 serial flash from its external image (channel attributes,
-# voice clips, ...). Blank (0xFF) flash is fine; the firmware uses defaults.
-sysbus LoadBinary $ORIGIN/../data/spi_PY25Q16.bin 0x90000000
+# The PY25Q16 serial flash holds the entire radio configuration: eeprom_compat.c maps
+# the logical EEPROM layout onto it, so channels, settings and calibration all live here,
+# including everything CHIRP writes. Seed the part from the image, and let the model
+# mirror the firmware's writes back into the same file, so the configuration survives a
+# restart exactly as it would on the real radio.
+# Override with: renode -e "$flashImage=@/path/to.bin; i @run.resc"   (the tests do)
+$flashImage ?= $ORIGIN/../data/spi_PY25Q16.bin
+sysbus LoadBinary $flashImage 0x90000000
+spiFlash ImagePath $flashImage
 
-# Seed the EEPROM from a real device dump (calibration + settings).
-sysbus LoadBinary $ORIGIN/../data/eeprom.bin 0x90200000
+# The 24Cxx I2C EEPROM. Vestigial on V3 -- the settings moved to the SPI flash above and
+# this bus only really carries the BK1080 -- but the part is still there, so model it.
+$eepromImage ?= $ORIGIN/../data/eeprom.bin
+sysbus LoadBinary $eepromImage 0x90200000
 
 # --- Expose USART1 as a host serial device (PTY symlinked to $uartDev) ---
 # No root needed for a user-writable path; tools (CHIRP, k5viewer.py, the MCP)
