@@ -33,15 +33,27 @@ cmake --preset Fusion && cmake --build --preset Fusion -j
 ## Run
 
 ```bash
-./sim/dev.sh                                # build + (re)start the sim + web viewer
-./sim/dev.sh --no-build                     # restart the sim on the current ELF
+./sim/dev.sh                                # build + reload a running sim (or start one)
+./sim/dev.sh --no-build                     # skip the build
+./sim/dev.sh --restart                      # force a cold start
 renode sim/scripts/run.resc                 # interactive, hardware-faithful timing
 renode --console --plain sim/scripts/boottest.resc   # headless smoke test
 ```
 
-`dev.sh` is the GUI loop: it rebuilds, restarts Renode on the fresh ELF, waits until
-the radio has really finished booting, and leaves the web viewer serving on
-http://localhost:8088/ — about 30 seconds end to end.
+`dev.sh` is the GUI loop: it rebuilds, gets the new firmware running, waits until the
+radio has really booted, and leaves the web viewer serving on http://localhost:8088/.
+**~4s when it can reload a running sim, ~14s for a cold start.**
+
+Reload keeps the same Renode process alive: `run.resc`'s reset macro re-runs `LoadELF`,
+so `machine Reset` brings the machine back on the freshly built binary. The PTY belongs
+to the process rather than the machine, so it survives — the bridge keeps its port and
+**the browser stays connected across a reload**; edit, run `dev.sh`, watch the screen
+come back. Memory does not clear on reset (`MappedMemory.Reset` is a no-op), so the
+flash and EEPROM images are re-seeded by hand, otherwise a reload would inherit
+whatever the previous run wrote.
+
+While a viewer is attached, `dev.sh` does not open the serial port itself: two readers
+would split the byte stream and steal the frames the viewer needs.
 
 It also runs the core at `PerformanceInMips 10` (override with `MIPS=`). Virtual time
 advances as instructions/MIPS, so a *lower* value gets more simulated time out of the

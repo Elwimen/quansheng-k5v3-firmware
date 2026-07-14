@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
 #
-# One command for the GUI loop: rebuild the firmware, restart the simulator on the
-# fresh ELF, wait until the radio actually answers, and leave the web viewer up.
+# One command for the GUI loop: rebuild the firmware, get it running in the
+# simulator, wait until the radio actually answers, and leave the web viewer up.
 #
-#   ./sim/dev.sh            # build + restart + wait
-#   ./sim/dev.sh --no-build # just restart the sim on the current ELF
+#   ./sim/dev.sh             # build, then reload a running sim (or start one)
+#   ./sim/dev.sh --no-build   # skip the build
+#   ./sim/dev.sh --restart    # force a cold start even if a sim is running
 #
-# Then open http://localhost:8088/ and click Connect. Leave the page open across
-# runs: when the simulator restarts, reconnect it (the bridge keeps its port).
+# Reload keeps the same Renode process, so the PTY survives and the browser stays
+# connected: edit, run this, watch the screen come back. Open http://localhost:8088/
+# and click Connect once.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -24,7 +26,58 @@ mkdir -p "$LOG_DIR"
 step() { printf '  %-24s' "$1"; }
 ok()   { printf 'ok%s\n' "${1:+ ($1)}"; }
 
-if [[ "${1:-}" != "--no-build" ]]; then
+BUILD=1; FORCE_RESTART=0
+for arg in "$@"; do
+    case "$arg" in
+        --no-build) BUILD=0 ;;
+        --restart)  FORCE_RESTART=1 ;;
+        *) echo "unknown option: $arg"; exit 1 ;;
+    esac
+done
+
+# Talk to the monitor of an already-running sim.
+monitor() {
+    python3 - "$MONITOR_PORT" "$@" <<'PY'
+import socket, sys, time
+port, cmds = int(sys.argv[1]), sys.argv[2:]
+try:
+    s = socket.create_connection(("127.0.0.1", port), timeout=2)
+except OSError:
+    sys.exit(1)
+# Read until the monitor prints its prompt again rather than draining on a timeout:
+# every command is near-instant, and waiting one timeout each made a reload take 22s.
+s.settimeout(15)
+PROMPT = "(uvk5v3)"
+for c in ["mach set 0"] + cmds:
+    s.sendall((c + "\n").encode())
+    seen = ""
+    while PROMPT not in seen:
+        try:
+            data = s.recv(65536)
+        except OSError:
+            break
+        if not data:
+            break
+        seen += data.decode(errors="replace")
+s.close()
+PY
+}
+
+# A sim we can reload: monitor answering *and* its PTY still there.
+sim_is_live() {
+    [[ -e "$PTY" ]] && monitor "version" 2>/dev/null
+}
+
+# Does the bridge currently hold the port open, i.e. is a viewer watching? If so we
+# must not open the port ourselves -- two readers would split the byte stream between
+# them and the viewer would lose the frames it needs.
+viewer_attached() {
+    local pid
+    pid=$(pgrep -f "sim/webviewer/bridge.py" | head -1) || return 1
+    [[ -n "$pid" ]] && ls -l "/proc/$pid/fd" 2>/dev/null | grep -q "pts/"
+}
+
+if [[ $BUILD -eq 1 ]]; then
     step "building ${PRESET}"
     start=$SECONDS
     [[ -d "build/${PRESET}" ]] || cmake --preset "$PRESET" > "$LOG_DIR/cmake.log" 2>&1
@@ -37,8 +90,26 @@ if [[ "${1:-}" != "--no-build" ]]; then
 fi
 [[ -f "$ELF" ]] || { echo "no firmware at $ELF — build first"; exit 1; }
 
-step "restarting renode"
-pkill -f "renode.*run.resc" 2>/dev/null || true
+RELOADED=0
+if [[ $FORCE_RESTART -eq 0 ]] && sim_is_live; then
+    # Fast path: keep the Renode process. Its reset macro re-runs LoadELF, so the
+    # machine comes back on the freshly built binary -- and because the PTY belongs to
+    # the process, not the machine, it survives: the bridge keeps its port and the
+    # browser stays connected across the reload.
+    step "reloading firmware"
+    start=$SECONDS
+    # Memory does not clear on reset (MappedMemory.Reset is a no-op), so re-seed the
+    # stores by hand; otherwise a reload inherits whatever the last run wrote to flash.
+    monitor "pause" \
+            "machine Reset" \
+            "sysbus LoadBinary @sim/data/spi_PY25Q16.bin 0x90000000" \
+            "sysbus LoadBinary @sim/data/eeprom.bin 0x90200000" \
+            "start"
+    RELOADED=1
+    ok "$((SECONDS - start))s"
+else
+    step "restarting renode"
+    pkill -f "renode.*run.resc" 2>/dev/null || true
 # pkill only signals: wait for the old instance to actually go, or it still owns the
 # monitor port -- and drop the stale symlink so we can't mistake it for the new PTY.
 for _ in $(seq 30); do
@@ -59,18 +130,25 @@ rm -f "$PTY"
 nohup sh -c "tail -f /dev/null | renode --disable-xwt --port ${MONITOR_PORT} \
     -e 'include @sim/scripts/run.resc; logLevel 3; cpu PerformanceInMips ${MIPS}; start'" \
     > "$LOG_DIR/renode.log" 2>&1 &
-for _ in $(seq 90); do
-    [[ -e "$PTY" ]] && break
-    sleep 1
-done
-[[ -e "$PTY" ]] || { echo "FAILED — no $PTY"; tail -20 "$LOG_DIR/renode.log"; exit 1; }
-ok
+    for _ in $(seq 90); do
+        [[ -e "$PTY" ]] && break
+        sleep 1
+    done
+    [[ -e "$PTY" ]] || { echo "FAILED — no $PTY"; tail -20 "$LOG_DIR/renode.log"; exit 1; }
+    ok
+fi
 
-# Renode compiles the C# models at load and then runs slower than real time, so the
-# firmware's 2.55s boot screen takes tens of seconds of wall clock. Poll rather than
-# guess: a host tool that opens the port too early just sees a dead UART.
 step "waiting for boot"
 start=$SECONDS
+if viewer_attached; then
+    # The bridge owns the port on behalf of a watching browser. Opening it here would
+    # split the byte stream between two readers and steal the frames the viewer needs,
+    # so let the viewer be the one that talks to the radio: it re-syncs on its own,
+    # because after the reset the firmware treats the next keepalive as a new host and
+    # answers with a full frame.
+    sleep 4
+    ok "$((SECONDS - start))s, viewer kept"
+else
 python3 - "$PTY" <<'PY' || { echo "FAILED — radio never answered"; exit 1; }
 import sys, time, serial
 
@@ -110,14 +188,18 @@ with serial.Serial(port, 38400, timeout=0.3) as ser:
         pass
 PY
 ok "$((SECONDS - start))s"
+fi
 
-# Always restart the bridge: it holds a serial fd to the PTY the simulator just
-# destroyed, and a stale one leaves the viewer "connected" to nothing.
-step "starting viewer bridge"
-pkill -f "sim/webviewer/bridge.py" 2>/dev/null || true
-nohup python3 -u sim/webviewer/bridge.py > "$LOG_DIR/bridge.log" 2>&1 &
-sleep 1
-ok
+if [[ $RELOADED -eq 0 ]]; then
+    # Restart the bridge with the sim: it holds a serial fd to the PTY the restart just
+    # destroyed, and a stale one leaves the viewer "connected" to nothing. A reload
+    # keeps the PTY, so the bridge (and the browser) stay as they are.
+    step "starting viewer bridge"
+    pkill -f "sim/webviewer/bridge.py" 2>/dev/null || true
+    nohup python3 -u sim/webviewer/bridge.py > "$LOG_DIR/bridge.log" 2>&1 &
+    sleep 1
+    ok
+fi
 
 echo
 echo "  viewer:   http://localhost:${HTTP_PORT}/   (click Connect)"
