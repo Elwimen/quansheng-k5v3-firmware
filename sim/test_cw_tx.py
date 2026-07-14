@@ -107,16 +107,40 @@ def transmit(mon):
     before = len(rows())
 
     # PTT cannot be injected over serial (the firmware blocks it), so pull the real line.
-    # Hold it until the message is sent: releasing early cuts the transmission off in the
-    # middle of an element, which looks like a timing bug but is the test's own fault.
-    mon.command("ptt_press")
     tx_state = uvctl.symbol("tx_state")
+    idle = lambda: mon.read_bytes(tx_state, 1)[0] == 0     # CW_TX_IDLE
+
+    # Wait for the transmission to *start* before waiting for it to finish. Watching only
+    # for "back to idle" is a trap: if the press never took, the state machine is already
+    # idle and the wait returns at once, the test measures an empty keying log, and it
+    # looks like a timing failure. This is where the suite used to flake.
+    #
+    # PTT here is a one-push session (gSetting_set_ptt_session): a press starts the
+    # transmission and a second press stops it, so a press that lands at the wrong moment
+    # can leave the session open and swallow the next one. Toggle it closed and try again.
+    started = False
+    for _ in range(3):
+        mon.command("ptt_press")
+        deadline = time.time() + 6
+        while time.time() < deadline and not started:
+            started = not idle()
+            time.sleep(0.2)
+        if started:
+            break
+        mon.command("ptt_release")     # clear whatever session that press opened
+        time.sleep(1.0)
+    if not started:
+        sys.exit("the radio never started transmitting (PTT did not take)")
+
+    # Hold PTT until the message is sent: releasing early cuts the transmission off in the
+    # middle of an element, which looks like a timing bug but is the test's own fault.
     deadline = time.time() + 20
-    time.sleep(1.0)
     while time.time() < deadline:
-        if mon.read_bytes(tx_state, 1)[0] == 0:   # CW_TX_IDLE: the message is done
+        if idle():
             break
         time.sleep(0.3)
+    else:
+        sys.exit("the radio never finished transmitting")
     time.sleep(0.5)
     mon.command("ptt_release")
     time.sleep(1)
