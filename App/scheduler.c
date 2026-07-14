@@ -24,6 +24,7 @@
 #include "functions.h"
 #include "helper/battery.h"
 #include "misc.h"
+#include "app/cw.h"
 #include "settings.h"
 
 #include "driver/backlight.h"
@@ -44,9 +45,18 @@
 
 static volatile uint32_t gGlobalSysTickCounter;
 
-// we come here every 10ms
+// we come here every 1ms; everything below the divider still runs every 10ms
 void SysTick_Handler(void)
 {
+#ifdef ENABLE_FEAT_ELW_CW
+    CW_RX_Sample();          /* Morse edge timing needs the full 1ms resolution */
+#endif
+
+    static uint8_t tick_10ms = 0;
+    if (++tick_10ms < 10)
+        return;
+    tick_10ms = 0;
+
     gGlobalSysTickCounter++;
     
     gNextTimeslice = true;

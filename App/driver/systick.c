@@ -20,7 +20,10 @@
 static uint32_t gTickMultiplier;
 void SYSTICK_Init(void)
 {
-    SysTick_Config(SystemCoreClock / 100); // 10 ms (1/100 sec) systick interrupt
+    /* 1 ms. The scheduler still runs on 10ms boundaries (scheduler.c divides by 10), but
+       the CW receiver needs to time Morse edges: at 10ms a 25 WPM dot is only ~5 samples,
+       which is not enough to tell a dot from a dash reliably. */
+    SysTick_Config(SystemCoreClock / 1000);
     gTickMultiplier = SystemCoreClock / 1000000;
 
     NVIC_SetPriority(SysTick_IRQn, 0);

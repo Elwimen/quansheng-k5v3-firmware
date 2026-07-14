@@ -69,6 +69,11 @@ extern bool gRxIdleMode;
 void     BK4819_Init(void);
 uint16_t BK4819_ReadRegister(BK4819_REGISTER_t Register);
 void     BK4819_WriteRegister(BK4819_REGISTER_t Register, uint16_t Data);
+
+/* Set while a bit-banged transaction is in flight. The CW receiver samples the chip from
+   the SysTick ISR; an interrupt landing mid-frame would clock its own bytes into someone
+   else's transaction and corrupt both, so the ISR checks this and skips that sample. */
+extern volatile bool gBK4819_BusBusy;
 void     BK4819_SetRegValue(RegisterSpec s, uint16_t v);
 void     BK4819_WriteU8(uint8_t Data);
 void     BK4819_WriteU16(uint16_t Data);

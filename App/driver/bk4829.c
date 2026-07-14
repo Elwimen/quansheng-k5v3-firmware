@@ -226,10 +226,16 @@ static uint16_t BK4819_ReadU16(void)
 static uint16_t reg_30_cache = 0xFFFF;
 static uint16_t reg_47_cache = 0xFFFF;
 
+/* The BK4819 is bit-banged from the main loop, and the CW receiver samples it from the
+   SysTick ISR. An interrupt landing in the middle of a frame would clock its own bytes into
+   someone else's transaction and corrupt both. The ISR checks this and skips that sample. */
+volatile bool gBK4819_BusBusy = false;
+
 uint16_t BK4819_ReadRegister(BK4819_REGISTER_t Register)
 {
     uint16_t Value;
 
+    gBK4819_BusBusy = true;
     CS_Release();
     SCL_Reset();
     SHORT_DELAY();
@@ -248,6 +254,7 @@ uint16_t BK4819_ReadRegister(BK4819_REGISTER_t Register)
     else if (Register == BK4819_REG_47)
         reg_47_cache = Value;
 
+    gBK4819_BusBusy = false;
     return Value;
 }
 
@@ -266,6 +273,8 @@ void BK4819_WriteRegister(BK4819_REGISTER_t Register, uint16_t Data)
         reg_47_cache = Data;
     }
 
+    gBK4819_BusBusy = true;
+
     CS_Release();
     SCL_Reset();
     SHORT_DELAY();
@@ -282,6 +291,8 @@ void BK4819_WriteRegister(BK4819_REGISTER_t Register, uint16_t Data)
 
     SCL_Set();
     SDA_Set();
+
+    gBK4819_BusBusy = false;
 }
 
 void BK4819_WriteU8(uint8_t Data)

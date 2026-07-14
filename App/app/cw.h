@@ -53,6 +53,7 @@ void CW_RecallText(char *out, uint8_t max);
 void CW_Init(void);
 void CW_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld);
 void CW_TimeSlice10ms(void);
+void CW_RX_Sample(void);   /* called from SysTick every 1ms */
 void CW_TimeSlice500ms(void);
 
 /* Phase 3 */
