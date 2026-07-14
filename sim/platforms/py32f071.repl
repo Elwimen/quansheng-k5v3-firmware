@@ -65,7 +65,10 @@ gpioPortA: GPIOPort.STM32_GPIOPort @ sysbus <0x50000000, +0x400>
 
 // GPIOB carries the BK4819 SCL (PB8) + SDA (PB9), the keyboard matrix
 // (cols PB3..6, rows PB12..15) and PTT (PB10).
-gpioPortB: GPIOPort.STM32_GPIOPort @ sysbus <0x50000400, +0x400>
+// Stock GPIO port plus one thing: while the BK4819 is shifting a register out, reading
+// PB9 (SDA) gives the chip's bit rather than the port's own state. See PY32_GPIOPortB.
+gpioPortB: GPIOPort.PY32_GPIOPortB @ sysbus <0x50000400, +0x400>
+    Bk4819: bk4819
     8 -> bk4819@1
     9 -> bk4819@2
     3 -> keyMatrix@0

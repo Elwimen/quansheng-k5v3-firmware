@@ -14,6 +14,7 @@
 // MSB as soon as the address phase ends and advance on each rising edge.
 //
 using System;
+using System.Collections.Generic;
 using System.IO;
 
 using Antmicro.Renode.Core;
@@ -38,6 +39,12 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 
         // Chip -> MCU data line; wire to the SDA GPIO input (GPIOB pin 9).
         public GPIO SdaOut { get; }
+
+        // While a register is being shifted out, GPIOB serves PB9 from these rather than
+        // from the port's own state -- see PY32_GPIOPortB. Trying to drive the pin through
+        // the GPIO instead just gets clobbered by the MCU's own clock writes.
+        public bool IsDrivingSda => phase == Phase.ReadData;
+        public bool SdaLevel => (outValue & 0x8000) != 0;
 
         // Where to record the transmitter's keying, as "<virtual ms>,<0|1>" per edge.
         //
@@ -92,8 +99,66 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 keyed ? 1 : 0);
         }
 
+        // ---- Receive: key a Morse signal *at* the radio -------------------------------
+        //
+        // cw_rx_tick() polls one thing: BK4819_GetAfTxRx(), the AF input amplitude in
+        // REG_6F<5:0>. It compares that against a threshold and times the marks and spaces.
+        // So "a station calling us" is just that register going up and down: synthesize it
+        // from the emulated clock and the decoder cannot tell it from a real signal.
+        //
+        // The radio auto-calibrates its threshold to (ambient + 10dB) when it has none
+        // stored, so the noise floor must be quiet and the tone well clear of it.
+        public void SendMorse(string text, int wpm)
+        {
+            var dit = 1200.0 / wpm;      // the definition of Morse speed, in milliseconds
+            var at = machine.ElapsedVirtualTime.TimeElapsed.TotalMilliseconds + 300;
+            var marks = new List<Tuple<double, double>>();
+
+            foreach(var raw in text.ToUpperInvariant())
+            {
+                if(raw == ' ')
+                {
+                    at += 4 * dit;       // word gap: 7 dits, 3 of which the last char added
+                    continue;
+                }
+                if(!Morse.TryGetValue(raw, out var pattern))
+                {
+                    continue;
+                }
+                foreach(var element in pattern)
+                {
+                    var length = (element == '-' ? 3 : 1) * dit;
+                    marks.Add(Tuple.Create(at, at + length));
+                    at += length + dit;  // element gap: one dit
+                }
+                at += 2 * dit;           // character gap: 3 dits, one already added
+            }
+
+            keying = marks;
+            this.Log(LogLevel.Info, "RX: keying '{0}' at {1} WPM ({2} elements)",
+                text, wpm, marks.Count);
+        }
+
+        private ushort AfAmplitude()
+        {
+            if(keying == null)
+            {
+                return RxNoiseFloor;
+            }
+            var now = machine.ElapsedVirtualTime.TimeElapsed.TotalMilliseconds;
+            foreach(var mark in keying)
+            {
+                if(now >= mark.Item1 && now < mark.Item2)
+                {
+                    return RxTone;
+                }
+            }
+            return RxNoiseFloor;
+        }
+
         public void Reset()
         {
+            keying = null;
             csn = true;
             scl = false;
             sdaIn = false;
@@ -181,7 +246,9 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                     {
                         // Read: present the register MSB now; the MCU samples before each pulse.
                         phase = Phase.ReadData;
-                        outValue = registers[address];
+                        outValue = address == AfAmplitudeRegister
+                            ? AfAmplitude()
+                            : registers[address];
                         bitCount = 0;
                         SdaOut.Set((outValue & 0x8000) != 0);
                     }
@@ -239,6 +306,25 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         // BK4819_EnterTxMute / ExitTxMute write REG_50 (mute = 0xBB18, unmute = 0x3B18).
         private const int TxMuteRegister = 0x50;
         private const ushort TxMuted = 0xBB18;
+
+        // BK4819_GetAfTxRx reads REG_6F<5:0>: the AF input amplitude in dB, 0..63.
+        private const int AfAmplitudeRegister = 0x6F;
+        private const ushort RxNoiseFloor = 3;
+        private const ushort RxTone = 40;
+
+        private List<Tuple<double, double>> keying;
+
+        private static readonly Dictionary<char, string> Morse = new Dictionary<char, string>
+        {
+            {'A', ".-"},   {'B', "-..."}, {'C', "-.-."}, {'D', "-.."},  {'E', "."},
+            {'F', "..-."}, {'G', "--."},  {'H', "...."}, {'I', ".."},   {'J', ".---"},
+            {'K', "-.-"},  {'L', ".-.."}, {'M', "--"},   {'N', "-."},   {'O', "---"},
+            {'P', ".--."}, {'Q', "--.-"}, {'R', ".-."},  {'S', "..."},  {'T', "-"},
+            {'U', "..-"},  {'V', "...-"}, {'W', ".--"},  {'X', "-..-"}, {'Y', "-.--"},
+            {'Z', "--.."},
+            {'0', "-----"}, {'1', ".----"}, {'2', "..---"}, {'3', "...--"}, {'4', "....-"},
+            {'5', "....."}, {'6', "-...."}, {'7', "--..."}, {'8', "---.."}, {'9', "----."},
+        };
 
         private const int PinCsn = 0;
         private const int PinScl = 1;

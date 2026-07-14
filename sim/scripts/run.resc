@@ -11,7 +11,7 @@ mach create "uvk5v3"
 # Compile + load custom PY32F071 peripheral models before the platform that
 # references them. One include, not six: Renode has no compilation cache and reloads
 # every metadata reference per invocation, so compiling them together is ~2x faster.
-i $ORIGIN/../renode/PY32_ADC.cs $ORIGIN/../renode/PY32_UART.cs $ORIGIN/../renode/PY32_SPIFlash.cs $ORIGIN/../renode/PY32_BK4819.cs $ORIGIN/../renode/PY32_KeyMatrix.cs $ORIGIN/../renode/PY32_I2CBus.cs
+i $ORIGIN/../renode/PY32_ADC.cs $ORIGIN/../renode/PY32_GPIOPortB.cs $ORIGIN/../renode/PY32_UART.cs $ORIGIN/../renode/PY32_SPIFlash.cs $ORIGIN/../renode/PY32_BK4819.cs $ORIGIN/../renode/PY32_KeyMatrix.cs $ORIGIN/../renode/PY32_I2CBus.cs
 
 # Monitor commands save_flash / load_flash for the PY25Q16 image.
 i $ORIGIN/../renode/flash_persist.py
@@ -21,6 +21,9 @@ i $ORIGIN/../renode/show_screen.py
 
 # Monitor commands ptt_press / ptt_release (PTT cannot be injected over serial).
 i $ORIGIN/../renode/ptt.py
+
+# Monitor command cw_rx_send "TEXT" WPM: key a Morse signal at the radio's receiver.
+i $ORIGIN/../renode/cw_rx.py
 
 machine LoadPlatformDescription $ORIGIN/../platforms/py32f071.repl
 
