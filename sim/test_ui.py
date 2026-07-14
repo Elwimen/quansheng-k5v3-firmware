@@ -56,7 +56,9 @@ CASES = {
     "menu_scrolled":   ["MENU", "DOWN", "DOWN"],
     "menu_step":       ["MENU", "MENU"],
     "back_to_main":    ["MENU", "EXIT"],
-    "vfo_frequency":   ["1"],
+    # No frequency-entry screen here: its digit cursor blinks (654 px toggling), so it has
+    # no settled state to compare against. It only ever passed because a fixed sleep landed
+    # on the same blink phase every time -- a golden of a blinking screen is not a test.
 }
 
 
@@ -75,6 +77,23 @@ def reboot(mon):
     mon.command("start")
     if not uvctl.wait_ready(mon):
         sys.exit("radio never settled after reset")
+
+
+def settle(mon, stable_for=1.2, timeout=15):
+    """Block until the LCD stops changing, so a case never captures a half-finished redraw."""
+    deadline = time.time() + timeout
+    previous, since = None, None
+    while time.time() < deadline:
+        screen = uvctl.grab(mon)
+        if screen == previous:
+            if since is None:
+                since = time.time()
+            elif time.time() - since >= stable_for:
+                return
+        else:
+            since = None
+        previous = screen
+        time.sleep(0.3)
 
 
 def to_bits(screen):
@@ -125,7 +144,11 @@ def main():
         reboot(mon)
         if keys:
             uvctl.press(keys)
-            time.sleep(1.0)
+            # Wait for the screen to stop changing rather than sleeping a fixed amount:
+            # the firmware redraws a frame or two after the last key, so a fixed wait
+            # sometimes captured the previous screen (the menu, on its way back to the
+            # main display) and the case failed for no reason.
+            settle(mon)
         screen = uvctl.grab(mon)
         golden_path = os.path.join(GOLDEN_DIR, f"{name}.png")
 
