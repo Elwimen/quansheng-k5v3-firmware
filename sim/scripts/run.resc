@@ -9,13 +9,9 @@ using sysbus
 mach create "uvk5v3"
 
 # Compile + load custom PY32F071 peripheral models before the platform that
-# references them.
-i $ORIGIN/../renode/PY32_ADC.cs
-i $ORIGIN/../renode/PY32_UART.cs
-i $ORIGIN/../renode/PY32_SPIFlash.cs
-i $ORIGIN/../renode/PY32_BK4819.cs
-i $ORIGIN/../renode/PY32_KeyMatrix.cs
-i $ORIGIN/../renode/PY32_I2CBus.cs
+# references them. One include, not six: Renode has no compilation cache and reloads
+# every metadata reference per invocation, so compiling them together is ~2x faster.
+i $ORIGIN/../renode/PY32_ADC.cs $ORIGIN/../renode/PY32_UART.cs $ORIGIN/../renode/PY32_SPIFlash.cs $ORIGIN/../renode/PY32_BK4819.cs $ORIGIN/../renode/PY32_KeyMatrix.cs $ORIGIN/../renode/PY32_I2CBus.cs
 
 # Monitor commands save_flash / load_flash for the PY25Q16 image.
 i $ORIGIN/../renode/flash_persist.py

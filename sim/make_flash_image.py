@@ -24,6 +24,16 @@ def put16(addr, value):
 for i, v in enumerate((1900, 2000, 2100, 2280, 2400, 2500)):
     put16(0x010140 + 2 * i, v)
 
+# POWER_ON_DISPLAY_MODE = NONE, i.e. settings.c reads it as Data[7] of the block at
+# flash 0x00A0A8. It is an ordinary user setting, not a patch -- but it is the single
+# biggest cost of a simulated boot: with any other value main.c spins 2.55 simulated
+# seconds on the boot screen, polling the keyboard (GPIO) and SysTick, and every one of
+# those register reads leaves Renode's translated code for a managed peripheral model.
+# Blank flash reads 0xFF, fails settings.c's "< 6" check and falls back to VOLTAGE, so
+# an unset image pays the full cost. Skipping it takes a sim boot from ~15s to ~2s.
+POWER_ON_DISPLAY_MODE_NONE = 5      # ALL, SOUND, MESSAGE, VOLTAGE, LOGO, NONE
+img[0x00A0A8 + 7] = POWER_ON_DISPLAY_MODE_NONE
+
 os.makedirs(os.path.dirname(OUT), exist_ok=True)
 with open(OUT, "wb") as f:
     f.write(img)

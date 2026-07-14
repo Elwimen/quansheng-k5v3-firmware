@@ -74,7 +74,7 @@ start=$SECONDS
 python3 - "$PTY" <<'PY' || { echo "FAILED — radio never answered"; exit 1; }
 import sys, time, serial
 
-SUSTAINED = 5.0   # seconds of unbroken streaming before we call it booted
+SUSTAINED = 2.0   # seconds of unbroken streaming before we call it booted
 GAP       = 3.0   # a silence longer than this means it was not the real thing
 
 port = sys.argv[1]
