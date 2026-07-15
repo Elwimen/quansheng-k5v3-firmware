@@ -18,3 +18,6 @@ __pycache__/
 AGENTS.md
 # UI test artefacts (regenerated on failure)
 sim/golden/failed/
+
+# CW screen demo captures (regenerate with sim/cwcap.py / cwseq.py)
+sim/captures/
