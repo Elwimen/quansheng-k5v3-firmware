@@ -29,3 +29,15 @@ def mc_cw_rx_send(text, wpm):
         return
     radio.SendMorse(str(text), int(str(wpm)))
     print("keying '%s' at %s WPM" % (text, wpm))
+
+
+# Monitor command `cw_rx_noise LEVEL`: add broadband white noise to REG_6F, the way the air
+# does. LEVEL is the peak per-sample amplitude added (plus sparse spikes); 0 = clean signal.
+# Use it to reproduce the on-air "stream of E's" and to check the decoder's noise gates.
+def mc_cw_rx_noise(level):
+    radio = _bk4819()
+    if radio is None:
+        print("cw_rx_noise: no PY32_BK4819 in this machine")
+        return
+    radio.SetRxNoise(int(str(level)))
+    print("RX noise level %s" % level)

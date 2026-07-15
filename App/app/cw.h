@@ -21,6 +21,9 @@
 #define CW_TEXT_COLS_FIRST  20  /* chars after prefix: (128-6)/6 */
 #define CW_TEXT_COLS_CONT   21  /* chars on continuation line: 128/6 */
 
+#define CW_SCOPE_LEN        128  /* rhythm-scope columns (one per LCD x) */
+#define CW_SCOPE_DECIM        8  /* ms between scope samples -> ~1s window */
+
 typedef enum { CW_MSG_RX = 0, CW_MSG_TX = 1, CW_MSG_CONT = 2 } CwMsgTag_t;
 
 typedef struct {
@@ -64,6 +67,12 @@ bool CW_TX_Active(void);
 void     CW_RX_SetThreshold(uint16_t rssi_threshold);
 uint16_t CW_RX_GetThreshold(void);
 uint8_t  CW_RX_GetLastAmp(void);
+uint8_t  CW_RX_GetWpm(void);                       /* detected sender WPM (0 = none) */
+uint8_t  CW_RX_GetSLevel(void);                    /* peak-hold S-meter, 0..9 */
+void     CW_RX_UpdateSMeter(void);                 /* call at ~10ms while on the CW screen */
+uint8_t  CW_RX_GetState(void);                     /* 0 idle, 1 mark, 2 space */
+void     CW_RX_GetLivePattern(char *buf, uint8_t n);
+void     CW_RX_GetScope(uint8_t *buf);             /* CW_SCOPE_LEN bytes, oldest..newest */
 
 /* Prediction popup accessors (used by ui/cw.c) */
 bool        CW_PopupActive(void);

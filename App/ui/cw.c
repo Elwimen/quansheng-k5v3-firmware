@@ -3,9 +3,11 @@
 #include <string.h>
 #include "app/cw.h"
 #include "driver/st7565.h"
+#include "driver/bk4819.h"
 #include "ui/helper.h"
 #include "settings.h"
 #include "radio.h"
+#include "misc.h"
 #include "external/printf/printf.h"
 
 #define CW_HIST_Y0  12u   /* framebuffer-relative y of first history line */
@@ -17,38 +19,57 @@ void UI_DisplayCwChat(void)
 
     UI_DisplayClear();
 
-    /* Line 0 — status bar: WPM + frequency (left) + char counter (right) */
+    /* Line 0 — status: [*]mode + channel-name-or-frequency (left); S-meter + TX/RX speed
+       (right). The '*' shows while a signal is being received; the S-meter is the strength
+       of the station you're copying; TX/RX = your sending speed / the detected sender speed. */
     {
-        const uint32_t freq = gCurrentVfo->pRX->Frequency;
-        const bool ook = (gCurrentVfo->Modulation == MODULATION_CW);
-        sprintf_(buf, "%s %uW %u.%03u",
-                 ook ? "CW" : "aCW",
-                 gEeprom.CW_WPM,
-                 freq / 100000,
-                 (freq % 100000) / 100);
+        const bool ook  = (gCurrentVfo->Modulation == MODULATION_CW);
+        const bool rxng = (CW_RX_GetState() != 0u);          /* not idle => hearing something */
+
+        /* Location: the memory-channel name when tuned to one, otherwise the frequency. */
+        char loc[14];
+        uint16_t ch = gEeprom.ScreenChannel[gEeprom.RX_VFO];
+        if (IS_MR_CHANNEL(ch)) {
+            char name[16];
+            SETTINGS_FetchChannelName(name, ch);
+            if (name[0]) {
+                name[8] = '\0';                              /* fits beside the S-meter/speed */
+                strcpy(loc, name);
+            } else {
+                sprintf_(loc, "CH%03u", ch + 1u);
+            }
+        } else {
+            const uint32_t freq = gCurrentVfo->pRX->Frequency;
+            sprintf_(loc, "%u.%03u", freq / 100000, (freq % 100000) / 100);
+        }
+        sprintf_(buf, "%s%s %s", rxng ? "*" : "", ook ? "CW" : "aCW", loc);
         UI_PrintStringSmallBold(buf, 0, 0, 0);
 
-        /* Right side — {threshold}[chars_remaining], inverted 3×5 font */
-        uint8_t remain = (uint8_t)((CW_COMPOSE_MAX - 1u) - strlen(cw_compose));
-        char indicator[12];
-        sprintf_(indicator, "%u %u", CW_RX_GetThreshold(), remain);
+        /* IARU S-meter (peak-held so a keyed carrier doesn't strobe it). */
+        uint8_t s = CW_RX_GetSLevel();
+
+        /* Right side — S{level} {TXwpm}/{RXwpm}, inverted 3×5 font. RX shows '--' until the
+           sender's speed is acquired. */
+        uint8_t rxwpm = CW_RX_GetWpm();
+        char indicator[16];
+        if (rxwpm)
+            sprintf_(indicator, "S%u %u/%u", s, gEeprom.CW_WPM, rxwpm);
+        else
+            sprintf_(indicator, "S%u %u/--", s, gEeprom.CW_WPM);
         uint8_t ind_w = (uint8_t)(strlen(indicator) * 4u);  /* 4 px per glyph */
         uint8_t ind_x = (uint8_t)(128u - ind_w);
         for (uint8_t px = ind_x - 1u; px < 128u; px++)     /* black background */
             gFrameBuffer[0][px] |= 0xFFu;
         GUI_DisplaySmallest(indicator, ind_x, 1, false, false); /* white glyphs */
 
-        /* AF amplitude bar — 3px strip at the top of the history area (bits 0-2 of
-           gFrameBuffer[1]), 1px below the status row. Drawn last so it separates
-           status from history. Threshold shown as XOR notch. */
-        uint8_t amp_v   = CW_RX_GetLastAmp();
-        uint8_t thr_v   = (uint8_t)(CW_RX_GetThreshold() > 63u ? 63u : CW_RX_GetThreshold());
-        uint8_t bar_end = (uint8_t)(amp_v * 2u);                    /* 0-126 px */
-        uint8_t thr_x   = (uint8_t)(thr_v * 2u);
-        for (uint8_t x = 0; x < bar_end && x < 128u; x++)
-            gFrameBuffer[1][x] |= 0x07u;                            /* bits 0-2 */
-        if (thr_x < 128u)
-            gFrameBuffer[1][thr_x] ^= 0x07u;                        /* notch */
+        /* Rhythm scope — 3px strip (bits 0-2 of gFrameBuffer[1]) showing the last ~1s of
+           the debounced on/off signal, oldest at the left, newest at the right. You can
+           read the Morse rhythm off it directly. */
+        uint8_t scope[CW_SCOPE_LEN];
+        CW_RX_GetScope(scope);
+        for (uint8_t x = 0; x < CW_SCOPE_LEN && x < 128u; x++)
+            if (scope[x])
+                gFrameBuffer[1][x] |= 0x07u;                        /* bits 0-2 */
     }
 
     /* History — gFont5x7, y=12 (just below AF bar+gap), 7px pitch
@@ -82,6 +103,23 @@ void UI_DisplayCwChat(void)
         }
     }
 
+    /* Live decode — the element being received right now, as dits/dahs, tacked onto the end
+       of the newest RX line so you watch it build up and snap to a letter. */
+    if (CW_RX_GetState() != 0u && cw_history_count > 0) {
+        uint8_t last = (uint8_t)(cw_history_count - 1u);
+        if (cw_history[last].tag == CW_MSG_RX &&
+            last >= cw_scroll && last < (uint8_t)(cw_scroll + hist_lines)) {
+            char pat[10];
+            CW_RX_GetLivePattern(pat, sizeof(pat));
+            if (pat[0]) {
+                uint8_t ly = (uint8_t)(CW_HIST_Y0 + (last - cw_scroll) * CW_HIST_DY);
+                uint8_t tx = (uint8_t)(6u + strlen(cw_history[last].text) * 6u + 3u);
+                if (tx < 122u)
+                    GUI_Display5x7(pat, tx, ly, true);
+            }
+        }
+    }
+
     /* Popup row — gFontSmall at Line=5 (y=40-47), shown when popup active */
     if (CW_PopupActive()) {
         char popup_buf[16];
@@ -109,7 +147,7 @@ void UI_DisplayCwChat(void)
 
     /* Line 6 — compose line (or recall preview when a TX entry is selected) */
     {
-        const uint8_t visible = 16;
+        const uint8_t visible = 12;   /* 7px/char: ">"+12+"_" = 105px, clear of the counter */
         char disp[visible + 3];
         uint8_t i = 0;
 
@@ -132,6 +170,12 @@ void UI_DisplayCwChat(void)
             disp[i++] = cw_cursor_visible ? '_' : ' ';
             disp[i]   = '\0';
             UI_PrintStringSmallNormal(disp, 0, 0, 6);
+
+            /* Right-aligned message capacity: chars used / total, 3×5 font. */
+            char cnt[8];
+            sprintf_(cnt, "%u/%u", dlen, (uint8_t)(CW_COMPOSE_MAX - 1u));
+            uint8_t cnt_x = (uint8_t)(128u - (uint8_t)strlen(cnt) * 4u);
+            GUI_DisplaySmallest(cnt, cnt_x, 49, false, true);
         }
     }
 
