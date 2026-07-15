@@ -345,8 +345,21 @@ static uint8_t     rx_bit_count   = 0;
 static uint16_t    rx_dit_est     = 0;
 static uint16_t    rx_threshold   = 0;
 static uint8_t     rx_last_amp    = 0;
+static bool        rx_wrap_pending = false;  /* line filled at a word boundary: next word -> new line */
+
+/* Rhythm scope: a ring of the debounced on/off signal, one sample every
+   CW_SCOPE_DECIM ms, so 128 columns cover ~1s -- enough to see the Morse rhythm. */
+static uint8_t rx_scope[CW_SCOPE_LEN];   /* 0/1 per column, oldest..newest via head */
+static uint8_t rx_scope_head = 0;        /* index of the next slot to write */
+static uint8_t rx_scope_div  = 0;
 
 #define CW_RX_TIMEOUT_MULT  10u
+
+/* An amplitude edge must persist this many 1ms samples before it counts, so a noise blip
+   shorter than any real element is rejected. Must stay below the briefest real element --
+   a 40 WPM dit is 30ms -- with margin. The debounce is symmetric, so element durations are
+   preserved. */
+#define CW_RX_DEBOUNCE_MS   6u
 
 /* REG_6F<6:0>: AF TX/RX input amplitude in dB — works for both OOK (beat note)
    and AF CW (keyed tone). No AGC guard needed; DSP updates it continuously. */
@@ -512,23 +525,50 @@ static void cw_rx_commit_char(void)
     rx_bit_accum  = 0;
     rx_bit_count  = 0;
 
-    bool appended = false;
-    if (cw_history_count > 0 &&
-        cw_history[cw_history_count - 1].tag == CW_MSG_RX) {
-        uint8_t idx = (uint8_t)(cw_history_count - 1u);
-        uint8_t len = (uint8_t)strlen(cw_history[idx].text);
-        if (len < CW_TEXT_COLS_FIRST) {
-            cw_history[idx].text[len]     = decoded;
-            cw_history[idx].text[len + 1] = '\0';
-            appended = true;
-        }
-    }
-    if (!appended) {
+    bool have_rx = (cw_history_count > 0 &&
+                    cw_history[cw_history_count - 1].tag == CW_MSG_RX);
+
+    /* A previous word filled the line exactly at its boundary -- start the new word fresh
+       on a new line instead of letting it run on. */
+    if (rx_wrap_pending) {
+        rx_wrap_pending = false;
         char tmp[2] = { decoded, '\0' };
         cw_push_raw(tmp, CW_MSG_RX);
-        if (cw_history_count > CW_VISIBLE_LINES)
-            cw_scroll = (uint8_t)(cw_history_count - CW_VISIBLE_LINES);
+    } else if (have_rx) {
+        uint8_t idx  = (uint8_t)(cw_history_count - 1u);
+        char   *line = cw_history[idx].text;
+        uint8_t len  = (uint8_t)strlen(line);
+        if (len < CW_TEXT_COLS_FIRST) {
+            line[len]     = decoded;
+            line[len + 1] = '\0';
+            gRequestDisplayScreen = DISPLAY_CW_CHAT;
+            return;                                  /* fit on the current line, done */
+        }
+        /* Line full mid-word -- wrap on the word boundary: move the trailing run after the
+           last space down to a new line rather than splitting the word. A word longer than
+           a whole line has no space, so it hard-breaks. */
+        int8_t sp = -1;
+        for (int8_t i = (int8_t)len - 1; i >= 0; i--)
+            if (line[i] == ' ') { sp = i; break; }
+        if (sp >= 0) {
+            char    word[CW_TEXT_COLS_FIRST + 2];
+            uint8_t wl = 0;
+            for (uint8_t i = (uint8_t)(sp + 1); i < len; i++)
+                word[wl++] = line[i];
+            word[wl++] = decoded;
+            word[wl]   = '\0';
+            line[sp]   = '\0';                        /* drop the wrapped word from this line */
+            cw_push_raw(word, CW_MSG_RX);
+        } else {
+            char tmp[2] = { decoded, '\0' };
+            cw_push_raw(tmp, CW_MSG_RX);
+        }
+    } else {
+        char tmp[2] = { decoded, '\0' };
+        cw_push_raw(tmp, CW_MSG_RX);
     }
+    if (cw_history_count > CW_VISIBLE_LINES)
+        cw_scroll = (uint8_t)(cw_history_count - CW_VISIBLE_LINES);
     gRequestDisplayScreen = DISPLAY_CW_CHAT;
 }
 
@@ -543,6 +583,10 @@ static void cw_rx_commit_word_space(void)
             len < CW_TEXT_COLS_FIRST) {
             cw_history[idx].text[len]     = ' ';
             cw_history[idx].text[len + 1] = '\0';
+        } else if (len >= CW_TEXT_COLS_FIRST) {
+            /* No room for the separating space -- defer the break so the next word starts on
+               a fresh line and doesn't merge with this one. */
+            rx_wrap_pending = true;
         }
     }
 }
@@ -582,15 +626,43 @@ void CW_RX_Sample(void)
        start of a mark than it does to keep one going. A single threshold on a noisy
        envelope chatters around the crossing and smears the edge whose timing is the whole
        measurement. The margin is a quarter of the threshold above the noise floor. */
-    uint16_t hyst  = (rx_threshold > 4u) ? (rx_threshold / 4u) : 1u;
-    bool     above = (rx_state == CW_RX_MARK)
-                   ? (raw_amp + hyst > rx_threshold)   /* stay in the mark */
-                   : (raw_amp > rx_threshold + hyst);  /* start a new one */
+    uint16_t hyst      = (rx_threshold > 4u) ? (rx_threshold / 4u) : 1u;
+    bool     raw_above = (rx_state == CW_RX_MARK)
+                       ? (raw_amp + hyst > rx_threshold)   /* stay in the mark */
+                       : (raw_amp > rx_threshold + hyst);  /* start a new one */
+
+    /* Min-element noise gate: debounce the edge. REG_6F has no tone selectivity, so band
+       noise and QRN poke above the threshold for a millisecond or two and the timer reads
+       the blip as a one-dit element -- the stream of E's seen on the air. Require an edge to
+       persist CW_RX_DEBOUNCE_MS before it counts; shorter blips are dropped. Because both
+       edges are delayed equally, the measured mark/gap durations are unchanged. */
+    static bool    db_above = false;
+    static uint8_t db_count = 0;
+    if (raw_above != db_above) {
+        if (++db_count >= CW_RX_DEBOUNCE_MS) { db_above = raw_above; db_count = 0; }
+    } else {
+        db_count = 0;
+    }
+    bool above = db_above;
+
+    /* Feed the rhythm scope at a decimated rate (see rx_scope). */
+    if (++rx_scope_div >= CW_SCOPE_DECIM) {
+        rx_scope_div = 0;
+        rx_scope[rx_scope_head] = above ? 1u : 0u;
+        rx_scope_head = (uint8_t)((rx_scope_head + 1u) % CW_SCOPE_LEN);
+    }
 
     switch (rx_state) {
 
     case CW_RX_IDLE:
-        if (above) {
+        /* Squelch-arming gate: only *start* a reception when the receiver's own squelch says
+           a real carrier is present. The squelch (RSSI + noise + glitch thresholds) rejects
+           band noise far better than the raw broadband amplitude, so this is what stops the
+           decoder free-running on an empty channel. It gates the start only: an OOK carrier
+           is keyed, so the squelch closes in every inter-element gap -- once we are receiving,
+           amplitude drives the timing and the gaps are measured normally. The end-of-
+           transmission timeout returns here and re-arms for the next station. */
+        if (above && g_SquelchLost) {
             rx_mark_ticks  = 1;
             rx_space_ticks = 0;
             rx_state       = CW_RX_MARK;
@@ -672,6 +744,72 @@ uint16_t CW_RX_GetThreshold(void)
 uint8_t CW_RX_GetLastAmp(void)
 {
     return rx_last_amp;
+}
+
+/* Detected sender speed in WPM (0 = not yet acquired). dit_ms = 1200/WPM. */
+uint8_t CW_RX_GetWpm(void)
+{
+    return rx_dit_est ? (uint8_t)(1200u / rx_dit_est) : 0u;
+}
+
+/* S-meter with peak-hold. An OOK carrier is keyed, so raw RSSI strobes S0<->Sx with every
+   dit; peak-hold jumps up instantly, holds ~0.8s, then decays -- a steady, readable meter.
+   Sampled from CW_TimeSlice10ms (main loop, bus-safe via gBK4819_BusBusy). */
+static uint8_t rx_slevel      = 0;   /* held peak, 0..9 */
+static uint8_t rx_slevel_hold = 0;
+
+static uint8_t cw_rx_slevel_now(void)
+{
+    int16_t dbm = BK4819_GetRSSI_dBm();
+#ifdef ENABLE_FEAT_F4HWN
+    if (gCurrentVfo != NULL)
+        dbm += dBmCorrTable[gCurrentVfo->Band];
+#endif
+    if (dbm >= -93)  return 9u;
+    if (dbm < -141)  return 0u;
+    return (uint8_t)((dbm + 147) / 6);
+}
+
+void CW_RX_UpdateSMeter(void)
+{
+    uint8_t now = cw_rx_slevel_now();
+    if (now >= rx_slevel) {
+        rx_slevel      = now;
+        rx_slevel_hold = 80u;                 /* hold the peak ~0.8s (80 x 10ms) */
+    } else if (rx_slevel_hold > 0u) {
+        rx_slevel_hold--;
+    } else if (rx_slevel > now) {
+        rx_slevel--;                          /* decay one S-unit per tick after the hold */
+    }
+}
+
+uint8_t CW_RX_GetSLevel(void)
+{
+    return rx_slevel;
+}
+
+/* 0 = idle (nothing heard), 1 = mark (key down now), 2 = space (in a gap). */
+uint8_t CW_RX_GetState(void)
+{
+    return (uint8_t)rx_state;
+}
+
+/* The element being assembled right now, as dits/dahs. Writes at most n-1 chars
+   ('.'=dit, '-'=dah, MSB first) and NUL-terminates. Empty when nothing is pending. */
+void CW_RX_GetLivePattern(char *buf, uint8_t n)
+{
+    uint8_t count = rx_bit_count;
+    if (count > n - 1u) count = (uint8_t)(n - 1u);
+    for (uint8_t i = 0; i < count; i++)
+        buf[i] = (rx_bit_accum & (1u << (rx_bit_count - 1u - i))) ? '-' : '.';
+    buf[count] = '\0';
+}
+
+/* Rhythm scope: oldest..newest into buf (CW_SCOPE_LEN entries, 0/1). */
+void CW_RX_GetScope(uint8_t *buf)
+{
+    for (uint8_t i = 0; i < CW_SCOPE_LEN; i++)
+        buf[i] = rx_scope[(rx_scope_head + i) % CW_SCOPE_LEN];
 }
 
 /* ------------------------------------------------------------------ */
@@ -843,9 +981,12 @@ void CW_TimeSlice10ms(void)
     /* The receiver runs from SysTick at 1ms (CW_RX_Sample); here we only refresh the
        signal bar, at 20Hz -- blitting costs ~7.5ms at 1MHz SPI. */
     static uint8_t bar_refresh_ctr = 0;
-    if (gScreenToDisplay == DISPLAY_CW_CHAT && ++bar_refresh_ctr >= 5u) {
-        bar_refresh_ctr = 0;
-        gUpdateDisplay = true;
+    if (gScreenToDisplay == DISPLAY_CW_CHAT) {
+        CW_RX_UpdateSMeter();                 /* peak-hold S-meter, 10ms cadence */
+        if (++bar_refresh_ctr >= 5u) {
+            bar_refresh_ctr = 0;
+            gUpdateDisplay = true;
+        }
     }
 }
 
