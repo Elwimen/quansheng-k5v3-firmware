@@ -105,10 +105,28 @@ def symbol(name):
     return addr
 
 
+_gdb_bin = None
+
+
+def _gdb():
+    """A gdb that can read the ARM ELF's DWARF. Computing a static field offset never runs
+    the target, so gdb-multiarch works when arm-none-eabi-gdb isn't installed (e.g. CI)."""
+    global _gdb_bin
+    if _gdb_bin is None:
+        import shutil
+        for cand in ("arm-none-eabi-gdb", "gdb-multiarch", "gdb"):
+            if shutil.which(cand):
+                _gdb_bin = cand
+                break
+        else:
+            sys.exit("no gdb found (install arm-none-eabi-gdb or gdb-multiarch)")
+    return _gdb_bin
+
+
 def field_offset(struct, field):
     """Offset of a field, straight out of the DWARF -- no hand-counted struct layouts."""
     out = subprocess.run(
-        ["arm-none-eabi-gdb", "-q", ELF, "-batch",
+        [_gdb(), "-q", ELF, "-batch",
          "-ex", f"print (int)&(({struct} *)0)->{field}"],
         capture_output=True, text=True).stdout
     match = re.search(r"=\s*(\d+)", out)
