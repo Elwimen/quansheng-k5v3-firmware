@@ -47,6 +47,11 @@ jobs:
     - name: CW keying is correct Morse
       run: ./sim/test_cw_tx.py
 
+    # Add broadband noise + bursts to REG_6F and confirm the receiver stays silent on an
+    # empty channel (no "stream of E's") yet still copies a real signal through moderate noise.
+    - name: CW receiver rejects noise
+      run: ./sim/test_cw_rx_noise.py
+
     - name: Upload failing screens
       if: failure()
       uses: actions/upload-artifact@v4

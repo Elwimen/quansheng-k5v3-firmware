@@ -139,26 +139,119 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 text, wpm, marks.Count);
         }
 
-        private ushort AfAmplitude()
+        // Reproduce the on-air "stream of E's": real REG_6F is a *broadband* amplitude with
+        // no tone selectivity, so band noise and QRN poke above the (noise+10) threshold and
+        // the decoder times a 1-tick blip as a dit. The clean model (noise floor 3, tone 24)
+        // never showed this. SetRxNoise(level) dials it in: `level` is the peak white-noise
+        // amplitude added per sample, plus sparse impulsive spikes that can cross the
+        // threshold. 0 = clean (unchanged behaviour, keeps the existing tests deterministic).
+        public void SetRxNoise(int level)
+        {
+            rxNoise = level < 0 ? 0 : level;
+            this.Log(LogLevel.Info, "RX noise level set to {0}", rxNoise);
+        }
+
+        // Is the keyed carrier up right now? This is the *clean* carrier (independent of the
+        // broadband audio noise), which is what an RSSI-based squelch actually sees.
+        private bool CarrierPresent()
         {
             if(keying == null)
             {
-                return RxNoiseFloor;
+                return false;
             }
             var now = machine.ElapsedVirtualTime.TimeElapsed.TotalMilliseconds;
             foreach(var mark in keying)
             {
                 if(now >= mark.Item1 && now < mark.Item2)
                 {
-                    return RxTone;
+                    return true;
                 }
             }
-            return RxNoiseFloor;
+            return false;
+        }
+
+        // Model the squelch interrupt the firmware polls: REG_0C bit0 = "an interrupt is
+        // pending", REG_02 = the latched event bits (sqlLost/sqlFound). The squelch tracks the
+        // clean carrier, not the noisy audio -- that is exactly why the firmware's arming gate
+        // can trust it to reject band noise. Evaluated lazily on each REG_0C poll; only a level
+        // *change* latches an event, so repeated polls don't loop forever.
+        private void UpdateSquelch()
+        {
+            bool open = CarrierPresent();
+            if(open != squelchOpen)
+            {
+                squelchOpen     = open;
+                interruptFlags |= open ? IntSqlLost : IntSqlFound;
+                pendingInterrupt = true;
+            }
+        }
+
+        private ushort ReadModelRegister(byte reg)
+        {
+            switch(reg)
+            {
+            case AfAmplitudeRegister:
+                return AfAmplitude();
+            case InterruptFlagRegister:      // REG_0C: bit0 = interrupt request pending
+                UpdateSquelch();
+                return (ushort)(pendingInterrupt ? 1u : 0u);
+            case InterruptRegister:          // REG_02: latched event bits, consumed on read
+                {
+                    ushort flags = interruptFlags;
+                    interruptFlags = 0;
+                    return flags;
+                }
+            case RssiRegister:               // REG_67<8:0>: RSSI. dBm = rssi/2 - 160.
+                {
+                    // Carrier present -> a decent signal (~S8); noise floor otherwise. A
+                    // little jitter so the S-meter isn't dead-static.
+                    int rssi = CarrierPresent() ? 126 : 40;
+                    rssi += rng.Next(-4, 5);
+                    return (ushort)(rssi < 0 ? 0 : rssi & 0x1FF);
+                }
+            default:
+                return registers[reg];
+            }
+        }
+
+        private ushort AfAmplitude()
+        {
+            ushort baseAmp = CarrierPresent() ? RxTone : RxNoiseFloor;
+            if(rxNoise <= 0)
+            {
+                return baseAmp;
+            }
+            // Per-sample white noise around the current level, plus a sparse impulsive spike
+            // (chance scales with the level) big enough to clear the threshold on its own.
+            int val = baseAmp + rng.Next(-rxNoise, rxNoise + 1);
+            if(rng.Next(100) < rxNoise)
+            {
+                val += rng.Next(rxNoise, 3 * rxNoise + 1);
+            }
+            // Bursts: real QRN and band noise arrive in runs of several ms, not lone samples,
+            // so they survive a short debounce. A held burst is what a per-sample gate cannot
+            // reject and only the squelch (carrier-present) gate can. Start one occasionally
+            // and hold an elevated level for a run of samples.
+            if(noiseBurst > 0)
+            {
+                noiseBurst--;
+                val += rxNoise + rng.Next(0, rxNoise + 1);
+            }
+            else if(rng.Next(1000) < rxNoise)
+            {
+                noiseBurst = rng.Next(10, 40);   // ~10-40ms at the 1ms sample rate
+            }
+            if(val < 0) val = 0;
+            if(val > 63) val = 63;
+            return (ushort)val;
         }
 
         public void Reset()
         {
             keying = null;
+            squelchOpen = false;
+            interruptFlags = 0;
+            pendingInterrupt = false;
             csn = true;
             scl = false;
             sdaIn = false;
@@ -246,9 +339,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                     {
                         // Read: present the register MSB now; the MCU samples before each pulse.
                         phase = Phase.ReadData;
-                        outValue = address == AfAmplitudeRegister
-                            ? AfAmplitude()
-                            : registers[address];
+                        outValue = ReadModelRegister(address);
                         bitCount = 0;
                         SdaOut.Set((outValue & 0x8000) != 0);
                     }
@@ -269,6 +360,11 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                     if(address == GpioOutRegister || address == TxMuteRegister)
                     {
                         RecordKeying(address, shifter);
+                    }
+                    if(address == InterruptRegister)
+                    {
+                        // Firmware writes REG_02 = 0 to acknowledge; drop the pending request.
+                        pendingInterrupt = false;
                     }
                     this.Log(LogLevel.Noisy, "REG 0x{0:X2} <= 0x{1:X4}", address, shifter);
                     phase = Phase.Idle;
@@ -310,6 +406,17 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         // BK4819_GetAfTxRx reads REG_6F<5:0>: the AF input amplitude in dB, 0..63.
         private const int AfAmplitudeRegister = 0x6F;
         private const ushort RxNoiseFloor = 3;
+
+        // Interrupt path the firmware polls in CheckRadioInterrupts(): REG_0C bit0 signals a
+        // pending interrupt, REG_02 holds the event bits, and writing REG_02 acknowledges.
+        private const byte   InterruptFlagRegister = 0x0C;
+        private const byte   InterruptRegister     = 0x02;
+        private const byte   RssiRegister          = 0x67;
+        private const ushort IntSqlLost  = 0x0004;  // squelch opened (carrier present)
+        private const ushort IntSqlFound = 0x0008;  // squelch closed (carrier gone)
+        private bool   squelchOpen;
+        private ushort interruptFlags;
+        private bool   pendingInterrupt;
         // The firmware auto-calibrates its threshold to (noise + 10) and then smooths the
         // amplitude with an IIR whose decay is slower than its rise. If the tone sits far
         // above the threshold the decay takes many ticks to fall back through it, every mark
@@ -317,6 +424,11 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         // symmetric when the threshold sits near the middle of the span, so key the tone at
         // roughly twice the auto-calibrated threshold.
         private const ushort RxTone = 24;
+
+        // Fixed seed: reproducible noise so the "no false E's" regression is stable in CI.
+        private readonly Random rng = new Random(12345);
+        private int rxNoise;
+        private int noiseBurst;   // remaining samples of an in-progress noise burst
 
         private List<Tuple<double, double>> keying;
 
