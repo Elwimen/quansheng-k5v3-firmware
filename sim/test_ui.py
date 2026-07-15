@@ -142,12 +142,13 @@ def main():
     for name, keys in cases.items():
         print(f"  {name:18s}", end=" ", flush=True)
         reboot(mon)
-        if keys:
-            uvctl.press(keys)
-            # Wait for the screen to stop changing rather than sleeping a fixed amount:
-            # the firmware redraws a frame or two after the last key, so a fixed wait
-            # sometimes captured the previous screen (the menu, on its way back to the
-            # main display) and the case failed for no reason.
+        # Press one key at a time and wait for the screen to settle before the next, rather
+        # than firing them a fixed delay apart. A fixed wall-clock delay buys different
+        # amounts of *emulated* time depending on how fast Renode runs (much slower on CI),
+        # so keys could pile up and a scroll landed one step off. Settling between keys makes
+        # navigation deterministic regardless of host speed.
+        for k in keys:
+            uvctl.press([k])
             settle(mon)
         screen = uvctl.grab(mon)
         golden_path = os.path.join(GOLDEN_DIR, f"{name}.png")
