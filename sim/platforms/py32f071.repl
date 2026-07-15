@@ -1,0 +1,108 @@
+// Renode platform for the Puya PY32F071 (ARM Cortex-M0+) as used on the
+// Quansheng UV-K5 V3 / UV-K1. Minimal model: core + memories + NVIC/SysTick +
+// USART1. Bit-banged external ICs (BK4819, EEPROM, BK1080) are NOT modelled —
+// the firmware's ENABLE_SIM build redirects those to RAM/file-backed state.
+// Other on-chip peripherals are stubbed via `sysbus Tag` in the .resc script.
+
+cpu: CPU.CortexM @ sysbus
+    cpuType: "cortex-m0+"
+    nvic: nvic
+
+nvic: IRQControllers.NVIC @ sysbus 0xE000E000
+    // The firmware runs the core at 48 MHz (Core/Src/main.c: LL_SetSystemCoreClock) and
+    // sets SysTick to SystemCoreClock/100 for its 10ms slice. Declare the same clock here
+    // or every firmware timer runs fast: at 64 MHz that "10ms" slice fired every 7.5ms,
+    // which made CW keying come out 33% quick.
+    systickFrequency: 48000000
+    IRQ -> cpu@0
+
+// 128 KB flash @ 0x08000000 (app vector table lives at 0x08002800).
+flash: Memory.MappedMemory @ sysbus 0x08000000
+    size: 0x20000
+
+// 16 KB SRAM @ 0x20000000.
+sram: Memory.MappedMemory @ sysbus 0x20000000
+    size: 0x4000
+
+// USART1 @ 0x40013800 — STM32F1-style SR/DR/BRR/CR1 register layout, which is
+// exactly what the PY32F071 USART uses.
+// USART1 with the firmware's circular RX DMA emulated (custom model). The
+// firmware uses DMA for RX and polled TX, so no UART interrupt is needed.
+usart1: UART.PY32_UART @ sysbus <0x40013800, +0x100>
+
+// PY32F071 ADC (STM32F1-style). Custom model in sim/renode/PY32_ADC.cs.
+adc1: Analog.PY32_ADC @ sysbus <0x40012400, +0x400>
+
+// DMA1 — PY32F0 uses the channel-based STM32F0/L0 layout (CCR/CNDTR/CPAR/CMAR,
+// channel N at 0x08 + (N-1)*0x14), matched by STM32LDMA.
+dma1: DMA.STM32LDMA @ sysbus <0x40020000, +0x400>
+    // DMA1 channels 4..7 share IRQ 11. Only the flash RX channel (ch4 = index 3)
+    // has its TC interrupt enabled by the firmware; wiring the TX channel (ch5)
+    // too would storm, because this STM32LDMA asserts the channel IRQ on every
+    // transfer regardless of the TC-interrupt-enable bit.
+    3 -> nvic@11
+
+// Backing store for the flash, also visible on the bus at 0x90000000 so the
+// host can load/dump it as an external file (sim/data/spi_PY25Q16.bin).
+spiFlashMem: Memory.MappedMemory @ sysbus 0x90000000
+    size: 0x200000
+
+// SPI2 + PY25Q16 serial flash as one custom model: stock STM32SPI mis-serves the
+// firmware's RX-FIFO flush and the DMA read ordering. CS is bit-banged on PA3.
+// The DMA1 RX channel reads SPI2 DR (0x4000380C) and gets sequential flash bytes.
+// Firmware writes (settings, channels, anything CHIRP sends) are mirrored into a backing
+// file so the radio's configuration survives a restart -- run.resc sets that path
+// (ImagePath), because it needs to be absolute and only the script knows where it is.
+spiFlash: SPI.PY32_SPIFlash @ sysbus <0x40003800, +0x400>
+    flashMemory: spiFlashMem
+
+// GPIOA — PY32 GPIO is STM32F0-style (MODER/IDR/ODR/BSRR). Modelled mainly to
+// frame PY25Q16 transactions: the firmware bit-bangs the flash chip-select on
+// PA3, and GenericSpiFlash.OnGPIO(0, high) = CS deasserted -> FinishTransmission.
+// (GPIOB/C/F stay stubbed high for now so the keyboard rows read "no key".)
+gpioPortA: GPIOPort.STM32_GPIOPort @ sysbus <0x50000000, +0x400>
+    3 -> spiFlash@0
+
+// GPIOB carries the BK4819 SCL (PB8) + SDA (PB9), the keyboard matrix
+// (cols PB3..6, rows PB12..15) and PTT (PB10).
+// Stock GPIO port plus one thing: while the BK4819 is shifting a register out, reading
+// PB9 (SDA) gives the chip's bit rather than the port's own state. See PY32_GPIOPortB.
+gpioPortB: GPIOPort.PY32_GPIOPortB @ sysbus <0x50000400, +0x400>
+    Bk4819: bk4819
+    8 -> bk4819@1
+    9 -> bk4819@2
+    3 -> keyMatrix@0
+    4 -> keyMatrix@1
+    5 -> keyMatrix@2
+    6 -> keyMatrix@3
+
+// GPIOF carries the BK4819 chip-select (PF9) and the bit-banged I2C bus
+// (SCL=PF5, SDA=PF6) shared by the EEPROM and the BK1080.
+gpioPortF: GPIOPort.STM32_GPIOPort @ sysbus <0x50001400, +0x400>
+    9 -> bk4819@0
+    5 -> i2cBus@0
+    6 -> i2cBus@1
+
+// 8 KB / 24C64 EEPROM backing store, file-seeded; also on the bus at 0x90200000
+// for host inspection / persistence.
+eepromMem: Memory.MappedMemory @ sysbus 0x90200000
+    size: 0x2000
+
+// Bit-banged I2C bus decoder: EEPROM (0xA0) + BK1080 stub (0x80).
+i2cBus: Miscellaneous.PY32_I2CBus @ none
+    eepromMemory: eepromMem
+    SdaOut -> gpioPortF@6
+
+// BK4819 RF transceiver — 3-wire bit-banged. Custom model.
+// SdaOut drives the SDA line back to the MCU (GPIOB pin 9 input).
+bk4819: Miscellaneous.PY32_BK4819 @ none
+    SdaOut -> gpioPortB@9
+
+// Key-matrix stub: holds rows + PTT high ("no key") so the firmware doesn't see
+// phantom presses. Key injection goes through the serial protocol instead.
+keyMatrix: Miscellaneous.PY32_KeyMatrix @ none
+    Row0 -> gpioPortB@12
+    Row1 -> gpioPortB@13
+    Row2 -> gpioPortB@14
+    Row3 -> gpioPortB@15
+    Ptt -> gpioPortB@10

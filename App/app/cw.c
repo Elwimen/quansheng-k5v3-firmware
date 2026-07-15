@@ -236,7 +236,15 @@ static void cw_tx_tick(void)
         return;
     }
 
-    if (tx_tick > 0) { tx_tick--; return; }
+    /* A loaded tx_tick of N must last N ticks. The tick that ends the wait also runs the
+       next state, so decrement first and fall through on the tick that reaches zero --
+       returning here as well would spend one extra tick, making every element and gap
+       10ms too long (a 15 WPM dot came out 90ms instead of 80, and a dash 250ms instead
+       of 240, so dash/dot was 2.78 rather than 3). */
+    if (tx_tick > 0) {
+        if (--tx_tick > 0)
+            return;
+    }
 
     const bool ook = (gCurrentVfo != NULL && gCurrentVfo->Modulation == MODULATION_CW);
 
@@ -368,7 +376,8 @@ static void cw_rx_update_dit_est(uint16_t new_dit)
 static uint16_t cw_dit_ref(void)
 {
     if (rx_dit_est > 0) return rx_dit_est;
-    uint16_t t = (uint16_t)(1200u / ((uint32_t)gEeprom.CW_WPM * 10u));
+    /* Milliseconds: the receiver is sampled every 1ms now, so a dit is 1200/WPM ms. */
+    uint16_t t = (uint16_t)(1200u / (uint32_t)gEeprom.CW_WPM);
     return t > 0 ? t : 1;
 }
 
@@ -385,10 +394,105 @@ static char cw_rx_decode(uint8_t len, uint16_t code)
     return '?';
 }
 
+/* ---- speed acquisition -----------------------------------------------------------
+   The dit length is the clock of the whole message, and until it is known nothing can be
+   classified: a dah measured against a stale dit reads as a dit, and one wrong element
+   poisons the running average that produced it. So do not guess from the first element --
+   buffer the first few characters, estimate the dit from them, then decode the buffer.
+
+   The estimate uses marks *and* gaps: a dit-mark and an element gap are both exactly one
+   dit, so the shortest of either is the clock, and averaging everything close to it beats
+   trusting a single shortest sample. Each transmission re-acquires, so the decoder follows
+   a station that changes speed instead of dragging its old estimate along. */
+#define CW_RX_ACQ_MARKS  6u    /* about two or three characters */
+#define CW_RX_ACQ_MAX   24u
+
+static uint16_t rx_acq_dur[CW_RX_ACQ_MAX];
+static uint8_t  rx_acq_is_mark[CW_RX_ACQ_MAX];
+static uint8_t  rx_acq_n     = 0;
+static uint8_t  rx_acq_marks = 0;
+static bool     rx_locked    = false;
+
+static void cw_rx_acq_reset(void)
+{
+    rx_acq_n     = 0;
+    rx_acq_marks = 0;
+    rx_locked    = false;
+}
+
+static void cw_rx_acq_push(uint16_t duration, bool is_mark)
+{
+    if (rx_acq_n >= CW_RX_ACQ_MAX) return;
+    rx_acq_dur[rx_acq_n]     = duration;
+    rx_acq_is_mark[rx_acq_n] = is_mark ? 1u : 0u;
+    rx_acq_n++;
+    if (is_mark) rx_acq_marks++;
+}
+
+static uint16_t cw_rx_acq_estimate(void)
+{
+    /* The clock is the shortest thing in the message -- but not blindly: one clipped edge
+       or noise blip is shorter than any real element, and taking it as the dit halves the
+       timebase, at which point every dit measures as a dah and the message reads as a row
+       of T's. So require the candidate to be corroborated: a dit is not a dit unless at
+       least two elements agree with it. In 2-3 characters there are always several. */
+    uint16_t best = 0;
+    for (uint8_t i = 0; i < rx_acq_n; i++) {
+        uint16_t cand = rx_acq_dur[i];
+        if (cand == 0 || (best != 0 && cand >= best)) continue;
+
+        uint8_t support = 0;
+        for (uint8_t j = 0; j < rx_acq_n; j++) {
+            if (rx_acq_dur[j] * 2u <= cand * 3u)   /* within 1.5x of the candidate */
+                support++;
+        }
+        if (support >= 2u) best = cand;
+    }
+    if (best == 0) return cw_dit_ref();
+
+    /* Average the whole short class: a dit-mark and an element gap are both one dit, so
+       everything under twice the shortest is a sample of the same quantity. */
+    uint32_t sum = 0;
+    uint8_t  n   = 0;
+    for (uint8_t i = 0; i < rx_acq_n; i++) {
+        if (rx_acq_dur[i] < best * 2u) { sum += rx_acq_dur[i]; n++; }
+    }
+    return n ? (uint16_t)(sum / n) : best;
+}
+
+static void cw_rx_decode_element(void);
+static void cw_rx_commit_char(void);
+static void cw_rx_commit_word_space(void);
+
+/* Estimate the dit from what we buffered, then decode the buffer with it. */
+static void cw_rx_acq_lock(void)
+{
+    uint16_t dit = cw_rx_acq_estimate();
+    rx_dit_est = dit;
+
+    for (uint8_t i = 0; i < rx_acq_n; i++) {
+        if (rx_acq_is_mark[i]) {
+            rx_mark_ticks = rx_acq_dur[i];
+            cw_rx_decode_element();
+        } else {
+            uint16_t gap = rx_acq_dur[i];
+            if (gap * 2u >= dit * 9u)         /* 4.5 dits: a word */
+                cw_rx_commit_word_space();
+            else if (gap * 4u >= dit * 7u)    /* 1.75 dits: a character */
+                cw_rx_commit_char();
+        }
+    }
+    rx_acq_n     = 0;
+    rx_acq_marks = 0;
+    rx_locked    = true;
+}
+
 static void cw_rx_decode_element(void)
 {
     uint16_t dit    = cw_dit_ref();
-    uint8_t  is_dah = (rx_mark_ticks >= dit * 2u) ? 1u : 0u;
+    /* A decision boundary belongs at the geometric mean of the two classes it separates,
+       so a dit (1) and a dah (3) are split at sqrt(3) = 1.73 dits, not at 2. */
+    uint8_t  is_dah = (rx_mark_ticks * 4u >= dit * 7u) ? 1u : 0u;   /* 1.75 dits */
 
     if (is_dah == 0)
         cw_rx_update_dit_est(rx_mark_ticks);
@@ -443,28 +547,45 @@ static void cw_rx_commit_word_space(void)
     }
 }
 
-static void cw_rx_tick(void)
+void CW_RX_Sample(void)
 {
     if (gScreenToDisplay != DISPLAY_CW_CHAT) return;
+    if (tx_state != CW_TX_IDLE) return;   /* never poke the bus while we are keying */
 
-    uint8_t raw_amp = cw_get_af_amp();
+    /* The state machine counts milliseconds, so it has to run on every tick even when the
+       amplitude cannot be sampled: the main loop bit-bangs the same chip, and an interrupt
+       landing mid-frame would corrupt both transactions. Skipping the whole tick instead
+       would drop time, not just a sample -- and at 40 WPM a dot is only 30 ticks, so a
+       handful of skips is enough to shrink an element into the next class. Hold the last
+       reading and keep counting. */
+    static uint8_t last_amp = 0;
+    uint8_t raw_amp;
+    if (gBK4819_BusBusy) {
+        raw_amp = last_amp;
+    } else {
+        raw_amp = cw_get_af_amp();
+        last_amp = raw_amp;
+    }
+
+    /* Smoothed only for the on-screen bar. Detection uses the raw amplitude: this filter
+       settles in ~3.5 samples = 35ms, which is comparable to a whole dot at 15 WPM, and it
+       decays slower than it rises -- so it detected the start of a mark late and its end
+       later still, stretching every mark and shrinking every gap. That is what turned dots
+       into dashes and ran characters together. */
     rx_last_amp = (rx_last_amp == 0u) ? raw_amp
                 : (uint8_t)((rx_last_amp * 3u + raw_amp) / 4u);
 
-    /* Refresh bar at 20 Hz (every 5 ticks) — blitting costs ~7.5 ms at 1 MHz SPI.
-       Set gUpdateDisplay directly; gRequestDisplayScreen can be swallowed if
-       APP_Update() already cleared it earlier in the same loop iteration. */
-    static uint8_t bar_refresh_ctr = 0;
-    if (++bar_refresh_ctr >= 5u) {
-        bar_refresh_ctr = 0;
-        gUpdateDisplay = true;
-    }
 
-    if (tx_state != CW_TX_IDLE) return;
-
-    uint16_t amp   = rx_last_amp;
     uint16_t dit   = cw_dit_ref();
-    bool     above = (amp > rx_threshold);
+
+    /* Schmitt trigger on the raw amplitude: it takes a clearly stronger signal to call the
+       start of a mark than it does to keep one going. A single threshold on a noisy
+       envelope chatters around the crossing and smears the edge whose timing is the whole
+       measurement. The margin is a quarter of the threshold above the noise floor. */
+    uint16_t hyst  = (rx_threshold > 4u) ? (rx_threshold / 4u) : 1u;
+    bool     above = (rx_state == CW_RX_MARK)
+                   ? (raw_amp + hyst > rx_threshold)   /* stay in the mark */
+                   : (raw_amp > rx_threshold + hyst);  /* start a new one */
 
     switch (rx_state) {
 
@@ -487,23 +608,49 @@ static void cw_rx_tick(void)
 
     case CW_RX_SPACE:
         if (above) {
+            if (!rx_locked) {
+                /* Still learning the speed: keep the element and the gap that followed it,
+                   and decode nothing yet. */
+                cw_rx_acq_push(rx_mark_ticks, true);
+                cw_rx_acq_push(rx_space_ticks, false);
+                if (rx_acq_marks >= CW_RX_ACQ_MARKS || rx_acq_n + 2u > CW_RX_ACQ_MAX)
+                    cw_rx_acq_lock();
+            } else {
             cw_rx_decode_element();
-            if (rx_space_ticks >= dit * 8u)
+            /* Morse spaces elements by 1 dit, characters by 3 and words by 7. The old
+               thresholds (4 and 8) sat *above* the classes they were meant to separate, so
+               a correctly timed sender never cleared them and its characters ran together.
+               Split each pair at its geometric mean instead: sqrt(3) = 1.73 between an
+               element gap and a character gap, sqrt(21) = 4.58 between a character and a
+               word. */
+            if (rx_space_ticks * 2u >= dit * 9u)         /* 4.5 dits */
                 cw_rx_commit_word_space();
-            else if (rx_space_ticks >= dit * 4u)
+            else if (rx_space_ticks * 4u >= dit * 7u)    /* 1.75 dits */
                 cw_rx_commit_char();
+            }
             rx_mark_ticks  = 1;
             rx_space_ticks = 0;
             rx_state       = CW_RX_MARK;
         } else {
             rx_space_ticks++;
             if (rx_space_ticks >= dit * CW_RX_TIMEOUT_MULT) {
-                cw_rx_decode_element();
+                /* End of the transmission. If it was too short to have locked the speed --
+                   a bare "K" is three elements -- estimate from what little there is and
+                   decode it now rather than throwing it away. */
+                if (!rx_locked) {
+                    cw_rx_acq_push(rx_mark_ticks, true);
+                    cw_rx_acq_lock();
+                } else {
+                    cw_rx_decode_element();
+                }
                 cw_rx_commit_word_space();
                 rx_mark_ticks  = 0;
                 rx_space_ticks = 0;
                 rx_state       = CW_RX_IDLE;
                 cw_live_char   = '\0';
+                /* Re-acquire on the next transmission: the other station may be sending at
+                   a different speed, and the old estimate is worse than no estimate. */
+                cw_rx_acq_reset();
             }
         }
         break;
@@ -693,7 +840,13 @@ void CW_TimeSlice10ms(void)
         }
     }
     cw_tx_tick();
-    cw_rx_tick();
+    /* The receiver runs from SysTick at 1ms (CW_RX_Sample); here we only refresh the
+       signal bar, at 20Hz -- blitting costs ~7.5ms at 1MHz SPI. */
+    static uint8_t bar_refresh_ctr = 0;
+    if (gScreenToDisplay == DISPLAY_CW_CHAT && ++bar_refresh_ctr >= 5u) {
+        bar_refresh_ctr = 0;
+        gUpdateDisplay = true;
+    }
 }
 
 void CW_TimeSlice500ms(void)

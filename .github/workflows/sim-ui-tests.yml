@@ -1,0 +1,61 @@
+name: Simulator UI tests
+
+on:
+  push:
+    branches: [ main, develop, 'feature/**' ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  ui-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install toolchain
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc-arm-none-eabi cmake ninja-build
+        pip install pyserial pillow
+
+    - name: Install Renode
+      env:
+        RENODE_VERSION: 1.16.1
+      run: |
+        curl -sSL -o /tmp/renode.tar.gz \
+          "https://github.com/renode/renode/releases/download/v${RENODE_VERSION}/renode-${RENODE_VERSION}.linux-portable-dotnet.tar.gz"
+        mkdir -p "$HOME/renode" "$HOME/.local/bin"
+        tar -xzf /tmp/renode.tar.gz -C "$HOME/renode" --strip-components=1
+        ln -sf "$HOME/renode/renode" "$HOME/.local/bin/renode"
+        echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+    # test_ui.py builds the firmware and boots the simulator itself, on a factory-fresh
+    # flash image of its own: the simulator persists the firmware's writes into its image,
+    # so the tests must not run against a radio somebody has configured.
+    - name: Golden-screen UI tests
+      run: ./sim/test_ui.py
+
+    # Change a setting through the real UI, power-cycle the radio, and check the firmware
+    # reads it back: settings.c -> eeprom_compat.c -> PY25Q16 -> flash and back again.
+    - name: Settings survive a power cycle
+      run: ./sim/test_persist.py
+
+    # Type a letter into the CW chat screen, press PTT, and measure the keying the firmware
+    # sends to the BK4819 against the definition of Morse (a dot is 1200/WPM ms).
+    - name: CW keying is correct Morse
+      run: ./sim/test_cw_tx.py
+
+    - name: Upload failing screens
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: failed-screens
+        # Each failure writes the actual screen plus a diff with the changed pixels in red.
+        path: sim/golden/failed/
+        if-no-files-found: ignore
+
+    - name: Simulator log
+      if: failure()
+      run: tail -50 /tmp/uvk5-sim/renode.log || true

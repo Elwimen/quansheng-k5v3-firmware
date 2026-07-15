@@ -1,0 +1,85 @@
+:name: UV-K5 V3 (PY32F071) simulator
+:description: Boots the f4hwn.sim firmware under Renode with a UART socket + GDB server.
+
+# The shipping firmware itself (built from this branch) is run unmodified.
+# Override with: renode -e "$elf=@/path/to.elf; i @run.resc"
+$elf ?= @build/Fusion/f4hwn.fusion.elf
+
+using sysbus
+mach create "uvk5v3"
+
+# Compile + load custom PY32F071 peripheral models before the platform that
+# references them. One include, not six: Renode has no compilation cache and reloads
+# every metadata reference per invocation, so compiling them together is ~2x faster.
+i $ORIGIN/../renode/PY32_ADC.cs $ORIGIN/../renode/PY32_GPIOPortB.cs $ORIGIN/../renode/PY32_UART.cs $ORIGIN/../renode/PY32_SPIFlash.cs $ORIGIN/../renode/PY32_BK4819.cs $ORIGIN/../renode/PY32_KeyMatrix.cs $ORIGIN/../renode/PY32_I2CBus.cs
+
+# Monitor commands save_flash / load_flash for the PY25Q16 image.
+i $ORIGIN/../renode/flash_persist.py
+
+# Monitor command show_screen: render the LCD as block-art in the monitor.
+i $ORIGIN/../renode/show_screen.py
+
+# Monitor commands ptt_press / ptt_release (PTT cannot be injected over serial).
+i $ORIGIN/../renode/ptt.py
+
+# Monitor command cw_rx_send "TEXT" WPM: key a Morse signal at the radio's receiver.
+i $ORIGIN/../renode/cw_rx.py
+
+machine LoadPlatformDescription $ORIGIN/../platforms/py32f071.repl
+
+# --- Stub on-chip peripherals the firmware pokes but we don't model ---
+# Returning all-ones makes every "ready"/"flag" poll pass (clocks locked, SPI
+# TXE/RXNE set, etc.) so init code never spins. Writes are ignored.
+# TIM1 (ADC1 is now a real model — see platform .repl)
+sysbus Tag <0x40012C00 0x400>  "TIM1"    0xFFFFFFFF
+# SPI1 = ST7565 LCD bus (display is read via serial, not this bus).
+# Return 0x03 = TXE|RXNE set, BSY clear, so "wait for ready / not-busy" loops exit.
+# (SPI2 + DMA1 are now real models — see platform .repl.)
+sysbus Tag <0x40013000 0x400>  "SPI1"    0x00000003
+# RCC: all clock-ready bits set so init never spins
+sysbus Tag <0x40021000 0x400>  "RCC"     0xFFFFFFFF
+# FLASH controller: not busy
+sysbus Tag <0x40022000 0x400>  "FLASH"   0x00000000
+sysbus Tag <0x40005400 0x800>  "I2C_USB" 0xFFFFFFFF
+# Only GPIOC (0x50000800) remains stubbed; GPIOA/B/F are real models now.
+sysbus Tag <0x50000800 0x400> "GPIOC" 0xFFFFFFFF
+
+# --- Load firmware; point the core at the app vector table (no bootloader) ---
+macro reset
+"""
+    sysbus LoadELF $elf
+    cpu VectorTableOffset 0x08002800
+"""
+runMacro $reset
+
+# The PY25Q16 serial flash holds the entire radio configuration: eeprom_compat.c maps
+# the logical EEPROM layout onto it, so channels, settings and calibration all live here,
+# including everything CHIRP writes. Seed the part from the image, and let the model
+# mirror the firmware's writes back into the same file, so the configuration survives a
+# restart exactly as it would on the real radio.
+# Override with: renode -e "$flashImage=@/path/to.bin; i @run.resc"   (the tests do)
+$flashImage ?= $ORIGIN/../data/spi_PY25Q16.bin
+sysbus LoadBinary $flashImage 0x90000000
+spiFlash ImagePath $flashImage
+
+# No image for the 24Cxx I2C EEPROM: nothing reads it. The only code that addresses 0xA0
+# is App/driver/eeprom.c, which is not compiled on V3 -- eeprom_compat.c takes its place
+# and puts everything on the SPI flash, and the I2C bus is left carrying just the BK1080.
+# (Checked: the radio renders identically with that part erased, 0x5A or 0x00.) The model
+# stays, backed by RAM, so the part is still there if some future code path talks to it.
+
+# --- Expose USART1 as a host serial device (PTY symlinked to $uartDev) ---
+# No root needed for a user-writable path; tools (CHIRP, k5viewer.py, the MCP)
+# open $uartDev as if it were the radio's serial port. For a literal /dev/ttyUV0
+# add a one-time:  sudo ln -sf $uartDev /dev/ttyUV0
+$uartDev ?= "/tmp/ttyUV0"
+emulation CreateUartPtyTerminal "uvuart" $uartDev true
+connector Connect usart1 uvuart
+
+# --- GDB server on :3333 (see sim/debug.sh) ---
+# autostartEmulation=true means GDB starts the emulation itself when it attaches, and
+# the CPU comes up under its control. That only works if nobody has called `start`
+# first: attach to an already-running machine and GDB reports "target is running" and
+# refuses to break or step, because Renode never halts the core for it. So debug.sh
+# leaves the machine loaded but *not* started and lets GDB drive.
+machine StartGdbServer 3333 true
