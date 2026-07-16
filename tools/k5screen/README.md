@@ -44,7 +44,16 @@ This supersedes the two older, single-source tools:
 ### Live-view keys (forwarded to the radio)
 
 `0`–`9` · `m` = MENU · `e`/`⌫` = EXIT · `↑`/`↓` = UP/DOWN · `*` ·
-`f` (or `#`) = F · `o`/`k` = side 1/2 · `space` = PTT · `q` = quit.
+`f` (or `#`) = F · `o`/`k` = side 1/2 · **`space` = PTT (hold to transmit)** · `q` = quit.
+
+### Transmitting (spacebar, GUI only)
+
+Hold **space** in the `--gui` window to key the transmitter; release to stop.
+This needs firmware with serial-PTT support (this repo, `ENABLE_FEAT_F4HWN_SCREENSHOT`).
+A **dead-man watchdog** in the firmware auto-releases TX if the host stops sending
+keepalives for ~300ms, so a crashed viewer, closed window, or unplugged cable can
+never leave the radio keyed. The curses/ASCII view cannot transmit — a terminal
+can't reliably report key-release, so hold-to-talk isn't safe there.
 
 **Short vs long press:**
 - ASCII (curses): press `Tab` to arm a one-shot **long** press for the next key

@@ -107,6 +107,15 @@ class Stream:
         self.ser.write(bytes([0xAA, 0x55, 0x04 if long_press else 0x03, KEYS[key]]))
         self.ser.flush()
 
+    def send_ptt(self, down):
+        """Hold (down=True) or release serial PTT. The firmware auto-releases if
+        keepalives stop (dead-man watchdog), so a crash can't leave it keyed."""
+        try:
+            self.ser.write(bytes([0xAA, 0x55, 0x05, 1 if down else 0]))
+            self.ser.flush()
+        except serial.SerialException:
+            pass
+
     def pump(self):
         """Decode one frame, then drain any backlog so we render only the newest.
 
@@ -359,11 +368,11 @@ def run_gui(stream, theme_name=None):
     except Exception:
         font = None
 
-    # pygame key -> radio key
+    # pygame key -> radio key (momentary presses). Space is NOT here: it is
+    # handled as a hold via send_ptt() on key down/up so it can drive TX.
     kmap = {pygame.K_m: "MENU", pygame.K_RETURN: "MENU", pygame.K_e: "EXIT",
             pygame.K_BACKSPACE: "EXIT", pygame.K_UP: "UP", pygame.K_DOWN: "DOWN",
             pygame.K_ASTERISK: "STAR", pygame.K_HASH: "F", pygame.K_f: "F",
-            pygame.K_SPACE: "PTT",
             pygame.K_o: "SIDE1", pygame.K_k: "SIDE2"}
     for d in range(10):
         kmap[getattr(pygame, f"K_{d}")] = str(d)          # number row
@@ -434,7 +443,7 @@ def run_gui(stream, theme_name=None):
     while True:
         for ev in pygame.event.get():
             if ev.type == pygame.QUIT:
-                pygame.quit(); return
+                stream.send_ptt(False); pygame.quit(); return
             if ev.type == pygame.VIDEORESIZE:
                 redraw(stream.fb)   # just redraw; SDL2 already resized the surface
             if ev.type == pygame.MOUSEBUTTONDOWN and ev.button == 1:
@@ -451,11 +460,17 @@ def run_gui(stream, theme_name=None):
                 redraw(stream.fb)   # live hover highlight
             if ev.type == pygame.KEYDOWN:
                 if ev.key == pygame.K_q:
-                    pygame.quit(); return
-                if ev.key == pygame.K_t:                 # cycle theme
+                    stream.send_ptt(False); pygame.quit(); return
+                if ev.key == pygame.K_SPACE:             # hold to transmit
+                    stream.send_ptt(True)
+                elif ev.key == pygame.K_t:               # cycle theme
                     theme = (theme + 1) % len(THEMES); redraw(stream.fb)
                 elif ev.key in kmap:
                     stream.send_key(kmap[ev.key], bool(ev.mod & pygame.KMOD_SHIFT))
+            if ev.type == pygame.KEYUP and ev.key == pygame.K_SPACE:
+                stream.send_ptt(False)                   # release TX
+            if ev.type == pygame.ACTIVEEVENT and not getattr(ev, "gain", 1):
+                stream.send_ptt(False)                   # lost focus -> release TX
         now = time.monotonic()
         if now - last_ka >= KEEPALIVE_INTERVAL:
             stream.keepalive(); last_ka = now
