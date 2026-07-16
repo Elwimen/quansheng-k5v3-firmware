@@ -1,5 +1,10 @@
 # Quansheng K5Viewer
 
+> **Superseded by [`tools/k5screen`](../k5screen/).** k5screen speaks the same
+> serial protocol but also works against the simulator and adds ASCII/PNG output
+> and key forwarding (`k5screen --gui` reproduces this pygame window). This
+> upstream copy is kept for reference.
+
 K5Viewer is a lightweight viewer that displays the live screen output of the Quansheng K5 transceiver (running F4HWN firmware), transmitted via UART to your computer through a Baofeng/Kenwood-style USB-to-Serial cable.
 
 https://github.com/user-attachments/assets/578c8605-9820-4a2c-90e4-5a93b2be7d2b
