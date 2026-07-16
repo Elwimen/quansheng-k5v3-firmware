@@ -46,6 +46,7 @@ Special thanks to Jean-Cyrille F6IWW (3 times), Fabrice 14RC123, David F4BPP, Ol
 
 ## Table of Contents
 
+* [What this fork adds (develop branch)](#what-this-fork-adds-develop-branch)
 * [My Features](#main-features)
 * [Main Features from Egzumer](#main-features-from-egzumer)
 * [Manual](#manual)
@@ -54,6 +55,45 @@ Special thanks to Jean-Cyrille F6IWW (3 times), Fabrice 14RC123, David F4BPP, Ol
 * [Credits](#credits)
 * [Other sources of information](#other-sources-of-information)
 * [License](#license)
+
+## What this fork adds (develop branch)
+
+The `develop` branch is the active line of this fork, maintained by **N0CALL**
+([@Elwimen](https://github.com/Elwimen)). It builds directly on F4HWN **Fusion**
+— every F4HWN / Egzumer feature listed further down is still available, and
+**Fusion** remains the reference build — and adds the following:
+
+### On-air CW / CW Chat  (`ENABLE_FEAT_ELW_CW`)
+
+* a CW keyer/encoder and an **audio CW receive decoder** that reads the BK4819
+  AF level and decodes Morse in real time, for any VFO / modulation that breaks
+  squelch;
+* a **live decoder on the main screen** (running in the background), plus a full
+  **CW Chat** window with scrolling history and **T9-style callsign prediction**;
+* menu entries: `CWSpd` (speed presets + custom WPM), `CWTone`, `CWMode`,
+  `CWMonitor` (chat / main / full-background), `CWHold`, `CWRecallHist`,
+  `CWCallsign`;
+* **hold-to-talk over USB serial** with a firmware **dead-man watchdog** that
+  auto-releases TX if the host stops sending keepalives, so a crashed viewer or
+  unplugged cable can never leave the radio keyed.
+
+### Tooling & infrastructure
+
+* **`tools/k5screen`** — one live-screen viewer for the **real radio and the
+  Renode simulator**: terminal ASCII, a PNG snapshot, or a resizable pygame
+  window with colour themes; it forwards keypresses and can transmit (hold
+  space). Supersedes the pygame-only K5Viewer.
+* **`sim/`** — a full **Renode simulator** of the radio (LCD, BK4819, keypad,
+  external flash) with a dev loop, GDB, a browser viewer, and golden-screen CI
+  tests, so most work can be validated without hardware.
+* **`tools/uvflash`** (submodule) — a headless flasher / calibration backup /
+  boot-logo tool (a Python port of uvtools2).
+* **Flash-layout single source of truth** — `App/driver/spi_flash_layout.h`
+  describes the PY25Q16 flash layout once, and `tools/gen_flash_layout.py`
+  derives the ImHex pattern and the CHIRP `MEM_FORMAT` from it.
+* **`tools/cwdsp`** — a fixed-point **Goertzel** CW tone-detector prototype and a
+  noisy-audio test bench, researching frequency-selective AF CW decode (not yet
+  wired into the firmware).
 
 ## Main features and improvements from F4HWN:
 
