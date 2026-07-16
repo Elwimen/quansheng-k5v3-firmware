@@ -535,7 +535,7 @@ gEeprom.FreqChannel[1]   = IS_FREQ_CHANNEL(Data16[5]) ? Data16[5] : (FREQ_CHANNE
         gEeprom.CW_TONE_HZ = ((uint16_t)cw_buf[1] << 8) | cw_buf[2];
         if (gEeprom.CW_TONE_HZ < 400 || gEeprom.CW_TONE_HZ > 1000)
             gEeprom.CW_TONE_HZ = 700;
-        gEeprom.CW_FLAGS   = cw_buf[3];
+        gEeprom.CW_FLAGS   = (cw_buf[3] == 0xFFu) ? 0u : cw_buf[3];  /* blank flash -> defaults */
 
         /* prediction popup usage counters — 15 bytes at 0x00A174 */
         uint8_t pred_buf[CW_PRED_COUNT];

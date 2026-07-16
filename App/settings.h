@@ -318,6 +318,10 @@ typedef struct {
     uint8_t               CW_FLAGS;
     /* CW_FLAGS bits */
     #define CW_FLAG_RECALL_HISTORY  (1u << 0)   /* push recalled TX back to history */
+    #define CW_FLAG_MON_SHIFT       1u          /* RX decoder scope, bits 1-2:        */
+    #define CW_FLAG_MON_MASK        (3u << 1)   /*   0=chat only, 1=main+chat, 2=full */
+    #define CW_FLAG_HOLD_SHIFT      3u          /* main-screen decode hold, bits 3-7: */
+    #define CW_FLAG_HOLD_MASK       (0x1Fu << 3) /*  seconds (1-30); 0 -> default      */
     #define CW_PRED_COUNT           15u          /* 14 static + 1 callsign slot */
     #define CW_CALLSIGN_MAX         12u          /* 11 chars + NUL */
     uint8_t               CW_PRED_COUNTS[CW_PRED_COUNT]; /* usage counters, 0x00A174 (15 bytes) */

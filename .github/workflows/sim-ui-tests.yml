@@ -52,6 +52,11 @@ jobs:
     - name: CW receiver rejects noise
       run: ./sim/test_cw_rx_noise.py
 
+    # Decode Morse in the background on the main screen and check CWHold controls how long
+    # the decode lingers on the centre line.
+    - name: CW main-screen decoder
+      run: ./sim/test_cw_main.py
+
     - name: Upload failing screens
       if: failure()
       uses: actions/upload-artifact@v4

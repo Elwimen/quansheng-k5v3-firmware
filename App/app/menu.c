@@ -497,16 +497,12 @@ int MENU_GetLimits(uint8_t menu_id, int32_t *pMin, int32_t *pMax)
 
 #ifdef ENABLE_FEAT_ELW_CW
         case MENU_CW_SPEED:
-            *pMin = 5;
-            *pMax = 40;
+            *pMin = 0;
+            *pMax = 40;  /* 0..presetCount-1 = named presets, presetCount..40 = custom wpm */
             break;
         case MENU_CW_TONE:
             *pMin = 0;
             *pMax = 6;  /* indices into cw_tone_table[] */
-            break;
-        case MENU_CW_PRESET:
-            *pMin = 0;
-            *pMax = 4;  /* 5 presets */
             break;
         case MENU_CW_RECALL_HIST:
             *pMin = 0;
@@ -515,6 +511,14 @@ int MENU_GetLimits(uint8_t menu_id, int32_t *pMin, int32_t *pMax)
         case MENU_CW_MODE:
             *pMin = 0;
             *pMax = 1;  /* 0 = AFCW (FM), 1 = OOK (CW) */
+            break;
+        case MENU_CW_MONITOR:
+            *pMin = 0;
+            *pMax = 2;  /* 0 = chat only, 1 = main+chat, 2 = full background */
+            break;
+        case MENU_CW_HOLD:
+            *pMin = 1;
+            *pMax = 30;  /* seconds a decode lingers on the main screen */
             break;
         case MENU_CW_CALLSIGN:
             *pMin = 0;
@@ -1093,7 +1097,12 @@ void MENU_AcceptSetting(void)
 
 #ifdef ENABLE_FEAT_ELW_CW
         case MENU_CW_SPEED:
-            gEeprom.CW_WPM = (uint8_t)gSubMenuSelection;
+            /* 0..presetCount-1 pick a named preset (sets wpm + tone); above sets a custom
+               wpm and leaves the tone alone. */
+            if (gSubMenuSelection < CW_PresetCount())
+                CW_ApplyPreset((uint8_t)gSubMenuSelection);
+            else
+                gEeprom.CW_WPM = (uint8_t)gSubMenuSelection;
             break;
 
         case MENU_CW_TONE: {
@@ -1104,25 +1113,19 @@ void MENU_AcceptSetting(void)
             break;
         }
 
-        case MENU_CW_PRESET: {
-            typedef struct { uint8_t wpm; uint16_t tone; } CwPreset_t;
-            static const CwPreset_t presets[] = {
-                {10, 600},   /* SLOW    */
-                {15, 700},   /* STD     */
-                {20, 700},   /* QSO     */
-                {25, 800},   /* FAST    */
-                {35, 900},   /* CONTEST */
-            };
-            gEeprom.CW_WPM     = presets[gSubMenuSelection].wpm;
-            gEeprom.CW_TONE_HZ = presets[gSubMenuSelection].tone;
-            break;
-        }
-
         case MENU_CW_RECALL_HIST:
             if (gSubMenuSelection)
                 gEeprom.CW_FLAGS |=  CW_FLAG_RECALL_HISTORY;
             else
                 gEeprom.CW_FLAGS &= ~CW_FLAG_RECALL_HISTORY;
+            break;
+        case MENU_CW_MONITOR:
+            gEeprom.CW_FLAGS = (uint8_t)((gEeprom.CW_FLAGS & ~CW_FLAG_MON_MASK)
+                             | ((gSubMenuSelection << CW_FLAG_MON_SHIFT) & CW_FLAG_MON_MASK));
+            break;
+        case MENU_CW_HOLD:
+            gEeprom.CW_FLAGS = (uint8_t)((gEeprom.CW_FLAGS & ~CW_FLAG_HOLD_MASK)
+                             | ((gSubMenuSelection << CW_FLAG_HOLD_SHIFT) & CW_FLAG_HOLD_MASK));
             break;
         case MENU_CW_MODE:
             /* 0 = AFCW → FM modulation, 1 = OOK → CW modulation */
@@ -1603,9 +1606,11 @@ void MENU_ShowCurrentSetting(void)
 #endif
 
 #ifdef ENABLE_FEAT_ELW_CW
-        case MENU_CW_SPEED:
-            gSubMenuSelection = gEeprom.CW_WPM;
+        case MENU_CW_SPEED: {
+            int8_t p = CW_PresetMatch();
+            gSubMenuSelection = (p >= 0) ? p : gEeprom.CW_WPM;
             break;
+        }
 
         case MENU_CW_TONE: {
             static const uint16_t cw_tone_table[] = {
@@ -1621,16 +1626,20 @@ void MENU_ShowCurrentSetting(void)
             break;
         }
 
-        case MENU_CW_PRESET:
-            gSubMenuSelection = 1; /* default to STD */
-            break;
-
         case MENU_CW_RECALL_HIST:
             gSubMenuSelection = (gEeprom.CW_FLAGS & CW_FLAG_RECALL_HISTORY) ? 1 : 0;
             break;
         case MENU_CW_MODE:
             gSubMenuSelection = (gTxVfo->Modulation == MODULATION_CW) ? 1 : 0;
             break;
+        case MENU_CW_MONITOR:
+            gSubMenuSelection = (gEeprom.CW_FLAGS & CW_FLAG_MON_MASK) >> CW_FLAG_MON_SHIFT;
+            break;
+        case MENU_CW_HOLD: {
+            uint8_t s = (gEeprom.CW_FLAGS & CW_FLAG_HOLD_MASK) >> CW_FLAG_HOLD_SHIFT;
+            gSubMenuSelection = s ? s : 4;   /* default 4s when un-set */
+            break;
+        }
         case MENU_CW_CALLSIGN:
             gSubMenuSelection = 0;  /* text field, no selection index */
             break;

@@ -347,6 +347,19 @@ static uint16_t    rx_threshold   = 0;
 static uint8_t     rx_last_amp    = 0;
 static bool        rx_wrap_pending = false;  /* line filled at a word boundary: next word -> new line */
 
+/* "Is this really Morse?" confidence gate. Because the decoder now runs in the background on
+   any open squelch (incl. FM voice), characters are held pending until a run of clean ones
+   confirms real Morse; only then are they flushed to the history and shown. A transmission
+   that never reaches confidence (voice/noise) is discarded -- it never pollutes the log or
+   the main-screen line. */
+#define CW_RX_DETECT_CHARS  3u        /* valid (non-'?') chars needed to accept a transmission */
+#define CW_RX_SHOW_HOLD_MS  4000u     /* keep the decode on the main-screen line this long */
+static char        rx_pending[12];
+static uint8_t     rx_pending_len = 0;
+static uint8_t     rx_valid_count = 0;
+static bool        rx_detected    = false;   /* this transmission confirmed as Morse */
+static uint16_t    rx_show_ms     = 0;        /* main-screen line hold, ms (decremented @10ms) */
+
 /* Rhythm scope: a ring of the debounced on/off signal, one sample every
    CW_SCOPE_DECIM ms, so 128 columns cover ~1s -- enough to see the Morse rhythm. */
 static uint8_t rx_scope[CW_SCOPE_LEN];   /* 0/1 per column, oldest..newest via head */
@@ -431,6 +444,12 @@ static void cw_rx_acq_reset(void)
     rx_acq_n     = 0;
     rx_acq_marks = 0;
     rx_locked    = false;
+    /* Each transmission must re-prove itself as Morse; discard any unconfirmed pending
+       chars (they were voice/noise). rx_show_ms is left to decay so a confirmed message
+       lingers on the main-screen line after the sender stops. */
+    rx_pending_len = 0;
+    rx_valid_count = 0;
+    rx_detected    = false;
 }
 
 static void cw_rx_acq_push(uint16_t duration, bool is_mark)
@@ -516,20 +535,12 @@ static void cw_rx_decode_element(void)
     }
 }
 
-static void cw_rx_commit_char(void)
+/* Append one already-confirmed character to the RX history, word-wrapping on spaces. */
+static void cw_hist_append(char decoded)
 {
-    if (rx_bit_count == 0) return;
-
-    char decoded  = cw_rx_decode(rx_bit_count, rx_bit_accum);
-    cw_live_char  = decoded;
-    rx_bit_accum  = 0;
-    rx_bit_count  = 0;
-
     bool have_rx = (cw_history_count > 0 &&
                     cw_history[cw_history_count - 1].tag == CW_MSG_RX);
 
-    /* A previous word filled the line exactly at its boundary -- start the new word fresh
-       on a new line instead of letting it run on. */
     if (rx_wrap_pending) {
         rx_wrap_pending = false;
         char tmp[2] = { decoded, '\0' };
@@ -541,12 +552,9 @@ static void cw_rx_commit_char(void)
         if (len < CW_TEXT_COLS_FIRST) {
             line[len]     = decoded;
             line[len + 1] = '\0';
-            gRequestDisplayScreen = DISPLAY_CW_CHAT;
-            return;                                  /* fit on the current line, done */
+            return;                                  /* fit on the current line, no scroll */
         }
-        /* Line full mid-word -- wrap on the word boundary: move the trailing run after the
-           last space down to a new line rather than splitting the word. A word longer than
-           a whole line has no space, so it hard-breaks. */
+        /* Line full mid-word -- wrap on the word boundary (move the trailing run down). */
         int8_t sp = -1;
         for (int8_t i = (int8_t)len - 1; i >= 0; i--)
             if (line[i] == ' ') { sp = i; break; }
@@ -557,7 +565,7 @@ static void cw_rx_commit_char(void)
                 word[wl++] = line[i];
             word[wl++] = decoded;
             word[wl]   = '\0';
-            line[sp]   = '\0';                        /* drop the wrapped word from this line */
+            line[sp]   = '\0';
             cw_push_raw(word, CW_MSG_RX);
         } else {
             char tmp[2] = { decoded, '\0' };
@@ -569,12 +577,55 @@ static void cw_rx_commit_char(void)
     }
     if (cw_history_count > CW_VISIBLE_LINES)
         cw_scroll = (uint8_t)(cw_history_count - CW_VISIBLE_LINES);
-    gRequestDisplayScreen = DISPLAY_CW_CHAT;
+}
+
+/* Refresh whichever screen shows the decode -- but never yank the user to the CW chat
+   screen from the background/main. The main-screen center line refreshes via rx_show_ms. */
+static void cw_rx_note_display(void)
+{
+    rx_show_ms = (uint16_t)(CW_HoldSeconds() * 1000u);
+    if (gScreenToDisplay == DISPLAY_CW_CHAT)
+        gRequestDisplayScreen = DISPLAY_CW_CHAT;
+}
+
+static void cw_rx_commit_char(void)
+{
+    if (rx_bit_count == 0) return;
+
+    char decoded  = cw_rx_decode(rx_bit_count, rx_bit_accum);
+    cw_live_char  = decoded;
+    rx_bit_accum  = 0;
+    rx_bit_count  = 0;
+
+    if (!rx_detected) {
+        /* Hold the character until the transmission proves itself Morse. */
+        if (rx_pending_len < sizeof(rx_pending) - 1u)
+            rx_pending[rx_pending_len++] = decoded;
+        if (decoded != '?')
+            rx_valid_count++;
+        if (rx_valid_count >= CW_RX_DETECT_CHARS) {   /* confirmed -> flush the held chars */
+            rx_detected = true;
+            for (uint8_t i = 0; i < rx_pending_len; i++)
+                cw_hist_append(rx_pending[i]);
+            rx_pending_len = 0;
+            cw_rx_note_display();
+        }
+        return;
+    }
+    cw_hist_append(decoded);
+    cw_rx_note_display();
 }
 
 static void cw_rx_commit_word_space(void)
 {
     cw_rx_commit_char();
+    if (!rx_detected) {
+        /* Word boundary while still unconfirmed -- keep it in the pending buffer. */
+        if (rx_pending_len > 0 && rx_pending_len < sizeof(rx_pending) - 1u &&
+            rx_pending[rx_pending_len - 1] != ' ')
+            rx_pending[rx_pending_len++] = ' ';
+        return;
+    }
     if (cw_history_count > 0 &&
         cw_history[cw_history_count - 1].tag == CW_MSG_RX) {
         uint8_t idx = (uint8_t)(cw_history_count - 1u);
@@ -584,17 +635,70 @@ static void cw_rx_commit_word_space(void)
             cw_history[idx].text[len]     = ' ';
             cw_history[idx].text[len + 1] = '\0';
         } else if (len >= CW_TEXT_COLS_FIRST) {
-            /* No room for the separating space -- defer the break so the next word starts on
-               a fresh line and doesn't merge with this one. */
             rx_wrap_pending = true;
         }
     }
 }
 
+/* CW_FLAGS bits 1-2: 0 = decode only on the CW chat screen, 1 = also on the main screen,
+   2 = everywhere (full background). */
+uint8_t CW_MonScope(void)
+{
+    return (uint8_t)((gEeprom.CW_FLAGS & CW_FLAG_MON_MASK) >> CW_FLAG_MON_SHIFT);
+}
+
+/* How long (seconds) a decoded message stays on the main-screen line after the sender stops.
+   Stored in CW_FLAGS bits 3-7; 0 (un-set) -> 4s default. */
+uint8_t CW_HoldSeconds(void)
+{
+    uint8_t s = (uint8_t)((gEeprom.CW_FLAGS & CW_FLAG_HOLD_MASK) >> CW_FLAG_HOLD_SHIFT);
+    return s ? s : 4u;
+}
+
+/* CW speed presets -- named wpm+tone bundles the CWSpd menu offers alongside custom speeds.
+   Defined once here (was duplicated between app/menu.c and ui/menu.c). */
+typedef struct { uint8_t wpm; uint16_t tone; const char *name; } CwPreset_t;
+static const CwPreset_t cw_presets[] = {
+    {10, 600, "SLOW"},
+    {15, 700, "STD"},
+    {20, 700, "QSO"},
+    {25, 800, "FAST"},
+    {35, 900, "CONTEST"},
+};
+
+uint8_t CW_PresetCount(void) { return (uint8_t)(sizeof(cw_presets) / sizeof(cw_presets[0])); }
+uint8_t CW_PresetWpm(uint8_t i)  { return (i < CW_PresetCount()) ? cw_presets[i].wpm : 15u; }
+const char *CW_PresetName(uint8_t i) { return (i < CW_PresetCount()) ? cw_presets[i].name : ""; }
+
+void CW_ApplyPreset(uint8_t i)
+{
+    if (i < CW_PresetCount()) {
+        gEeprom.CW_WPM     = cw_presets[i].wpm;
+        gEeprom.CW_TONE_HZ = cw_presets[i].tone;
+    }
+}
+
+/* Index of the preset whose wpm+tone match the current settings, or -1 (custom). */
+int8_t CW_PresetMatch(void)
+{
+    for (uint8_t i = 0; i < CW_PresetCount(); i++)
+        if (cw_presets[i].wpm == gEeprom.CW_WPM && cw_presets[i].tone == gEeprom.CW_TONE_HZ)
+            return (int8_t)i;
+    return -1;
+}
+
 void CW_RX_Sample(void)
 {
-    if (gScreenToDisplay != DISPLAY_CW_CHAT) return;
     if (tx_state != CW_TX_IDLE) return;   /* never poke the bus while we are keying */
+
+    /* Run per the CWMon scope: chat screen always; main screen if scope>=1; anywhere if
+       scope==2. The squelch-arming + confidence gates below keep it from decoding noise or
+       voice into anything visible, so running broadly is cheap and safe. */
+    const uint8_t scope = CW_MonScope();
+    if (gScreenToDisplay != DISPLAY_CW_CHAT &&
+        !(scope >= 2u) &&
+        !(scope == 1u && gScreenToDisplay == DISPLAY_MAIN))
+        return;
 
     /* The state machine counts milliseconds, so it has to run on every tick even when the
        amplitude cannot be sampled: the main loop bit-bangs the same chip, and an interrupt
@@ -788,6 +892,29 @@ uint8_t CW_RX_GetSLevel(void)
     return rx_slevel;
 }
 
+/* True while a confirmed Morse decode should be shown on the main-screen line. */
+bool CW_RX_Detected(void)
+{
+    return rx_show_ms > 0u;
+}
+
+/* Tail of the most recent decoded RX message for the one-line main-screen display:
+   copies the last n-1 chars of the newest RX history entry, NUL-terminated. */
+void CW_RX_GetTail(char *buf, uint8_t n)
+{
+    buf[0] = '\0';
+    for (int i = (int)cw_history_count - 1; i >= 0; i--) {
+        if (cw_history[i].tag == CW_MSG_RX) {
+            const char *t   = cw_history[i].text;
+            uint8_t     len = (uint8_t)strlen(t);
+            const char *tail = t + (len > (n - 1u) ? len - (n - 1u) : 0);
+            strncpy(buf, tail, n - 1u);
+            buf[n - 1u] = '\0';
+            return;
+        }
+    }
+}
+
 /* 0 = idle (nothing heard), 1 = mark (key down now), 2 = space (in a gap). */
 uint8_t CW_RX_GetState(void)
 {
@@ -978,6 +1105,26 @@ void CW_TimeSlice10ms(void)
         }
     }
     cw_tx_tick();
+
+    /* The background/main-screen decoder needs an RX threshold even if the CW chat screen
+       (which calls CW_Init) was never opened. Prefer the persisted value; otherwise calibrate
+       once, but only while the channel is quiet so we measure the true noise floor. This runs
+       in the main loop, so the blocking calibrate is safe here (never in the 1ms ISR). */
+    if (rx_threshold == 0u && CW_MonScope() >= 1u) {
+        if (gEeprom.CW_RX_THRESHOLD > 0u) {
+            rx_threshold = gEeprom.CW_RX_THRESHOLD;
+        } else if (!g_SquelchLost) {
+            cw_rx_calibrate_threshold();
+            gEeprom.CW_RX_THRESHOLD = rx_threshold;
+            SETTINGS_SaveCwThreshold();
+        }
+    }
+
+    /* Main-screen CW line: hold a confirmed decode for CW_RX_SHOW_HOLD_MS after the last
+       character, then let the S-meter take the line back. */
+    if (rx_show_ms > 0u)
+        rx_show_ms = (rx_show_ms > 10u) ? (uint16_t)(rx_show_ms - 10u) : 0u;
+
     /* The receiver runs from SysTick at 1ms (CW_RX_Sample); here we only refresh the
        signal bar, at 20Hz -- blitting costs ~7.5ms at 1MHz SPI. */
     static uint8_t bar_refresh_ctr = 0;
@@ -987,6 +1134,17 @@ void CW_TimeSlice10ms(void)
             bar_refresh_ctr = 0;
             gUpdateDisplay = true;
         }
+    } else if (gScreenToDisplay == DISPLAY_MAIN && CW_MonScope() >= 1u) {
+        /* Refresh the main screen while the CW line is showing, and once when it clears. */
+        static bool    was_showing = false;
+        static uint8_t main_ctr    = 0;
+        bool showing = (rx_show_ms > 0u);
+        if (showing) {
+            if (++main_ctr >= 5u) { main_ctr = 0; gUpdateDisplay = true; }
+        } else if (was_showing) {
+            gUpdateDisplay = true;            /* CW just ended -> redraw so the S-meter returns */
+        }
+        was_showing = showing;
     }
 }
 
