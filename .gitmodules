@@ -1,0 +1,3 @@
+[submodule "tools/uvflash"]
+	path = tools/uvflash
+	url = https://github.com/Elwimen/quansheng-uvflash.git
