@@ -174,6 +174,7 @@ enum
     MENU_CW_RECALL_HIST,
     MENU_CW_MODE,
     MENU_CW_MONITOR,
+    MENU_CW_HOLD,
     MENU_CW_CALLSIGN,
 #endif
 };

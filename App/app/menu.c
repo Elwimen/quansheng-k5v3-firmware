@@ -520,6 +520,10 @@ int MENU_GetLimits(uint8_t menu_id, int32_t *pMin, int32_t *pMax)
             *pMin = 0;
             *pMax = 2;  /* 0 = chat only, 1 = main+chat, 2 = full background */
             break;
+        case MENU_CW_HOLD:
+            *pMin = 1;
+            *pMax = 30;  /* seconds a decode lingers on the main screen */
+            break;
         case MENU_CW_CALLSIGN:
             *pMin = 0;
             *pMax = 0;  /* text field — no numeric range */
@@ -1132,6 +1136,10 @@ void MENU_AcceptSetting(void)
             gEeprom.CW_FLAGS = (uint8_t)((gEeprom.CW_FLAGS & ~CW_FLAG_MON_MASK)
                              | ((gSubMenuSelection << CW_FLAG_MON_SHIFT) & CW_FLAG_MON_MASK));
             break;
+        case MENU_CW_HOLD:
+            gEeprom.CW_FLAGS = (uint8_t)((gEeprom.CW_FLAGS & ~CW_FLAG_HOLD_MASK)
+                             | ((gSubMenuSelection << CW_FLAG_HOLD_SHIFT) & CW_FLAG_HOLD_MASK));
+            break;
         case MENU_CW_MODE:
             /* 0 = AFCW → FM modulation, 1 = OOK → CW modulation */
             gTxVfo->Modulation = gSubMenuSelection ? MODULATION_CW : MODULATION_FM;
@@ -1642,6 +1650,11 @@ void MENU_ShowCurrentSetting(void)
         case MENU_CW_MONITOR:
             gSubMenuSelection = (gEeprom.CW_FLAGS & CW_FLAG_MON_MASK) >> CW_FLAG_MON_SHIFT;
             break;
+        case MENU_CW_HOLD: {
+            uint8_t s = (gEeprom.CW_FLAGS & CW_FLAG_HOLD_MASK) >> CW_FLAG_HOLD_SHIFT;
+            gSubMenuSelection = s ? s : 4;   /* default 4s when un-set */
+            break;
+        }
         case MENU_CW_CALLSIGN:
             gSubMenuSelection = 0;  /* text field, no selection index */
             break;

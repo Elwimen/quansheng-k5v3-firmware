@@ -583,7 +583,7 @@ static void cw_hist_append(char decoded)
    screen from the background/main. The main-screen center line refreshes via rx_show_ms. */
 static void cw_rx_note_display(void)
 {
-    rx_show_ms = CW_RX_SHOW_HOLD_MS;
+    rx_show_ms = (uint16_t)(CW_HoldSeconds() * 1000u);
     if (gScreenToDisplay == DISPLAY_CW_CHAT)
         gRequestDisplayScreen = DISPLAY_CW_CHAT;
 }
@@ -645,6 +645,14 @@ static void cw_rx_commit_word_space(void)
 uint8_t CW_MonScope(void)
 {
     return (uint8_t)((gEeprom.CW_FLAGS & CW_FLAG_MON_MASK) >> CW_FLAG_MON_SHIFT);
+}
+
+/* How long (seconds) a decoded message stays on the main-screen line after the sender stops.
+   Stored in CW_FLAGS bits 3-7; 0 (un-set) -> 4s default. */
+uint8_t CW_HoldSeconds(void)
+{
+    uint8_t s = (uint8_t)((gEeprom.CW_FLAGS & CW_FLAG_HOLD_MASK) >> CW_FLAG_HOLD_SHIFT);
+    return s ? s : 4u;
 }
 
 void CW_RX_Sample(void)

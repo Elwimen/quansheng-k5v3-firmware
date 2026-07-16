@@ -182,6 +182,7 @@ const t_menu_item MenuList[] =
     {"CWRHst",      MENU_CW_RECALL_HIST}, // CW log recalled TX to history
     {"CWMode",      MENU_CW_MODE       }, // CW TX mode: OOK or AFCW
     {"CWMon",       MENU_CW_MONITOR    }, // CW RX decoder scope: chat / main / background
+    {"CWHold",      MENU_CW_HOLD       }, // seconds a decode stays on the main screen
     {"CWCall",      MENU_CW_CALLSIGN   }, // user callsign for prediction
 #endif
     // hidden menu items from here on
@@ -1528,6 +1529,9 @@ void UI_DisplayMenu(void)
             strcpy(String, scope[gSubMenuSelection <= 2 ? gSubMenuSelection : 0]);
             break;
         }
+        case MENU_CW_HOLD:
+            sprintf(String, "%us", gSubMenuSelection);   /* main-screen decode hold, seconds */
+            break;
         /* MENU_CW_CALLSIGN display is handled in the special-case block above */
 #endif
 
