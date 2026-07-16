@@ -48,7 +48,9 @@ This supersedes the two older, single-source tools:
 - ASCII (curses): press `Tab` to arm a one-shot **long** press for the next key
   (works for digits and arrows too); or use the CAPS variant of a letter key
   (`M`, `E`, `F`, `O`, `K`). The status line shows `LONG-ARMED`.
-- GUI (pygame): hold **Shift** while pressing any key for a long press.
+- GUI (pygame): hold **Shift** while pressing any key for a long press. The
+  window is resizable — drag any edge and the screen scales to fit (2:1),
+  never clipping a row or column.
 - Scripted (`--keys`): append `!` to a token, e.g. `--keys "F! 1"` (long F, short 1).
 
 ## Connecting a real radio

@@ -285,11 +285,12 @@ def run_gui(stream):
     except ImportError:
         sys.exit("--gui needs pygame:  pip install pygame")
 
-    scale = 6  # square pixels -> a true 2:1 window, no horizontal squish
+    scale = 6  # initial pixel size; the window is resizable and scales to fit
     fg, bg = pygame.Color(0, 0, 0), pygame.Color(202, 202, 202)
     pygame.init()
-    win = pygame.display.set_mode((WIDTH * scale, HEIGHT * scale))
+    win = pygame.display.set_mode((WIDTH * scale, HEIGHT * scale), pygame.RESIZABLE)
     pygame.display.set_caption("k5screen")
+    lcd = pygame.Surface((WIDTH, HEIGHT))   # 1:1 framebuffer; scaled to the window
 
     # pygame key -> radio key
     kmap = {pygame.K_m: "MENU", pygame.K_RETURN: "MENU", pygame.K_e: "EXIT",
@@ -300,12 +301,30 @@ def run_gui(stream):
     for d in range(10):
         kmap[getattr(pygame, f"K_{d}")] = str(d)
 
+    def blit(fb):
+        # Render the LCD 1:1, then scale it to fit the window preserving the
+        # 2:1 aspect and centre it, so no row/column is ever clipped.
+        lcd.fill(bg)
+        for y in range(HEIGHT):
+            for x in range(WIDTH):
+                if bit(fb, x, y):
+                    lcd.set_at((x, y), fg)
+        ww, wh = win.get_size()
+        k = max(1, min(ww // WIDTH, wh // HEIGHT))
+        w, h = WIDTH * k, HEIGHT * k
+        win.fill((0, 0, 0))
+        win.blit(pygame.transform.scale(lcd, (w, h)), ((ww - w) // 2, (wh - h) // 2))
+        pygame.display.flip()
+
     last_ka = 0.0
     clock = pygame.time.Clock()
     while True:
         for ev in pygame.event.get():
             if ev.type == pygame.QUIT:
                 pygame.quit(); return
+            if ev.type == pygame.VIDEORESIZE:
+                win = pygame.display.set_mode((ev.w, ev.h), pygame.RESIZABLE)
+                blit(stream.fb)
             if ev.type == pygame.KEYDOWN:
                 if ev.key == pygame.K_q:
                     pygame.quit(); return
@@ -315,13 +334,7 @@ def run_gui(stream):
         if now - last_ka >= 0.3:
             stream.keepalive(); last_ka = now
         if stream.read_frame() is not None:
-            win.fill(bg)
-            fb = stream.fb
-            for y in range(HEIGHT):
-                for x in range(WIDTH):
-                    if bit(fb, x, y):
-                        win.fill(fg, (x * scale, y * scale, scale, scale))
-            pygame.display.flip()
+            blit(stream.fb)
         clock.tick(60)
 
 
