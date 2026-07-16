@@ -41,8 +41,15 @@ This supersedes the two older, single-source tools:
 
 ### Live-view keys (forwarded to the radio)
 
-`0`–`9` · `m` = MENU · `e`/`⌫` = EXIT · `↑`/`↓` = UP/DOWN · `*` · `#` ·
-`o`/`k` = side 1/2 (`O`/`K` = long press) · `space` = PTT · `q` = quit.
+`0`–`9` · `m` = MENU · `e`/`⌫` = EXIT · `↑`/`↓` = UP/DOWN · `*` ·
+`f` (or `#`) = F · `o`/`k` = side 1/2 · `space` = PTT · `q` = quit.
+
+**Short vs long press:**
+- ASCII (curses): press `Tab` to arm a one-shot **long** press for the next key
+  (works for digits and arrows too); or use the CAPS variant of a letter key
+  (`M`, `E`, `F`, `O`, `K`). The status line shows `LONG-ARMED`.
+- GUI (pygame): hold **Shift** while pressing any key for a long press.
+- Scripted (`--keys`): append `!` to a token, e.g. `--keys "F! 1"` (long F, short 1).
 
 ## Connecting a real radio
 

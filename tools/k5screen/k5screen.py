@@ -207,13 +207,15 @@ def resolve_port(args):
 
 # terminal key -> (radio key, long?)
 CURSES_KEYMAP = {
-    ord("m"): ("MENU", False), ord("\n"): ("MENU", False),
-    ord("e"): ("EXIT", False), 127: ("EXIT", False),
+    ord("m"): ("MENU", False), ord("\n"): ("MENU", False), ord("M"): ("MENU", True),
+    ord("e"): ("EXIT", False), 127: ("EXIT", False), ord("E"): ("EXIT", True),
     ord("*"): ("STAR", False), ord("#"): ("F", False),
+    ord("f"): ("F", False), ord("F"): ("F", True),
     ord("o"): ("SIDE1", False), ord("k"): ("SIDE2", False),
     ord("O"): ("SIDE1", True), ord("K"): ("SIDE2", True),
     ord(" "): ("PTT", False),
 }
+LONG_ARM = ord("\t")   # Tab: make the *next* key a long press (works for digits/arrows too)
 for _d in "0123456789":
     CURSES_KEYMAP[ord(_d)] = (_d, False)
 
@@ -230,8 +232,9 @@ def run_curses(stream):
         except curses.error:
             pass
         last_ka = 0.0
-        legend = ("keys: 0-9  m=MENU  e/⌫=EXIT  ↑↓=UP/DOWN  *  #  o/k=side "
-                  "(O/K=long)  space=PTT   q=quit")
+        pending_long = False   # Tab arms a one-shot long press for the next key
+        legend = ("keys: 0-9  m=MENU  e/⌫=EXIT  ↑↓=UP/DOWN  *  f=F(#) o/k=side  "
+                  "Tab or CAPS=long  space=PTT   q=quit")
         while True:
             now = time.monotonic()
             if now - last_ka >= 0.3:
@@ -242,13 +245,15 @@ def run_curses(stream):
             if ch != -1:
                 if ch in (ord("q"), 3):        # q or Ctrl-C
                     return
-                if ch == curses.KEY_UP:
-                    stream.send_key("UP")
+                if ch == LONG_ARM:
+                    pending_long = True
+                elif ch == curses.KEY_UP:
+                    stream.send_key("UP", pending_long); pending_long = False
                 elif ch == curses.KEY_DOWN:
-                    stream.send_key("DOWN")
+                    stream.send_key("DOWN", pending_long); pending_long = False
                 elif ch in CURSES_KEYMAP:
                     name, lng = CURSES_KEYMAP[ch]
-                    stream.send_key(name, lng)
+                    stream.send_key(name, lng or pending_long); pending_long = False
 
             if stream.read_frame() is not None:
                 rows, cols = scr.getmaxyx()
@@ -262,7 +267,8 @@ def run_curses(stream):
                     ("SLEEP", stream.flags & FLAG_DEEP_SLEEP),
                     ("RED", stream.flags & FLAG_LED_RED),
                     ("GRN", stream.flags & FLAG_LED_GREEN)) if on) or "-"
-                status = f"[{flag_txt}]  {legend}"
+                arm = " LONG-ARMED" if pending_long else ""
+                status = f"[{flag_txt}{arm}]  {legend}"
                 if rows > len(text):
                     scr.addnstr(rows - 1, 0, status, max(0, cols - 1))
                 scr.refresh()
@@ -279,16 +285,17 @@ def run_gui(stream):
     except ImportError:
         sys.exit("--gui needs pygame:  pip install pygame")
 
-    scale = 5
+    scale = 6  # square pixels -> a true 2:1 window, no horizontal squish
     fg, bg = pygame.Color(0, 0, 0), pygame.Color(202, 202, 202)
     pygame.init()
-    win = pygame.display.set_mode((WIDTH * (scale - 1), HEIGHT * scale))
+    win = pygame.display.set_mode((WIDTH * scale, HEIGHT * scale))
     pygame.display.set_caption("k5screen")
 
     # pygame key -> radio key
     kmap = {pygame.K_m: "MENU", pygame.K_RETURN: "MENU", pygame.K_e: "EXIT",
             pygame.K_BACKSPACE: "EXIT", pygame.K_UP: "UP", pygame.K_DOWN: "DOWN",
-            pygame.K_ASTERISK: "STAR", pygame.K_HASH: "F", pygame.K_SPACE: "PTT",
+            pygame.K_ASTERISK: "STAR", pygame.K_HASH: "F", pygame.K_f: "F",
+            pygame.K_SPACE: "PTT",
             pygame.K_o: "SIDE1", pygame.K_k: "SIDE2"}
     for d in range(10):
         kmap[getattr(pygame, f"K_{d}")] = str(d)
@@ -313,7 +320,7 @@ def run_gui(stream):
             for y in range(HEIGHT):
                 for x in range(WIDTH):
                     if bit(fb, x, y):
-                        win.fill(fg, (x * (scale - 1), y * scale, scale - 1, scale))
+                        win.fill(fg, (x * scale, y * scale, scale, scale))
             pygame.display.flip()
         clock.tick(60)
 
