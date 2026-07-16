@@ -46,6 +46,11 @@ TYPE_FULL = 0x01
 TYPE_DIFF = 0x02
 MAX_DIFF = 128 * 9          # firmware sends at most 128 chunks, 9 bytes each
 KEEPALIVE = b"\x55\xAA\x00\x00"
+# The firmware's keepAlive counter (max 15) decrements on every SCREENSHOT_Update
+# call. During TX the audio scope refreshes ~50x/s, so at a 0.3s ping interval the
+# counter can burn to 0 and streaming shuts off (PTT freezes the screen). Ping well
+# under that so the counter never reaches 0.
+KEEPALIVE_INTERVAL = 0.1
 
 # host -> radio key codes (same map as sim/uvctl.py so scripts agree)
 KEYS = {
@@ -187,7 +192,7 @@ def capture_settled(stream, seconds=1.2):
     got = False
     while time.monotonic() < deadline:
         now = time.monotonic()
-        if now - last_ka >= 0.3:
+        if now - last_ka >= KEEPALIVE_INTERVAL:
             stream.keepalive()
             last_ka = now
         if stream.read_frame() is not None:
@@ -290,7 +295,7 @@ def run_curses(stream):
                   "Tab or CAPS=long  space=PTT   q=quit")
         while True:
             now = time.monotonic()
-            if now - last_ka >= 0.3:
+            if now - last_ka >= KEEPALIVE_INTERVAL:
                 stream.keepalive()
                 last_ka = now
 
@@ -447,7 +452,7 @@ def run_gui(stream, theme_name=None):
                 elif ev.key in kmap:
                     stream.send_key(kmap[ev.key], bool(ev.mod & pygame.KMOD_SHIFT))
         now = time.monotonic()
-        if now - last_ka >= 0.3:
+        if now - last_ka >= KEEPALIVE_INTERVAL:
             stream.keepalive(); last_ka = now
         if stream.pump():
             redraw(stream.fb)
