@@ -84,6 +84,9 @@ class Stream:
         self.fb = bytearray(FRAME_SIZE)
         self.flags = 0
         self._last = 0  # last byte read, to catch the 0xF0|flags marker
+        self.debug = False
+        self.frames = 0     # frames decoded since the last debug print
+        self.dbg_t = 0.0
 
     def keepalive(self):
         try:
@@ -98,6 +101,20 @@ class Stream:
             raise ValueError(f"unknown key '{name}' — one of: {', '.join(KEYS)}")
         self.ser.write(bytes([0xAA, 0x55, 0x04 if long_press else 0x03, KEYS[key]]))
         self.ser.flush()
+
+    def pump(self):
+        """Decode one frame, then drain any backlog so we render only the newest.
+
+        During TX the audio scope floods frames faster than a slow redraw can
+        keep up; without draining, the OS serial buffer backs up and the screen
+        shows seconds-old frames (looks frozen). Returns True if a frame decoded."""
+        got = self.read_frame() is not None
+        # Drain whatever else is already buffered; keep only the last frame.
+        while self.ser.in_waiting >= 6:
+            if self.read_frame() is None:
+                break
+            got = True
+        return got
 
     def read_frame(self):
         """Read one frame, updating self.fb/self.flags. None on timeout."""
@@ -122,11 +139,13 @@ class Stream:
                 if marked and t == bytes([TYPE_FULL]) and size == FRAME_SIZE:
                     self.fb = bytearray(ser.read(FRAME_SIZE))
                     self._last = 0
+                    self.frames += 1
                     return self.fb
                 if (marked and t == bytes([TYPE_DIFF])
                         and 0 < size <= MAX_DIFF and size % 9 == 0):
                     self._apply_diff(ser.read(size))
                     self._last = 0
+                    self.frames += 1
                     return self.fb
                 self._last = 0
             else:
@@ -140,6 +159,22 @@ class Stream:
                 break
             self.fb[block * 8: block * 8 + 8] = payload[i + 1: i + 9]
             i += 9
+
+
+def debug_tick(stream):
+    """Once/second, print decode stats to stderr (only when --debug)."""
+    if not stream.debug:
+        return
+    t = time.monotonic()
+    if t - stream.dbg_t >= 1.0:
+        try:
+            backlog = stream.ser.in_waiting
+        except Exception:
+            backlog = -1
+        print(f"[debug] {stream.frames:3d} frame/s  backlog={backlog}B  "
+              f"flags={stream.flags:#04x}", file=sys.stderr)
+        stream.frames = 0
+        stream.dbg_t = t
 
 
 def capture_settled(stream, seconds=1.2):
@@ -273,7 +308,7 @@ def run_curses(stream):
                     name, lng = CURSES_KEYMAP[ch]
                     stream.send_key(name, lng or pending_long); pending_long = False
 
-            if stream.read_frame() is not None:
+            if stream.pump():
                 rows, cols = scr.getmaxyx()
                 text = as_text(stream.fb).split("\n")
                 scr.erase()
@@ -292,6 +327,7 @@ def run_curses(stream):
                 scr.refresh()
             else:
                 time.sleep(0.01)
+            debug_tick(stream)
 
     curses.wrapper(loop)
 
@@ -413,8 +449,9 @@ def run_gui(stream, theme_name=None):
         now = time.monotonic()
         if now - last_ka >= 0.3:
             stream.keepalive(); last_ka = now
-        if stream.read_frame() is not None:
+        if stream.pump():
             redraw(stream.fb)
+        debug_tick(stream)
         clock.tick(60)
 
 
@@ -427,6 +464,7 @@ def main():
     src.add_argument("--sim", action="store_true", help=f"use the simulator ({SIM_PTY})")
     ap.add_argument("--baud", type=int, default=BAUDRATE, help="baud (default 38400; USB CDC ignores it)")
     ap.add_argument("--list-ports", action="store_true", help="list USB serial ports and exit")
+    ap.add_argument("--debug", action="store_true", help="print frames/s + serial backlog to stderr")
     ap.add_argument("--keys", help="inject keys before viewing, e.g. \"MENU 1 EXIT\" (append ! for long)")
 
     mode = ap.add_mutually_exclusive_group()
@@ -453,6 +491,7 @@ def main():
         sys.exit(f"cannot open {port}: {e}")
     print(f"k5screen: {port}", file=sys.stderr)
     stream = Stream(ser)
+    stream.debug = args.debug
 
     try:
         if args.keys:

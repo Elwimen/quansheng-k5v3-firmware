@@ -38,6 +38,7 @@ This supersedes the two older, single-source tools:
 ./k5screen.py --once               # print one settled frame and exit (scriptable)
 ./k5screen.py --png screen.png     # save one settled frame as PNG
 ./k5screen.py --keys "MENU 1 EXIT" # inject keys, then view (append ! for a long press)
+./k5screen.py --debug              # print frames/s + serial backlog to stderr (diagnostics)
 ```
 
 ### Live-view keys (forwarded to the radio)
