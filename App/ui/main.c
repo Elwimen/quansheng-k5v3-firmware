@@ -20,6 +20,9 @@
 #include "app/app.h"
 #include "app/chFrScanner.h"
 #include "app/dtmf.h"
+#ifdef ENABLE_FEAT_ELW_CW
+    #include "app/cw.h"
+#endif
 
 #ifdef ENABLE_FEAT_F4HWN_BEAM
     #include "app/beam.h"
@@ -2261,6 +2264,19 @@ void UI_DisplayMain(void)
         else
 #endif
 
+#ifdef ENABLE_FEAT_ELW_CW
+        if (CW_MonScope() >= 1u && CW_RX_Detected())
+        {   // a confirmed Morse decode takes the line from the S-meter (main+chat / full modes)
+            if (gScreenToDisplay != DISPLAY_MAIN)
+                return;
+            center_line = CENTER_LINE_CW_DEC;
+            char tail[18];
+            CW_RX_GetTail(tail, sizeof(tail));
+            sprintf(String, "CW %s", tail);
+            UI_PrintStringSmallNormal(String, 2, 0, isMainOnly() ? 5 : 3);
+        }
+        else
+#endif
 #ifdef ENABLE_RSSI_BAR
         if (rx) {
             center_line = CENTER_LINE_RSSI;

@@ -70,6 +70,9 @@ uint8_t  CW_RX_GetLastAmp(void);
 uint8_t  CW_RX_GetWpm(void);                       /* detected sender WPM (0 = none) */
 uint8_t  CW_RX_GetSLevel(void);                    /* peak-hold S-meter, 0..9 */
 void     CW_RX_UpdateSMeter(void);                 /* call at ~10ms while on the CW screen */
+uint8_t  CW_MonScope(void);                        /* 0 chat only, 1 main+chat, 2 background */
+bool     CW_RX_Detected(void);                     /* a confirmed Morse decode is showing */
+void     CW_RX_GetTail(char *buf, uint8_t n);      /* last n-1 chars of the newest RX line */
 uint8_t  CW_RX_GetState(void);                     /* 0 idle, 1 mark, 2 space */
 void     CW_RX_GetLivePattern(char *buf, uint8_t n);
 void     CW_RX_GetScope(uint8_t *buf);             /* CW_SCOPE_LEN bytes, oldest..newest */

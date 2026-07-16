@@ -181,6 +181,7 @@ const t_menu_item MenuList[] =
     {"CWPset",      MENU_CW_PRESET     }, // CW parameter presets
     {"CWRHst",      MENU_CW_RECALL_HIST}, // CW log recalled TX to history
     {"CWMode",      MENU_CW_MODE       }, // CW TX mode: OOK or AFCW
+    {"CWMon",       MENU_CW_MONITOR    }, // CW RX decoder scope: chat / main / background
     {"CWCall",      MENU_CW_CALLSIGN   }, // user callsign for prediction
 #endif
     // hidden menu items from here on
@@ -1521,6 +1522,12 @@ void UI_DisplayMenu(void)
         case MENU_CW_MODE:
             strcpy(String, gSubMenuSelection ? "OOK" : "AFCW");
             break;
+        case MENU_CW_MONITOR: {
+            /* RX decoder scope: where the background Morse decoder runs / shows */
+            static const char *const scope[] = { "Chat", "Main", "Full" };
+            strcpy(String, scope[gSubMenuSelection <= 2 ? gSubMenuSelection : 0]);
+            break;
+        }
         /* MENU_CW_CALLSIGN display is handled in the special-case block above */
 #endif
 
