@@ -302,18 +302,22 @@ def run_gui(stream):
         kmap[getattr(pygame, f"K_{d}")] = str(d)
 
     def blit(fb):
-        # Render the LCD 1:1, then scale it to fit the window preserving the
-        # 2:1 aspect and centre it, so no row/column is ever clipped.
+        # Render the LCD 1:1, then scale it to fit the current window preserving
+        # the 2:1 aspect and centre it, so no row/column is ever clipped.
+        # Read the live surface each frame (SDL2 resizes it in place); never call
+        # set_mode again -- doing so in a resize handler causes a shrink spiral on
+        # HiDPI displays where the event size is in points, not pixels.
+        surf = pygame.display.get_surface()
         lcd.fill(bg)
         for y in range(HEIGHT):
             for x in range(WIDTH):
                 if bit(fb, x, y):
                     lcd.set_at((x, y), fg)
-        ww, wh = win.get_size()
+        ww, wh = surf.get_size()
         k = max(1, min(ww // WIDTH, wh // HEIGHT))
         w, h = WIDTH * k, HEIGHT * k
-        win.fill((0, 0, 0))
-        win.blit(pygame.transform.scale(lcd, (w, h)), ((ww - w) // 2, (wh - h) // 2))
+        surf.fill((0, 0, 0))
+        surf.blit(pygame.transform.scale(lcd, (w, h)), ((ww - w) // 2, (wh - h) // 2))
         pygame.display.flip()
 
     last_ka = 0.0
@@ -323,8 +327,7 @@ def run_gui(stream):
             if ev.type == pygame.QUIT:
                 pygame.quit(); return
             if ev.type == pygame.VIDEORESIZE:
-                win = pygame.display.set_mode((ev.w, ev.h), pygame.RESIZABLE)
-                blit(stream.fb)
+                blit(stream.fb)   # just redraw; SDL2 already resized the surface
             if ev.type == pygame.KEYDOWN:
                 if ev.key == pygame.K_q:
                     pygame.quit(); return
