@@ -24,8 +24,22 @@
 #include "driver/bk1080.h"
 #include "driver/bk4819.h"
 #include "driver/py25q16.h"
+#include "driver/spi_flash_layout.h"   /* single source of truth for flash offsets */
 #include "misc.h"
 #include "settings.h"
+
+/* The flash offsets used throughout this file are defined once in spi_flash_layout.h
+   (which also generates the ImHex pattern + CHIRP MEM_FORMAT). Pin the ones this file
+   relies on so the build breaks if the source-of-truth ever drifts from them. */
+_Static_assert(FL_ADDR_channels       == 0x000000, "channels addr");
+_Static_assert(FL_ADDR_channel_names  == 0x004000, "channel names addr");
+_Static_assert(FL_ADDR_ch_attr        == 0x008000, "channel attributes addr");
+_Static_assert(FL_ADDR_vfo_channels   == 0x009000, "VFO channels addr");
+_Static_assert(FL_ADDR_settings_a000  == 0x00A000, "settings block addr");
+_Static_assert(FL_ADDR_settings_a0a8  == 0x00A0A8, "keys/scan/power-on block addr");
+_Static_assert(FL_ADDR_cw             == 0x00A170, "CW settings addr");
+_Static_assert(FL_ADDR_calibration    == 0x00B000, "calibration addr");
+_Static_assert(FL_ADDR_boot_logo      == 0x00C000, "boot logo addr");
 #include "ui/menu.h"
 
 EEPROM_Config_t gEeprom = { 0 };
@@ -396,7 +410,7 @@ gEeprom.FreqChannel[1]   = IS_FREQ_CHANNEL(Data16[5]) ? Data16[5] : (FREQ_CHANNE
 
     // 0D60..0E27
     /*
-    PY25Q16_ReadBuffer(0x008000, gMR_ChannelAttributes, sizeof(gMR_ChannelAttributes));
+    PY25Q16_ReadBuffer(FL_ADDR_ch_attr, gMR_ChannelAttributes, sizeof(gMR_ChannelAttributes));
     uint16_t count = ARRAY_SIZE(gMR_ChannelAttributes);
 
     for (uint16_t i = 0; i < count; i++) {
@@ -758,7 +772,7 @@ void SETTINGS_FetchChannelName(char *s, const uint16_t channel)
         return;
 
     // 0x0F50
-    PY25Q16_ReadBuffer(0x004000 + (channel * 16), s, 10);
+    PY25Q16_ReadBuffer(FL_ADDR_channel_names + (channel * 16), s, 10);
 
     int i;
     for (i = 0; i < 10; i++)
