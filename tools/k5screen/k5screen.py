@@ -60,6 +60,16 @@ FLAG_DEEP_SLEEP = 1 << 0
 FLAG_LED_RED = 1 << 1
 FLAG_LED_GREEN = 1 << 2
 
+# GUI colour themes: name -> (foreground, background) as RGB tuples.
+THEMES = [
+    ("Amber",  (0, 0, 0),       (255, 176, 0)),
+    ("Grey",   (0, 0, 0),       (202, 202, 202)),
+    ("Blue",   (0, 0, 0),       (28, 134, 228)),
+    ("White",  (0, 0, 0),       (255, 255, 255)),
+    ("Green",  (0, 255, 65),    (0, 0, 0)),        # phosphor: green on black
+    ("AmberCRT", (255, 176, 0), (0, 0, 0)),        # amber text on black
+]
+
 
 # --------------------------------------------------------------------------- #
 # Serial stream decoder                                                        #
@@ -278,7 +288,7 @@ def run_curses(stream):
     curses.wrapper(loop)
 
 
-def run_gui(stream):
+def run_gui(stream, theme_name=None):
     try:
         os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "hide")
         import pygame
@@ -286,11 +296,19 @@ def run_gui(stream):
         sys.exit("--gui needs pygame:  pip install pygame")
 
     scale = 6  # initial pixel size; the window is resizable and scales to fit
-    fg, bg = pygame.Color(0, 0, 0), pygame.Color(202, 202, 202)
+    theme = 0
+    if theme_name:
+        for i, (n, _, _) in enumerate(THEMES):
+            if n.lower() == theme_name.lower():
+                theme = i
     pygame.init()
-    win = pygame.display.set_mode((WIDTH * scale, HEIGHT * scale), pygame.RESIZABLE)
+    pygame.display.set_mode((WIDTH * scale, HEIGHT * scale), pygame.RESIZABLE)
     pygame.display.set_caption("k5screen")
     lcd = pygame.Surface((WIDTH, HEIGHT))   # 1:1 framebuffer; scaled to the window
+    try:                                     # font is optional (some pygame builds lack it)
+        font = pygame.font.SysFont("monospace", 15)
+    except Exception:
+        font = None
 
     # pygame key -> radio key
     kmap = {pygame.K_m: "MENU", pygame.K_RETURN: "MENU", pygame.K_e: "EXIT",
@@ -301,13 +319,49 @@ def run_gui(stream):
     for d in range(10):
         kmap[getattr(pygame, f"K_{d}")] = str(d)
 
-    def blit(fb):
-        # Render the LCD 1:1, then scale it to fit the current window preserving
-        # the 2:1 aspect and centre it, so no row/column is ever clipped.
-        # Read the live surface each frame (SDL2 resizes it in place); never call
-        # set_mode again -- doing so in a resize handler causes a shrink spiral on
-        # HiDPI displays where the event size is in points, not pixels.
+    menu_open = False
+    BURGER = pygame.Rect(8, 8, 30, 26)         # clickable hamburger icon (window coords)
+    ROW_H, ROW_W = 24, 150
+
+    def theme_rows():
+        """(pygame.Rect, theme_index) for each item of the open dropdown."""
+        rows, y = [], BURGER.bottom + 4
+        for i in range(len(THEMES)):
+            rows.append((pygame.Rect(BURGER.x, y, ROW_W, ROW_H), i))
+            y += ROW_H
+        return rows
+
+    def draw_overlay(surf):
+        mouse = pygame.mouse.get_pos()
+        # hamburger button
+        pygame.draw.rect(surf, (60, 60, 60), BURGER, border_radius=4)
+        pygame.draw.rect(surf, (200, 200, 200), BURGER, width=1, border_radius=4)
+        for i in range(3):
+            ly = BURGER.y + 7 + i * 6
+            pygame.draw.line(surf, (230, 230, 230), (BURGER.x + 6, ly), (BURGER.right - 6, ly), 2)
+        if menu_open:
+            for rect, i in theme_rows():
+                name, fg, bg = THEMES[i]
+                hot = rect.collidepoint(mouse)
+                pygame.draw.rect(surf, bg, rect)     # row painted in the theme's own colours
+                pygame.draw.rect(surf, (255, 255, 255) if hot else (120, 120, 120),
+                                 rect, width=3 if (hot or i == theme) else 1)
+                if font:
+                    label = ("> " if i == theme else "  ") + name
+                    surf.blit(font.render(label, True, fg), (rect.x + 6, rect.y + 4))
+                else:
+                    # no font: show fg-on-bg sample bars + a dot for the active theme
+                    if i == theme:
+                        pygame.draw.circle(surf, fg, (rect.x + 12, rect.centery), 4)
+                    for b in range(3):
+                        by = rect.y + 6 + b * 5
+                        pygame.draw.line(surf, fg, (rect.x + 24, by), (rect.right - 10, by), 2)
+
+    def redraw(fb):
+        # Render the LCD 1:1 in the current theme, scale to fit the window
+        # (2:1, centred/letterboxed), then draw the menu overlay on top.
         surf = pygame.display.get_surface()
+        _, fg, bg = THEMES[theme]
         lcd.fill(bg)
         for y in range(HEIGHT):
             for x in range(WIDTH):
@@ -318,6 +372,7 @@ def run_gui(stream):
         w, h = WIDTH * k, HEIGHT * k
         surf.fill((0, 0, 0))
         surf.blit(pygame.transform.scale(lcd, (w, h)), ((ww - w) // 2, (wh - h) // 2))
+        draw_overlay(surf)
         pygame.display.flip()
 
     last_ka = 0.0
@@ -327,17 +382,31 @@ def run_gui(stream):
             if ev.type == pygame.QUIT:
                 pygame.quit(); return
             if ev.type == pygame.VIDEORESIZE:
-                blit(stream.fb)   # just redraw; SDL2 already resized the surface
+                redraw(stream.fb)   # just redraw; SDL2 already resized the surface
+            if ev.type == pygame.MOUSEBUTTONDOWN and ev.button == 1:
+                if BURGER.collidepoint(ev.pos):
+                    menu_open = not menu_open
+                elif menu_open:
+                    for rect, i in theme_rows():
+                        if rect.collidepoint(ev.pos):
+                            theme = i
+                            break
+                    menu_open = False
+                redraw(stream.fb)
+            if ev.type == pygame.MOUSEMOTION and menu_open:
+                redraw(stream.fb)   # live hover highlight
             if ev.type == pygame.KEYDOWN:
                 if ev.key == pygame.K_q:
                     pygame.quit(); return
-                if ev.key in kmap:
+                if ev.key == pygame.K_t:                 # cycle theme
+                    theme = (theme + 1) % len(THEMES); redraw(stream.fb)
+                elif ev.key in kmap:
                     stream.send_key(kmap[ev.key], bool(ev.mod & pygame.KMOD_SHIFT))
         now = time.monotonic()
         if now - last_ka >= 0.3:
             stream.keepalive(); last_ka = now
         if stream.read_frame() is not None:
-            blit(stream.fb)
+            redraw(stream.fb)
         clock.tick(60)
 
 
@@ -356,6 +425,9 @@ def main():
     mode.add_argument("--once", action="store_true", help="print one settled frame and exit")
     mode.add_argument("--png", metavar="FILE", help="save one settled frame as PNG and exit")
     mode.add_argument("--gui", action="store_true", help="pygame window (needs pygame)")
+    ap.add_argument("--theme", metavar="NAME", default="Amber",
+                    help="GUI colour theme: " + ", ".join(n for n, _, _ in THEMES)
+                         + " (default Amber; switch live from the burger menu or 't')")
     ap.add_argument("--scale", type=int, default=4, help="PNG scale factor (default 4)")
     args = ap.parse_args()
 
@@ -387,7 +459,7 @@ def main():
         elif args.once:
             print(as_text(capture_settled(stream)))
         elif args.gui:
-            run_gui(stream)
+            run_gui(stream, args.theme)
         else:
             run_curses(stream)
     except KeyboardInterrupt:

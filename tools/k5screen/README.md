@@ -33,7 +33,8 @@ This supersedes the two older, single-source tools:
 ./k5screen.py --port /dev/ttyACM0  # force a specific port
 ./k5screen.py --list-ports         # list USB serial ports
 
-./k5screen.py --gui                # pygame window
+./k5screen.py --gui                # pygame window (amber/black by default)
+./k5screen.py --gui --theme Green  # pick a starting theme
 ./k5screen.py --once               # print one settled frame and exit (scriptable)
 ./k5screen.py --png screen.png     # save one settled frame as PNG
 ./k5screen.py --keys "MENU 1 EXIT" # inject keys, then view (append ! for a long press)
@@ -51,6 +52,14 @@ This supersedes the two older, single-source tools:
 - GUI (pygame): hold **Shift** while pressing any key for a long press. The
   window is resizable — drag any edge and the screen scales to fit (2:1),
   never clipping a row or column.
+
+### GUI colour themes
+
+Default is **Amber** (black text on amber, classic-radio look). Switch live from
+the **burger menu** (three-line icon, top-left corner), or press **`t`** to cycle. Themes:
+Amber, Grey, Blue, White, Green (phosphor), AmberCRT (amber on black). Pick the
+starting one with `--theme NAME`. (The menu labels colour each row in its own
+theme; if the pygame build lacks a font module it falls back to colour swatches.)
 - Scripted (`--keys`): append `!` to a token, e.g. `--keys "F! 1"` (long F, short 1).
 
 ## Connecting a real radio
