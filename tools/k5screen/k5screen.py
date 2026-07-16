@@ -366,7 +366,12 @@ def run_gui(stream, theme_name=None):
             pygame.K_SPACE: "PTT",
             pygame.K_o: "SIDE1", pygame.K_k: "SIDE2"}
     for d in range(10):
-        kmap[getattr(pygame, f"K_{d}")] = str(d)
+        kmap[getattr(pygame, f"K_{d}")] = str(d)          # number row
+        for kp in (f"K_KP{d}", f"K_KP_{d}"):              # numpad (name varies by pygame)
+            if hasattr(pygame, kp):
+                kmap[getattr(pygame, kp)] = str(d)
+    if hasattr(pygame, "K_KP_ENTER"):
+        kmap[pygame.K_KP_ENTER] = "MENU"
 
     menu_open = False
     BURGER = pygame.Rect(8, 8, 30, 26)         # clickable hamburger icon (window coords)
