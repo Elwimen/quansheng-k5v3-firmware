@@ -18,6 +18,9 @@
 #include <stdlib.h>
 
 #include "../app/dtmf.h"
+#ifdef ENABLE_FEAT_ELW_CW
+#include "../app/cw.h"
+#endif
 #include "../app/menu.h"
 #include "../bitmaps.h"
 #include "../board.h"
@@ -176,9 +179,8 @@ const t_menu_item MenuList[] =
 #endif
 #endif
 #ifdef ENABLE_FEAT_ELW_CW
-    {"CWSpd",       MENU_CW_SPEED      }, // CW speed in WPM (OOK + AF CW)
+    {"CWSpd",       MENU_CW_SPEED      }, // CW speed: presets (name+wpm) or custom wpm
     {"CWTone",      MENU_CW_TONE       }, // CW sidetone frequency (AF CW only)
-    {"CWPset",      MENU_CW_PRESET     }, // CW parameter presets
     {"CWRHst",      MENU_CW_RECALL_HIST}, // CW log recalled TX to history
     {"CWMode",      MENU_CW_MODE       }, // CW TX mode: OOK or AFCW
     {"CWMon",       MENU_CW_MONITOR    }, // CW RX decoder scope: chat / main / background
@@ -1497,7 +1499,12 @@ void UI_DisplayMenu(void)
 
 #ifdef ENABLE_FEAT_ELW_CW
         case MENU_CW_SPEED:
-            sprintf(String, "%u WPM", (unsigned)gSubMenuSelection);
+            /* 0..presetCount-1 = named presets (name + wpm); above = custom wpm. */
+            if (gSubMenuSelection < CW_PresetCount())
+                sprintf(String, "%s %u", CW_PresetName(gSubMenuSelection),
+                        CW_PresetWpm(gSubMenuSelection));
+            else
+                sprintf(String, "%u WPM", (unsigned)gSubMenuSelection);
             break;
 
         case MENU_CW_TONE: {
@@ -1509,13 +1516,6 @@ void UI_DisplayMenu(void)
             break;
         }
 
-        case MENU_CW_PRESET: {
-            static const char * const cw_preset_names[] = {
-                "SLOW", "STD", "QSO", "FAST", "CONTEST"
-            };
-            strcpy(String, cw_preset_names[gSubMenuSelection < 5 ? gSubMenuSelection : 1]);
-            break;
-        }
 
         case MENU_CW_RECALL_HIST:
             strcpy(String, gSubMenuSelection ? "ON" : "OFF");

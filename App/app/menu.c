@@ -497,16 +497,12 @@ int MENU_GetLimits(uint8_t menu_id, int32_t *pMin, int32_t *pMax)
 
 #ifdef ENABLE_FEAT_ELW_CW
         case MENU_CW_SPEED:
-            *pMin = 5;
-            *pMax = 40;
+            *pMin = 0;
+            *pMax = 40;  /* 0..presetCount-1 = named presets, presetCount..40 = custom wpm */
             break;
         case MENU_CW_TONE:
             *pMin = 0;
             *pMax = 6;  /* indices into cw_tone_table[] */
-            break;
-        case MENU_CW_PRESET:
-            *pMin = 0;
-            *pMax = 4;  /* 5 presets */
             break;
         case MENU_CW_RECALL_HIST:
             *pMin = 0;
@@ -1101,7 +1097,12 @@ void MENU_AcceptSetting(void)
 
 #ifdef ENABLE_FEAT_ELW_CW
         case MENU_CW_SPEED:
-            gEeprom.CW_WPM = (uint8_t)gSubMenuSelection;
+            /* 0..presetCount-1 pick a named preset (sets wpm + tone); above sets a custom
+               wpm and leaves the tone alone. */
+            if (gSubMenuSelection < CW_PresetCount())
+                CW_ApplyPreset((uint8_t)gSubMenuSelection);
+            else
+                gEeprom.CW_WPM = (uint8_t)gSubMenuSelection;
             break;
 
         case MENU_CW_TONE: {
@@ -1109,20 +1110,6 @@ void MENU_AcceptSetting(void)
                 400, 500, 600, 700, 800, 900, 1000
             };
             gEeprom.CW_TONE_HZ = cw_tone_table[gSubMenuSelection];
-            break;
-        }
-
-        case MENU_CW_PRESET: {
-            typedef struct { uint8_t wpm; uint16_t tone; } CwPreset_t;
-            static const CwPreset_t presets[] = {
-                {10, 600},   /* SLOW    */
-                {15, 700},   /* STD     */
-                {20, 700},   /* QSO     */
-                {25, 800},   /* FAST    */
-                {35, 900},   /* CONTEST */
-            };
-            gEeprom.CW_WPM     = presets[gSubMenuSelection].wpm;
-            gEeprom.CW_TONE_HZ = presets[gSubMenuSelection].tone;
             break;
         }
 
@@ -1619,9 +1606,11 @@ void MENU_ShowCurrentSetting(void)
 #endif
 
 #ifdef ENABLE_FEAT_ELW_CW
-        case MENU_CW_SPEED:
-            gSubMenuSelection = gEeprom.CW_WPM;
+        case MENU_CW_SPEED: {
+            int8_t p = CW_PresetMatch();
+            gSubMenuSelection = (p >= 0) ? p : gEeprom.CW_WPM;
             break;
+        }
 
         case MENU_CW_TONE: {
             static const uint16_t cw_tone_table[] = {
@@ -1636,10 +1625,6 @@ void MENU_ShowCurrentSetting(void)
             }
             break;
         }
-
-        case MENU_CW_PRESET:
-            gSubMenuSelection = 1; /* default to STD */
-            break;
 
         case MENU_CW_RECALL_HIST:
             gSubMenuSelection = (gEeprom.CW_FLAGS & CW_FLAG_RECALL_HISTORY) ? 1 : 0;

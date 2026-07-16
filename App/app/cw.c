@@ -655,6 +655,38 @@ uint8_t CW_HoldSeconds(void)
     return s ? s : 4u;
 }
 
+/* CW speed presets -- named wpm+tone bundles the CWSpd menu offers alongside custom speeds.
+   Defined once here (was duplicated between app/menu.c and ui/menu.c). */
+typedef struct { uint8_t wpm; uint16_t tone; const char *name; } CwPreset_t;
+static const CwPreset_t cw_presets[] = {
+    {10, 600, "SLOW"},
+    {15, 700, "STD"},
+    {20, 700, "QSO"},
+    {25, 800, "FAST"},
+    {35, 900, "CONTEST"},
+};
+
+uint8_t CW_PresetCount(void) { return (uint8_t)(sizeof(cw_presets) / sizeof(cw_presets[0])); }
+uint8_t CW_PresetWpm(uint8_t i)  { return (i < CW_PresetCount()) ? cw_presets[i].wpm : 15u; }
+const char *CW_PresetName(uint8_t i) { return (i < CW_PresetCount()) ? cw_presets[i].name : ""; }
+
+void CW_ApplyPreset(uint8_t i)
+{
+    if (i < CW_PresetCount()) {
+        gEeprom.CW_WPM     = cw_presets[i].wpm;
+        gEeprom.CW_TONE_HZ = cw_presets[i].tone;
+    }
+}
+
+/* Index of the preset whose wpm+tone match the current settings, or -1 (custom). */
+int8_t CW_PresetMatch(void)
+{
+    for (uint8_t i = 0; i < CW_PresetCount(); i++)
+        if (cw_presets[i].wpm == gEeprom.CW_WPM && cw_presets[i].tone == gEeprom.CW_TONE_HZ)
+            return (int8_t)i;
+    return -1;
+}
+
 void CW_RX_Sample(void)
 {
     if (tx_state != CW_TX_IDLE) return;   /* never poke the bus while we are keying */

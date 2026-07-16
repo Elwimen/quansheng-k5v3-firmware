@@ -72,6 +72,13 @@ uint8_t  CW_RX_GetSLevel(void);                    /* peak-hold S-meter, 0..9 */
 void     CW_RX_UpdateSMeter(void);                 /* call at ~10ms while on the CW screen */
 uint8_t  CW_MonScope(void);                        /* 0 chat only, 1 main+chat, 2 background */
 uint8_t  CW_HoldSeconds(void);                     /* main-screen decode hold time, seconds */
+
+/* CW speed presets (shared by the CWSpd menu) */
+uint8_t     CW_PresetCount(void);
+uint8_t     CW_PresetWpm(uint8_t i);
+const char *CW_PresetName(uint8_t i);
+void        CW_ApplyPreset(uint8_t i);
+int8_t      CW_PresetMatch(void);                  /* preset index matching now, or -1 */
 bool     CW_RX_Detected(void);                     /* a confirmed Morse decode is showing */
 void     CW_RX_GetTail(char *buf, uint8_t n);      /* last n-1 chars of the newest RX line */
 uint8_t  CW_RX_GetState(void);                     /* 0 idle, 1 mark, 2 space */
