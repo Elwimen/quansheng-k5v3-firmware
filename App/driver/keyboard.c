@@ -39,10 +39,20 @@ bool       gWasFKeyPressed  = false;
 // Packet types for serial key injection (K5Viewer → radio)
 #define SERIAL_KEY_TYPE         0x03
 #define SERIAL_KEY_TYPE_LONG    0x04
+#define SERIAL_PTT_TYPE         0x05  // AA 55 05 <state>: hold (nonzero) / release (0)
+
+// Dead-man watchdog: serial PTT auto-releases if the host stops refreshing it
+// (a keepalive or another PTT-hold packet) within this many 10ms ticks. This is
+// the safety guarantee that makes held TX over serial acceptable -- a crashed
+// viewer or unplugged cable can never leave the radio keyed for more than ~0.3s.
+#define SERIAL_PTT_WATCHDOG_10MS 30
 
 volatile KEY_Code_t gKeyFromSerial      = KEY_INVALID;
 static   uint8_t    gSerialKeyHoldCount = 0;
 static   uint8_t    gSerialKeyLong      = 0;  // 0 = short press, 1 = long press
+
+static volatile bool     gSerialPttActive   = false;
+static volatile uint16_t gSerialPttWatchdog = 0;   // 10ms ticks until auto-release
 
 // Inject a short or long press from serial (UART or VCP).
 // KEY_PTT is explicitly blocked — PTT release cannot be guaranteed over serial.
@@ -75,7 +85,13 @@ bool KEYBOARD_ProcessProtocolByte(ParseState_t *state, uint8_t b)
             break;
             
         case STATE_KA_3:
-            if (b == 0x00) connected = true;
+            if (b == 0x00) {
+                connected = true;
+                // Keepalive doubles as the PTT watchdog refresh, so held TX
+                // survives as long as the host keeps pinging (~10x/s).
+                if (gSerialPttActive)
+                    gSerialPttWatchdog = SERIAL_PTT_WATCHDOG_10MS;
+            }
             *state = STATE_IDLE;
             break;
             
@@ -86,12 +102,22 @@ bool KEYBOARD_ProcessProtocolByte(ParseState_t *state, uint8_t b)
         case STATE_KEY_2:
             if      (b == SERIAL_KEY_TYPE)      *state = STATE_KEY_3;
             else if (b == SERIAL_KEY_TYPE_LONG) *state = STATE_KEY_3L;
+            else if (b == SERIAL_PTT_TYPE)      *state = STATE_PTT;
             else                                *state = STATE_IDLE;
             break;
-            
+
         case STATE_KEY_3:
         case STATE_KEY_3L:
             KEYBOARD_InjectKey(b, *state == STATE_KEY_3L);
+            connected = true;
+            *state = STATE_IDLE;
+            break;
+
+        case STATE_PTT:
+            // Held TX: b != 0 presses PTT, 0 releases it. The watchdog auto-
+            // releases if the host stops refreshing (see KEYBOARD_SerialPttTick).
+            gSerialPttActive   = (b != 0);
+            gSerialPttWatchdog = gSerialPttActive ? SERIAL_PTT_WATCHDOG_10MS : 0;
             connected = true;
             *state = STATE_IDLE;
             break;
@@ -260,6 +286,26 @@ KEY_Code_t KEYBOARD_GetKey(void)
         btn = KEY_PTT;
     }
     return btn;
+}
+
+// Is the host currently holding PTT over serial? Folded into the same TX
+// start/stop path as the physical PTT in CheckKeys().
+bool KEYBOARD_SerialPttActive(void)
+{
+#ifdef ENABLE_FEAT_F4HWN_SCREENSHOT
+    return gSerialPttActive;
+#else
+    return false;
+#endif
+}
+
+// 10ms tick: run down the dead-man watchdog and drop TX if the host went away.
+void KEYBOARD_SerialPttTick(void)
+{
+#ifdef ENABLE_FEAT_F4HWN_SCREENSHOT
+    if (gSerialPttWatchdog > 0 && --gSerialPttWatchdog == 0)
+        gSerialPttActive = false;
+#endif
 }
 
 void HideFKeyIcon(void) {

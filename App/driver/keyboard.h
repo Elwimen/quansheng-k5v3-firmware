@@ -54,6 +54,7 @@ typedef enum {
     STATE_KEY_2,
     STATE_KEY_3,
     STATE_KEY_3L,
+    STATE_PTT,      // AA 55 05 <state>: serial PTT hold (1) / release (0)
 } ParseState_t;
 
 extern KEY_Code_t gKeyReading0;
@@ -70,6 +71,11 @@ bool KEYBOARD_ProcessProtocolByte(ParseState_t *state, uint8_t b);
 
 KEY_Code_t KEYBOARD_Poll(void);
 KEY_Code_t KEYBOARD_GetKey(void);
+
+// Serial PTT (held TX over the K5Viewer link, with a dead-man watchdog).
+// Always defined; a no-op / false when the screenshot feature is disabled.
+bool KEYBOARD_SerialPttActive(void);   // is the host currently holding PTT?
+void KEYBOARD_SerialPttTick(void);     // call every 10ms: expires the watchdog
 
 void HideFKeyIcon(void);
 

@@ -1441,6 +1441,35 @@ void CheckKeys(void)
 // -------------------- PTT ------------------------
     const bool serialConfigInProgress = SerialConfigInProgress();
 
+    // Serial PTT (held TX from the K5Viewer link) is always pure hold-to-talk:
+    // TX while the host holds it, stop the instant it releases or the dead-man
+    // watchdog fires. It deliberately bypasses the physical PTT's one-push
+    // session mode (a latching toggle), whose counter logic does not fit a hold.
+    static bool serialPttTx = false;
+    const bool serialPtt = KEYBOARD_SerialPttActive() && !serialConfigInProgress;
+    if (serialPtt != serialPttTx)
+    {
+        serialPttTx = serialPtt;
+        if (serialPtt)
+        {   // start transmitting
+            boot_counter_10ms = 0;
+            gPttIsPressed     = true;
+            ProcessKey(KEY_PTT, true, false);
+        }
+        else
+        {   // release -> stop transmitting
+            StopTransmitting();
+            gPttIsPressed = false;
+        }
+    }
+
+    // While serial PTT owns the transmitter, skip the physical PTT handling.
+    if (serialPttTx)
+    {
+        // nothing more to do for PTT this tick
+    }
+    else
+    {
 #ifdef ENABLE_FEAT_F4HWN
     const bool isPressed = GPIO_IsPttPressed() && !serialConfigInProgress;
 #else
@@ -1508,6 +1537,7 @@ void CheckKeys(void)
         else
             gPttDebounceCounter = 0;
     }
+    }   // end: physical PTT handling (skipped while serial PTT owns TX)
 
 // --------------------- OTHER KEYS ----------------------------
 
@@ -1580,6 +1610,10 @@ void CheckKeys(void)
 void APP_TimeSlice10ms(void)
 {
     gNextTimeslice = false;
+
+    // Run the serial-PTT dead-man watchdog first, before any early return, so a
+    // vanished host can never leave the radio keyed.
+    KEYBOARD_SerialPttTick();
 
     SETTINGS_SaveVfoIndicesFlush();
 
