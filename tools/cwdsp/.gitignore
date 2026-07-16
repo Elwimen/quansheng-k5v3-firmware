@@ -1,0 +1,4 @@
+cw_sim
+*.o
+*.wav
+*.mp3
