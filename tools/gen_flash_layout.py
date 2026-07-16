@@ -104,8 +104,11 @@ def _walk(obj):
                 off = m.attributes.get("DW_AT_data_member_location")
                 bs = m.attributes.get("DW_AT_bit_size")
                 bo = m.attributes.get("DW_AT_data_bit_offset")
+                mname = nm(m)
+                if mname and mname.startswith("x_"):   # un-mangle names that dodge -D macros
+                    mname = mname[2:]
                 fields.append(Field(
-                    nm(m), resolve(die_at(m.attributes["DW_AT_type"].value, cu_base), cu_base),
+                    mname, resolve(die_at(m.attributes["DW_AT_type"].value, cu_base), cu_base),
                     off.value if off else 0,
                     bs.value if bs else None, bo.value if bo else None))
             return ("struct", nm(die), fields, size.value if size else 0)
@@ -150,6 +153,190 @@ def parse_regions():
     return regions
 
 
+# ---------------------------------------------------------------- emit helpers
+HEX_BASE = {"u8": "u8", "u16": "u16", "u32": "u32",
+            "i8": "s8", "i16": "s16", "i32": "s32", "char": "char"}
+CHIRP_BASE = {"u8": "u8", "u16": "ul16", "u32": "ul32",
+              "i8": "i8", "i16": "il16", "i32": "il32", "char": "char"}
+
+
+def iter_items(fields):
+    """Ordered emit items: ('field', Field) or ('bits', byte, [Field,...]) for a u8
+    bitfield storage unit (all fields sharing one byte)."""
+    items, i, n = [], 0, len(fields)
+    while i < n:
+        f = fields[i]
+        if f.bit_size is not None:
+            byte = f.bit_off // 8
+            grp = []
+            while i < n and fields[i].bit_size is not None and fields[i].bit_off // 8 == byte:
+                grp.append(fields[i]); i += 1
+            items.append(("bits", byte, grp))
+        else:
+            items.append(("field", f)); i += 1
+    return items
+
+
+class HexEmitter:
+    """Emit ImHex declarations, hoisting every struct/bitfield as a named type."""
+    def __init__(self):
+        self.decls, self._seen = [], set()
+
+    def struct(self, name, st):                       # st = ('struct', _, fields, size)
+        if name in self._seen:
+            return name
+        self._seen.add(name)
+        body = []
+        for it in iter_items(st[2]):
+            if it[0] == "bits":
+                _, byte, grp = it
+                bf = f"{name}_bits{byte:02X}"
+                self.decls.append("bitfield %s {\n%s\n};" % (
+                    bf, "\n".join(f"    {f.name} : {f.bit_size};"
+                                  for f in sorted(grp, key=lambda x: x.bit_off))))
+                body.append(f"    {bf} bits{byte:02X};")
+            else:
+                body.append("    " + self._member(name, it[1]))
+        self.decls.append("struct %s {\n%s\n};" % (name, "\n".join(body)))
+        return name
+
+    def _member(self, sname, f):
+        t = f.type
+        if t[0] == "array":
+            elem, cnt = t[1], t[2]
+            base = self._typename(sname + "_" + f.name, elem)
+            return f"{base} {f.name}[{cnt}];"
+        return f"{self._typename(sname + '_' + f.name, t)} {f.name};"
+
+    def _typename(self, hint, t):
+        if t[0] == "base":
+            return HEX_BASE[t[1]]
+        if t[0] == "enum":
+            return "u8"                               # enums: plain u8 (kept simple)
+        if t[0] == "struct":
+            return self.struct(hint, t)
+        return "u8"
+
+
+def emit_hexpat(types, enums, regions):
+    em = HexEmitter()
+    for r in regions:
+        em.struct(r["type"], types[r["type"]])
+    placements = []
+    for r in regions:
+        cnt = f"[{r['count']}]" if r["count"] > 1 else ""
+        placements.append(f'{r["type"]} {r["field"]}{cnt} @ {r["addr"]:#08x} '
+                          f'[[name("{r["field"]}")]];')
+    return ("#pragma description Quansheng UV-K5 V3 PY25Q16 SPI flash "
+            "(generated from App/driver/spi_flash_layout.h -- DO NOT EDIT)\n"
+            "#pragma endian little\n#pragma pattern_limit 2000000\n"
+            "#pragma array_limit 2000000\n\n"
+            + "\n\n".join(em.decls) + "\n\n// ------------------------------ placement\n"
+            + "\n".join(placements) + "\n")
+
+
+def emit_chirp(types, regions):
+    """MEM_FORMAT body (address-ordered), bitfields reversed to MSB-first per byte."""
+    def fields_of(st, indent):
+        out = []
+        for it in iter_items(st[2]):
+            if it[0] == "bits":
+                _, _, grp = it
+                parts = [f"{f.name}:{f.bit_size}"
+                         for f in sorted(grp, key=lambda x: -x.bit_off)]  # MSB first
+                out.append(f"{indent}u8 " + ", ".join(parts) + ";")
+            else:
+                f = it[1]
+                t = f.type
+                if t[0] == "array":
+                    elem, cnt = t[1], t[2]
+                    if elem[0] == "base" and elem[1] == "char":
+                        out.append(f"{indent}char {f.name}[{cnt}];")
+                    elif elem[0] == "base":
+                        out.append(f"{indent}{CHIRP_BASE[elem[1]]} {f.name}[{cnt}];")
+                    elif elem[0] == "struct":
+                        out.append(f"{indent}struct {{")
+                        out += fields_of(elem, indent + "  ")
+                        out.append(f"{indent}}} {f.name}[{cnt}];")
+                elif t[0] == "struct":
+                    out.append(f"{indent}struct {{")
+                    out += fields_of(t, indent + "  ")
+                    out.append(f"{indent}}} {f.name};")
+                elif t[0] == "base":
+                    out.append(f"{indent}{CHIRP_BASE[t[1]]} {f.name};")
+                elif t[0] == "enum":
+                    out.append(f"{indent}u8 {f.name};")
+        return out
+
+    lines = ["// generated from App/driver/spi_flash_layout.h -- DO NOT EDIT", ""]
+    for r in regions:
+        if not r["in_chirp"]:
+            continue
+        st = types[r["type"]]
+        lines.append(f"#seekto {r['addr']:#08x};")
+        if r["cname"]:
+            cnt = f"[{r['count']}]" if r["count"] > 1 else ""
+            lines.append("struct {")
+            lines += fields_of(st, "  ")
+            lines.append(f"}} {r['cname']}{cnt};")
+        else:
+            lines += fields_of(st, "")
+        lines.append("")
+    return "\n".join(lines)
+
+
+CHIRP_DRIVER = os.path.expanduser("~/code/chirp/chirp/drivers/f4hwn_fusion.py")
+# Known intentional differences vs the hand-written driver (SSOT is the correct one):
+#   cal.txp -- the SSOT uses the firmware's 16-byte-per-band stride (radio.c Band*16);
+#   the driver's #seek makes its element size ambiguous.
+CHIRP_ALLOW = {"cal.txp"}
+
+
+def validate_chirp(memfmt):
+    """Semantically diff the generated MEM_FORMAT against the real driver (via CHIRP's own
+    bitwise parser). Returns list of unexpected differences ([] == validated)."""
+    try:
+        sys.path.insert(0, os.path.expanduser("~/code/chirp"))
+        from chirp import bitwise, memmap
+    except Exception as e:
+        print(f"  (skip CHIRP validation: {e})")
+        return []
+    if not os.path.exists(CHIRP_DRIVER):
+        print("  (skip CHIRP validation: driver not found)")
+        return []
+    pad = re.compile(r"^(__pad|__p\d|__UNUSED)")
+
+    def layout(text):
+        obj = bitwise.parse(text, memmap.MemoryMapBytes(bytes(0xC000)))
+        out = {}
+
+        def walk(el, path):
+            if hasattr(el, "items") and hasattr(el, "_generators"):
+                for n, c in el.items():
+                    walk(c, f"{path}.{n}")
+            elif hasattr(el, "__len__") and not hasattr(el, "get_value"):
+                if len(el):
+                    walk(el[0], f"{path}[0]")
+            else:
+                name = path.rsplit(".", 1)[-1].split("[")[0]
+                if not pad.match(name):
+                    out[re.sub(r"\[0\]", "[]", path)] = (el._offset, el.size())
+        for n, c in obj.items():
+            walk(c, n)
+        return out
+
+    drv = re.search(r'MEM_FORMAT\s*=\s*"""(.*?)"""', open(CHIRP_DRIVER).read(), re.S).group(1)
+    gen, old = layout(memfmt), layout(drv)
+    diffs = []
+    for p in sorted(set(gen) | set(old)):
+        base = p.split(".")[0] + "." + p.split(".")[1] if p.count(".") >= 1 else p
+        if any(p.startswith(a) for a in CHIRP_ALLOW):
+            continue
+        if gen.get(p) != old.get(p):
+            diffs.append(f"{p}: generated={gen.get(p)} driver={old.get(p)}")
+    return diffs
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--check", action="store_true")
@@ -177,8 +364,34 @@ def main():
                     print(f"    {f.name:16s} byte {f.offset} bit_off {f.bit_off} :{f.bit_size}")
         return 0
 
-    print(f"model: {len(types)} structs, {len(enums)} enums, {len(regions)} regions")
-    print("(hexpat + MEM_FORMAT emitters: next step)")
+    hexpat = emit_hexpat(types, enums, regions)
+    memfmt = emit_chirp(types, regions)
+
+    if args.check:
+        ok = True
+        for path, new in ((HEXPAT_OUT, hexpat), (MEMFMT_OUT, memfmt)):
+            old = open(path).read() if os.path.exists(path) else None
+            if old != new:
+                print(f"  OUT OF DATE: {os.path.relpath(path, ROOT)} (run without --check)")
+                ok = False
+            else:
+                print(f"  up to date:  {os.path.relpath(path, ROOT)}")
+        print("  CHIRP layout validation:")
+        diffs = validate_chirp(memfmt)
+        if diffs:
+            ok = False
+            for d in diffs:
+                print(f"    MISMATCH {d}")
+        else:
+            print("    all functional fields match the driver's MEM_FORMAT")
+        return 0 if ok else 1
+
+    with open(HEXPAT_OUT, "w") as f:
+        f.write(hexpat)
+    with open(MEMFMT_OUT, "w") as f:
+        f.write(memfmt)
+    print(f"wrote {os.path.relpath(HEXPAT_OUT, ROOT)} ({hexpat.count(chr(10))+1} lines)")
+    print(f"wrote {os.path.relpath(MEMFMT_OUT, ROOT)} ({memfmt.count(chr(10))+1} lines)")
     return 0
 
 

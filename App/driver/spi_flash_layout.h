@@ -203,20 +203,25 @@ typedef struct __attribute__((packed)) {          /* 0x00A150 */
             mic_bar : 1, AM_fix : 1, backlight_on_TX_RX : 2;
 } FL_SettingsA150;
 
-typedef struct __attribute__((packed)) {          /* 0x00A158 : F4HWN */
-    uint8_t ENABLE_FMRADIO : 1, ENABLE_NOAA : 1, ENABLE_VOICE : 1, ENABLE_VOX : 1,
-            ENABLE_ALARM : 1, ENABLE_TX1750 : 1, ENABLE_PWRON_PASSWORD : 1,
-            ENABLE_DTMF_CALLING : 1;
-    uint8_t ENABLE_FLASHLIGHT : 1, ENABLE_WIDE_RX : 1, ENABLE_RAW_DEMODULATORS : 1,
-            ENABLE_FEAT_F4HWN_GAME : 1, ENABLE_AM_FIX : 1, ENABLE_BANDSCOPE : 1,
-            ENABLE_FEAT_F4HWN_RESCUE_OPS : 1, __UNUSED13 : 1;
+/* Field names carry an x_ prefix so they aren't expanded as firmware -D build-flag macros
+   (ENABLE_*); the generator strips the x_ so CHIRP still sees the real names. */
+typedef struct __attribute__((packed)) {          /* 0x00A158 : F4HWN build flags */
+    uint8_t x_ENABLE_FMRADIO : 1, x_ENABLE_NOAA : 1, x_ENABLE_VOICE : 1, x_ENABLE_VOX : 1,
+            x_ENABLE_ALARM : 1, x_ENABLE_TX1750 : 1, x_ENABLE_PWRON_PASSWORD : 1,
+            x_ENABLE_DTMF_CALLING : 1;
+    uint8_t x_ENABLE_FLASHLIGHT : 1, x_ENABLE_WIDE_RX : 1, x_ENABLE_RAW_DEMODULATORS : 1,
+            x_ENABLE_FEAT_F4HWN_GAME : 1, x_ENABLE_AM_FIX : 1, x_ENABLE_BANDSCOPE : 1,
+            x_ENABLE_FEAT_F4HWN_RESCUE_OPS : 1, __UNUSED13 : 1;
+} FL_BuildOptions;
+
+typedef struct __attribute__((packed)) {          /* 0x00A15A : F4HWN settings (bare) */
     uint8_t __UNUSED14;
     uint8_t __UNUSED15;
     uint8_t set_tmr : 1, set_off_tmr : 7;
     uint8_t set_contrast : 4, set_inv : 1, set_lck : 1, set_met : 1, set_gui : 1;
     uint8_t set_eot : 4, set_tot : 4;
     uint8_t set_ptt : 1, set_scn : 1, __UNUSED16 : 2, set_pwr : 4;
-} FL_SettingsF4HWN;
+} FL_SettingsA15A;
 
 typedef struct __attribute__((packed)) { char version[16]; } FL_Version;  /* 0x00A160 */
 
@@ -303,7 +308,8 @@ typedef struct __attribute__((packed)) {
     X(dtmf,            FL_Dtmf,                1, 0x00A0E8, dtmf,           1) \
     X(scan_list,       FL_ScanListSettings,    1, 0x00A130, sl,             1) \
     X(settings_a150,   FL_SettingsA150,        1, 0x00A150, /*bare*/,       1) \
-    X(build_options,   FL_SettingsF4HWN,       1, 0x00A158, BUILD_OPTIONS,  1) \
+    X(build_options,   FL_BuildOptions,        1, 0x00A158, BUILD_OPTIONS,  1) \
+    X(settings_a15a,   FL_SettingsA15A,        1, 0x00A15A, /*bare*/,       1) \
     X(version,         FL_Version,             1, 0x00A160, version,        1) \
     X(cw,              FL_CwSettings,          1, 0x00A170, cw,             1) \
     X(calibration,     FL_Calibration,         1, 0x00B000, cal,            1) \

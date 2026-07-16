@@ -1,0 +1,252 @@
+// generated from App/driver/spi_flash_layout.h -- DO NOT EDIT
+
+#seekto 0x000000;
+struct {
+  ul32 freq;
+  ul32 offset;
+  u8 rxcode;
+  u8 txcode;
+  u8 txcodeflag:4, rxcodeflag:4;
+  u8 modulation:4, offsetDir:4;
+  u8 __UNUSED01:1, txLock:1, busyChLockout:1, txpower:3, bandwidth:1, freq_reverse:1;
+  u8 __UNUSED02:4, dtmf_pttid:3, dtmf_decode:1;
+  u8 step;
+  u8 __UNUSED03;
+} channel[1024];
+
+#seekto 0x004000;
+struct {
+  char name[16];
+} channelname[1024];
+
+#seekto 0x008000;
+struct {
+  u8 __UNUSED04:3, compander:2, band:3;
+  u8 scanlist;
+} ch_attr[1031];
+
+#seekto 0x00880e;
+struct {
+  char name[4];
+} listname[24];
+
+#seekto 0x009000;
+struct {
+  ul32 freq;
+  ul32 offset;
+  u8 rxcode;
+  u8 txcode;
+  u8 txcodeflag:4, rxcodeflag:4;
+  u8 modulation:4, offsetDir:4;
+  u8 __UNUSED01:1, txLock:1, busyChLockout:1, txpower:3, bandwidth:1, freq_reverse:1;
+  u8 __UNUSED02:4, dtmf_pttid:3, dtmf_decode:1;
+  u8 step;
+  u8 __UNUSED03;
+} vfo_channel[14];
+
+#seekto 0x00a000;
+u8 set_rxa_am:4, set_rxa_fm:4;
+u8 squelch;
+u8 max_talk_time;
+u8 noaa_autoscan;
+u8 __UNUSED09:1, set_nav:1, set_key:4, set_menu_lock:1, key_lock:1;
+u8 vox_switch;
+u8 vox_level;
+u8 mic_gain;
+
+#seekto 0x00a008;
+u8 backlight_min:4, backlight_max:4;
+u8 channel_display_mode;
+u8 crossband;
+u8 battery_save;
+u8 dual_watch;
+u8 backlight_time;
+u8 __UNUSED10:5, set_nfm:2, ste:1;
+u8 current_state;
+
+#seekto 0x00a010;
+ul16 ScreenChannel_A;
+ul16 MrChannel_A;
+ul16 FreqChannel_A;
+ul16 ScreenChannel_B;
+ul16 MrChannel_B;
+ul16 FreqChannel_B;
+ul16 NoaaChannel_A;
+ul16 NoaaChannel_B;
+
+#seekto 0x00a028;
+ul16 fmfreq[48];
+
+#seekto 0x00a0a8;
+u8 keyM_longpress_action:7, button_beep:1;
+u8 key1_shortpress_action;
+u8 key1_longpress_action;
+u8 key2_shortpress_action;
+u8 key2_longpress_action;
+u8 scan_resume_mode;
+u8 auto_keypad_lock;
+u8 power_on_dispmode;
+ul32 password;
+
+#seekto 0x00a0b8;
+u8 voice;
+i8 dbm_corr[7];
+
+#seekto 0x00a0c0;
+u8 alarm_mode;
+u8 roger_beep;
+u8 rp_ste;
+u8 TX_VFO;
+u8 Battery_type;
+
+#seekto 0x00a0c8;
+char logo_line1[16];
+char logo_line2[16];
+
+#seekto 0x00a0e8;
+struct {
+  u8 side_tone;
+  char separate_code;
+  char group_call_code;
+  u8 decode_response;
+  u8 auto_reset_time;
+  u8 preload_time;
+  u8 first_code_persist_time;
+  u8 hash_persist_time;
+  u8 code_persist_time;
+  u8 code_interval_time;
+  u8 permit_remote_kill;
+  u8 __pad_A0F3[5];
+  char local_code[3];
+  char __pad_A0FB[5];
+  char kill_code[5];
+  char __pad_A103[3];
+  char revive_code[5];
+  char __pad_A10B[3];
+  char up_code[16];
+  char down_code[16];
+} dtmf;
+
+#seekto 0x00a130;
+struct {
+  u8 slPriorEnab:1, slDef:7;
+  ul16 slPriorCh1;
+  ul16 slPriorCh2;
+  ul16 call_channel;
+  u8 __UNUSED11;
+} sl;
+
+#seekto 0x00a150;
+u8 int_flock;
+u8 int_350tx_unsused;
+u8 int_KILLED;
+u8 int_200tx_unsused;
+u8 int_500tx_unsused;
+u8 int_350en;
+u8 int_scren;
+u8 backlight_on_TX_RX:2, AM_fix:1, mic_bar:1, battery_text:2, live_DTMF_decoder:1, __UNUSED12:1;
+
+#seekto 0x00a158;
+struct {
+  u8 ENABLE_DTMF_CALLING:1, ENABLE_PWRON_PASSWORD:1, ENABLE_TX1750:1, ENABLE_ALARM:1, ENABLE_VOX:1, ENABLE_VOICE:1, ENABLE_NOAA:1, ENABLE_FMRADIO:1;
+  u8 __UNUSED13:1, ENABLE_FEAT_F4HWN_RESCUE_OPS:1, ENABLE_BANDSCOPE:1, ENABLE_AM_FIX:1, ENABLE_FEAT_F4HWN_GAME:1, ENABLE_RAW_DEMODULATORS:1, ENABLE_WIDE_RX:1, ENABLE_FLASHLIGHT:1;
+} BUILD_OPTIONS;
+
+#seekto 0x00a15a;
+u8 __UNUSED14;
+u8 __UNUSED15;
+u8 set_off_tmr:7, set_tmr:1;
+u8 set_gui:1, set_met:1, set_lck:1, set_inv:1, set_contrast:4;
+u8 set_tot:4, set_eot:4;
+u8 set_pwr:4, __UNUSED16:2, set_scn:1, set_ptt:1;
+
+#seekto 0x00a160;
+struct {
+  char version[16];
+} version;
+
+#seekto 0x00a170;
+struct {
+  u8 cw_wpm;
+  u8 cw_tone_hi;
+  u8 cw_tone_lo;
+  u8 cw_flags;
+  u8 cw_pred_counts[15];
+  char cw_callsign[12];
+  u8 cw_thr_hi;
+  u8 cw_thr_lo;
+} cw;
+
+#seekto 0x00b000;
+struct {
+  struct {
+    u8 openRssiThr[10];
+    char __p0[6];
+    u8 closeRssiThr[10];
+    char __p1[6];
+    u8 openNoiseThr[10];
+    char __p2[6];
+    u8 closeNoiseThr[10];
+    char __p3[6];
+    u8 closeGlitchThr[10];
+    char __p4[6];
+    u8 openGlitchThr[10];
+    char __p5[6];
+  } sqlBand4_7;
+  struct {
+    u8 openRssiThr[10];
+    char __p0[6];
+    u8 closeRssiThr[10];
+    char __p1[6];
+    u8 openNoiseThr[10];
+    char __p2[6];
+    u8 closeNoiseThr[10];
+    char __p3[6];
+    u8 closeGlitchThr[10];
+    char __p4[6];
+    u8 openGlitchThr[10];
+    char __p5[6];
+  } sqlBand1_3;
+  struct {
+    ul16 level1;
+    ul16 level2;
+    ul16 level4;
+    ul16 level6;
+  } rssiLevelsBands3_7;
+  struct {
+    ul16 level1;
+    ul16 level2;
+    ul16 level4;
+    ul16 level6;
+  } rssiLevelsBands1_2;
+  struct {
+    struct {
+      u8 lower;
+      u8 center;
+      u8 upper;
+    } low;
+    struct {
+      u8 lower;
+      u8 center;
+      u8 upper;
+    } mid;
+    struct {
+      u8 lower;
+      u8 center;
+      u8 upper;
+    } hi;
+    char __pad[7];
+  } txp[7];
+  ul16 batLvl[6];
+  char __pad_B14C[4];
+  ul16 vox1Thr[10];
+  char __pad_B164[4];
+  ul16 vox0Thr[10];
+  char __pad_B17C[4];
+  u8 micLevel[5];
+  char __pad_B185[3];
+  il16 xtalFreqLow;
+  char __pad_B18A[4];
+  u8 volumeGain;
+  u8 dacGain;
+} cal;
