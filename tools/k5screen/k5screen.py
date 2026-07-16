@@ -44,6 +44,7 @@ SIM_PTY = os.environ.get("UVK5_SIM_PTY", "/tmp/ttyUV0")
 HEADER = b"\xAA\x55"
 TYPE_FULL = 0x01
 TYPE_DIFF = 0x02
+MAX_DIFF = 128 * 9          # firmware sends at most 128 chunks, 9 bytes each
 KEEPALIVE = b"\x55\xAA\x00\x00"
 
 # host -> radio key codes (same map as sim/uvctl.py so scripts agree)
@@ -107,16 +108,23 @@ class Stream:
                 return None
             byte = b[0]
             if byte == HEADER[0] and ser.read(1) == HEADER[1:2]:
-                # a 0xF0..0xF7 byte immediately before the header carries LED/sleep flags
-                if 0xF0 <= self._last <= 0xF7:
+                # The firmware sends a 0xF0..0xF7 marker (LED/sleep flags) right
+                # before *every* frame header. Requiring it, plus bounding the
+                # length to what the firmware can actually send (<=128 chunks *
+                # 9 bytes), stops a stray AA 55 02 inside the noisy TX audio-scope
+                # pixels from making us read()/swallow real frame data and desync
+                # -- the "PTT freezes the screen" bug.
+                marked = 0xF0 <= self._last <= 0xF7
+                if marked:
                     self.flags = self._last & 0x07
                 t = ser.read(1)
                 size = int.from_bytes(ser.read(2), "big")
-                if t == bytes([TYPE_FULL]) and size == FRAME_SIZE:
+                if marked and t == bytes([TYPE_FULL]) and size == FRAME_SIZE:
                     self.fb = bytearray(ser.read(FRAME_SIZE))
                     self._last = 0
                     return self.fb
-                if t == bytes([TYPE_DIFF]) and size % 9 == 0:
+                if (marked and t == bytes([TYPE_DIFF])
+                        and 0 < size <= MAX_DIFF and size % 9 == 0):
                     self._apply_diff(ser.read(size))
                     self._last = 0
                     return self.fb
