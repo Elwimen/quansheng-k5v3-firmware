@@ -23,7 +23,44 @@ sim/
   renode/*.cs               Custom C# peripheral models (compiled at load time).
 ```
 
+## Fresh clone — prerequisites & quickstart
+
+Install once (not vendored in the repo):
+
+- **Renode** — the emulator ([renode.io](https://renode.io)); must be on `PATH`.
+  On Arch/Manjaro: the AUR `renode` package or the portable release.
+- **ARM toolchain** — `arm-none-eabi-gcc` 13.x + `cmake` + `ninja` (or use Docker,
+  `./compile-with-docker.sh Fusion`). `arm-none-eabi-gdb` for `debug.sh` / the MCP
+  `gdb` tool.
+- **Python deps** — `pip install -r ../requirements.txt` (pyserial, Pillow;
+  websockets / pygame / mcp are optional).
+
+Known-good versions (this project is built and simulated against these):
+
+| Tool | Tested version |
+|---|---|
+| Renode | v1.16.1 |
+| arm-none-eabi-gcc | 16.1.0 (also builds with 13.x) |
+| arm-none-eabi-gdb | 17.2 |
+| cmake | 4.3.4 |
+| ninja | 1.13.2 |
+| Python | 3.14 |
+| pyserial / Pillow / websockets / mcp | 3.5 / 12.3 / 13.1 / 1.27 |
+
+Then a single command builds the firmware, creates the (gitignored) flash image,
+and runs the sim:
+
+```bash
+pip install -r ../requirements.txt
+./sim/dev.sh --no-viewer      # builds Fusion ELF + flash image, then runs
+```
+
+The MCP server (`tools/mcp/`) can do the same steps as tools — `build_firmware`,
+`sim_start`, `screen`, etc. — so an assistant can build/run/inspect without shell.
+
 ## Build the firmware
+
+`dev.sh` builds it for you; to build by hand:
 
 ```bash
 cmake --preset Fusion && cmake --build --preset Fusion -j
