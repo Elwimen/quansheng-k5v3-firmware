@@ -21,3 +21,6 @@ sim/golden/failed/
 
 # CW screen demo captures (regenerate with sim/cwcap.py / cwseq.py)
 sim/captures/
+
+# MCP session logs + screen artifacts (per-run, regenerated; see tools/mcp/)
+logs/

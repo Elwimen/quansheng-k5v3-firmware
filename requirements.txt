@@ -1,0 +1,18 @@
+# Host Python dependencies for the UV-K5 V3 tooling.
+# Install with:  pip install -r requirements.txt
+#
+# The firmware itself is built with the ARM toolchain (arm-none-eabi-gcc + cmake +
+# ninja, or ./compile-with-docker.sh); these are only the host-side Python tools.
+
+# Versions after each package are the tested/known-good ones (not hard pins).
+pyserial      # 3.5    serial I/O: sim/uvctl.py, tools/k5screen, tools/uvflash, webviewer
+Pillow        # 12.3   PNG rendering for screenshots (uvctl.py, k5screen)
+
+# Optional — only needed for specific tools:
+websockets    # 13.1   sim/webviewer/bridge.py (browser viewer)
+pygame        #        tools/k5screen --gui (graphical window)
+mcp           # 1.27   tools/mcp/uvradio_mcp.py (MCP server)
+flask         # 3.x    tools/mcp/logviewer.py (live session-log viewer)
+
+# Non-Python toolchain (install separately): Renode v1.16.1, arm-none-eabi-gcc 16.1
+# (or 13.x), arm-none-eabi-gdb 17.2, cmake 4.3, ninja 1.13, Python 3.14.

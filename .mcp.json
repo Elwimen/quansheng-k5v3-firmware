@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "uvradio": {
+      "command": "python3",
+      "args": ["tools/mcp/uvradio_mcp.py"]
+    }
+  }
+}
