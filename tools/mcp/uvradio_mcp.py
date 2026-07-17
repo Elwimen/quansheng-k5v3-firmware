@@ -212,17 +212,27 @@ def open_log_viewer(port: int = 8090, browser: bool = True, restart: bool = Fals
             s.settimeout(0.3)
             return s.connect_ex(("127.0.0.1", port)) == 0
 
-    if not up() and port_busy():
-        return (f"port {port} is held by something else (not the uvradio viewer) — "
-                f"pick another, e.g. open_log_viewer(port={port + 1})")
+    def ours_by_proc():
+        """Identify our viewer by process, not just /health — an older viewer predates
+        the health endpoint and would otherwise look like a foreign app."""
+        out, _ = _sh(["pgrep", "-f", rf"[l]ogviewer\.py --port {port}"], timeout=10)
+        return bool(out.strip())
 
+    # Restart FIRST: the guard below must not block the very upgrade that fixes an
+    # old viewer which can't answer /health yet.
     if restart:
-        # [l] so the pattern can't match this pkill's own command line
-        _sh(["pkill", "-f", f"[l]ogviewer.py --port {port}"], timeout=10)
-        for _ in range(20):
-            if not up():
+        _sh(["pkill", "-f", rf"[l]ogviewer\.py --port {port}"], timeout=10)
+        for _ in range(25):
+            if not port_busy():
                 break
             time.sleep(0.2)
+
+    if not up() and port_busy():
+        if ours_by_proc():
+            return (f"an older viewer is on {port} and can't answer /health — "
+                    f"call open_log_viewer(port={port}, restart=True) to replace it")
+        return (f"port {port} is held by something else (not the uvradio viewer) — "
+                f"pick another, e.g. open_log_viewer(port={port + 1})")
 
     started = False
     if not up():
