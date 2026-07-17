@@ -76,9 +76,26 @@ View it live:
 python3 tools/mcp/logviewer.py            # http://127.0.0.1:8090
 ```
 …or just call the **`open_log_viewer()`** tool, which starts it and opens your
-default browser. The viewer is a **separate process** (Flask + SSE): it survives MCP
-restarts, never fights for a port, follows whichever session is newest, and can show
-past sessions.
+default browser (`restart=True` after editing the viewer; it verifies `/health` so
+it won't mistake an unrelated app squatting the port for the viewer). It's a
+**separate process** (Flask + SSE): it survives MCP restarts and can show old sessions.
+
+The UI:
+
+| | |
+|---|---|
+| **NOW pane** | latest screen always visible + what's in flight |
+| **Filmstrip** | every screen capture; click to jump to that call |
+| **Categories** | ⚙ build · ▣ sim · ▦ screen · ⌨ input · ⚡ flash · ✱ debug · ✎ log |
+| **Duration heat** | dim / amber >1s / red >5s |
+| **Dedupe** | identical screen → "screen unchanged" instead of a repeat image |
+| **Notes** | `log_note()` chapter dividers |
+| **Follow-tail** | sticks to newest, auto-pauses when you scroll up |
+| **Filter** | search box, category chips, errors-only |
+| **Session picker** | replay any past session (live "newest" by default) |
+| **Diff** | `⧉` — green = pixels that turned on, red = turned off |
+| **Lightbox** | click any screen to zoom |
+| **Keys** | `j`/`k` move · `e` expand · `/` search · `f` follow · `g`/`G` top/bottom · `Esc` close |
 
 > The MCP server speaks protocol on **stdout**, so logging never writes there —
 > file only (errors to stderr).
