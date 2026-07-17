@@ -9,7 +9,8 @@ to bash. Thin wrapper over the existing tooling (`sim/uvctl.py`, `tools/k5screen
 
 | Tool | What it does |
 |---|---|
-| `open_log_viewer(port, browser)` | start the live session-log viewer and open the default browser |
+| `open_log_viewer(port, browser, restart)` | start the live session-log viewer and open the default browser |
+| `close_log_viewer(port)` | stop the viewer (logging continues; refuses a port held by another app) |
 | `log_info()` | where this session's log + artifacts are, and how big |
 | `goto_menu(name)` | open the menu and land on a named entry (e.g. `CWSpd`) — deterministic |
 | `build_firmware(preset, options)` | build the firmware with CMake; returns flash/RAM usage |
