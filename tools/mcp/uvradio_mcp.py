@@ -120,6 +120,41 @@ def _sh(cmd, timeout=180, cwd=FW):
     return (p.stdout or "") + (p.stderr or ""), p.returncode
 
 
+def _port_busy(port):
+    import socket
+    with socket.socket() as s:
+        s.settimeout(0.3)
+        return s.connect_ex(("127.0.0.1", port)) == 0
+
+
+def _viewer_up(port):
+    """True only if OUR viewer answers on this port. A bare port check would call any
+    unrelated app squatting the port 'the viewer' — and then act on it."""
+    import json as _json
+    import urllib.request
+    try:
+        with urllib.request.urlopen(f"http://127.0.0.1:{port}/health", timeout=0.5) as r:
+            return _json.loads(r.read()).get("app") == "uvradio-logviewer"
+    except Exception:
+        return False
+
+
+def _viewer_proc(port):
+    """Our viewer identified by process — an older one predates /health and can't
+    answer it, but is still ours to stop/replace."""
+    out, _ = _sh(["pgrep", "-f", rf"[l]ogviewer\.py --port {port}"], timeout=10)
+    return bool(out.strip())
+
+
+def _viewer_kill(port):
+    _sh(["pkill", "-f", rf"[l]ogviewer\.py --port {port}"], timeout=10)
+    for _ in range(25):
+        if not _port_busy(port):
+            return True
+        time.sleep(0.2)
+    return not _port_busy(port)
+
+
 def _uvctl(fn, *a, **kw):
     """Call a uvctl helper safely.
 
@@ -190,45 +225,18 @@ def open_log_viewer(port: int = 8090, browser: bool = True, restart: bool = Fals
     launch and only return the URL. restart=True kills a running viewer first —
     use it after editing logviewer.py, since the old process keeps the old UI.
     """
-    import json as _json
-    import urllib.request
     import webbrowser
 
     url = f"http://127.0.0.1:{port}/"
-
-    def up():
-        """True only if OUR viewer is on this port — a bare port check would happily
-        report 'already running' for any unrelated app squatting the port, and then
-        open the browser at it."""
-        try:
-            with urllib.request.urlopen(f"{url}health", timeout=0.5) as r:
-                return _json.loads(r.read()).get("app") == "uvradio-logviewer"
-        except Exception:
-            return False
-
-    def port_busy():
-        import socket
-        with socket.socket() as s:
-            s.settimeout(0.3)
-            return s.connect_ex(("127.0.0.1", port)) == 0
-
-    def ours_by_proc():
-        """Identify our viewer by process, not just /health — an older viewer predates
-        the health endpoint and would otherwise look like a foreign app."""
-        out, _ = _sh(["pgrep", "-f", rf"[l]ogviewer\.py --port {port}"], timeout=10)
-        return bool(out.strip())
+    up = lambda: _viewer_up(port)
 
     # Restart FIRST: the guard below must not block the very upgrade that fixes an
     # old viewer which can't answer /health yet.
     if restart:
-        _sh(["pkill", "-f", rf"[l]ogviewer\.py --port {port}"], timeout=10)
-        for _ in range(25):
-            if not port_busy():
-                break
-            time.sleep(0.2)
+        _viewer_kill(port)
 
-    if not up() and port_busy():
-        if ours_by_proc():
+    if not up() and _port_busy(port):
+        if _viewer_proc(port):
             return (f"an older viewer is on {port} and can't answer /health — "
                     f"call open_log_viewer(port={port}, restart=True) to replace it")
         return (f"port {port} is held by something else (not the uvradio viewer) — "
@@ -260,6 +268,23 @@ def open_log_viewer(port: int = 8090, browser: bool = True, restart: bool = Fals
     return (f"log viewer {'started' if started else 'already running'} at {url}\n"
             f"browser {'opened' if opened else 'not opened — open the URL yourself'}\n"
             f"session log: {LOG.path}")
+
+
+@mcp.tool()
+def close_log_viewer(port: int = 8090) -> str:
+    """Stop the live session-log viewer on `port`.
+
+    Only stops OUR viewer — it refuses a port held by an unrelated app rather than
+    killing whatever happens to be listening. Logging itself is unaffected: the
+    session JSONL keeps being written, so the viewer can be reopened any time.
+    """
+    if not _viewer_up(port) and not _viewer_proc(port):
+        if _port_busy(port):
+            return f"port {port} is held by something else — refusing to kill it"
+        return f"no viewer running on {port}"
+    if _viewer_kill(port):
+        return f"log viewer on {port} stopped (logging continues; reopen with open_log_viewer())"
+    return f"could not stop the viewer on {port} — still listening"
 
 
 @mcp.tool()
