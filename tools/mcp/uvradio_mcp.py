@@ -190,15 +190,31 @@ def open_log_viewer(port: int = 8090, browser: bool = True, restart: bool = Fals
     launch and only return the URL. restart=True kills a running viewer first —
     use it after editing logviewer.py, since the old process keeps the old UI.
     """
-    import socket
+    import json as _json
+    import urllib.request
     import webbrowser
 
     url = f"http://127.0.0.1:{port}/"
 
     def up():
+        """True only if OUR viewer is on this port — a bare port check would happily
+        report 'already running' for any unrelated app squatting the port, and then
+        open the browser at it."""
+        try:
+            with urllib.request.urlopen(f"{url}health", timeout=0.5) as r:
+                return _json.loads(r.read()).get("app") == "uvradio-logviewer"
+        except Exception:
+            return False
+
+    def port_busy():
+        import socket
         with socket.socket() as s:
             s.settimeout(0.3)
             return s.connect_ex(("127.0.0.1", port)) == 0
+
+    if not up() and port_busy():
+        return (f"port {port} is held by something else (not the uvradio viewer) — "
+                f"pick another, e.g. open_log_viewer(port={port + 1})")
 
     if restart:
         # [l] so the pattern can't match this pkill's own command line
