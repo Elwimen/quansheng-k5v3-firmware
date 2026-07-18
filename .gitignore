@@ -24,3 +24,9 @@ sim/captures/
 
 # MCP session logs + screen artifacts (per-run, regenerated; see tools/mcp/)
 logs/
+
+# Per-unit radio calibration dumps — NEVER commit (irreplaceable factory data)
+calib_*.dat
+calib_*.bin
+calibration_*.dat
+calibration_*.bin
