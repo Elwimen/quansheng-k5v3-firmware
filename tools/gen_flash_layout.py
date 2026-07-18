@@ -14,6 +14,7 @@ fields of each storage unit in reverse) -- both describe the same physical bits.
 """
 
 import argparse
+import json
 import os
 import re
 import subprocess
@@ -25,6 +26,8 @@ ROOT = os.path.dirname(HERE)
 HEADER = os.path.join(ROOT, "App", "driver", "spi_flash_layout.h")
 HEXPAT_OUT = os.path.join(HERE, "spi_PY25Q16.hexpat")
 MEMFMT_OUT = os.path.join(HERE, "f4hwn_fusion.mem_format.txt")
+CALIB_HEXPAT_OUT = os.path.join(HERE, "spi_calib.hexpat")   # calibration-only pattern
+CALIB_JSON_OUT = os.path.join(HERE, "calib_layout.json")    # flat layout for calibtool.py
 
 try:
     from elftools.elf.elffile import ELFFile
@@ -337,6 +340,72 @@ def validate_chirp(memfmt):
     return diffs
 
 
+# ---------------------------------------------------------------- calibration
+# The 0xB000 calibration block is worth having on its own: a 512-byte calib.dat
+# (uvflash dump-calib) decoded/diffed/edited without the whole 2MB image.
+
+BASE_SIZE = {"u8": 1, "u16": 2, "u32": 4, "i8": 1, "i16": 2, "i32": 4, "char": 1}
+# fields whose value is an operator setting (changes with use), not factory RF cal
+CALIB_VOLATILE = {"volumeGain", "dacGain"}
+# the RF-critical fields — a wrong value here mis-tunes the radio
+CALIB_CRITICAL_PREFIXES = ("txp", "xtalFreqLow", "batLvl")
+
+
+def flatten_calib(types, typename="FL_Calibration"):
+    """Flatten FL_Calibration into leaf fields with absolute offsets, straight from
+    the DWARF — so it can never drift from the C header. Base-type arrays stay one
+    field with a count; struct arrays recurse per index; padding (__*) is skipped."""
+    st = types.get(typename)
+    if not st:
+        sys.exit(f"{typename} not in DWARF")
+    out = []
+
+    def walk(t, base, path):
+        if t[0] == "struct":
+            for f in t[2]:
+                if f.name and f.name.startswith("__"):
+                    continue
+                walk(f.type, base + f.offset, f"{path}.{f.name}" if path else f.name)
+        elif t[0] == "array":
+            elem, cnt = t[1], t[2]
+            if elem[0] == "base":
+                if elem[1] == "char":
+                    return                              # char[] here is padding
+                out.append(dict(name=path, offset=base, ctype=elem[1], count=cnt))
+            else:
+                esz = elem[3] if elem[0] == "struct" else 1
+                for i in range(cnt):
+                    walk(elem, base + i * esz, f"{path}[{i}]")
+        elif t[0] in ("base", "enum"):
+            ct = "u8" if t[0] == "enum" else t[1]
+            if ct == "char":
+                return
+            out.append(dict(name=path, offset=base, ctype=ct, count=1))
+
+    walk(st, 0, "")
+    for fl in out:
+        fl["size"] = BASE_SIZE[fl["ctype"]]
+        top = fl["name"].split(".")[0].split("[")[0]
+        fl["role"] = ("volatile" if fl["name"] in CALIB_VOLATILE
+                      else "critical" if top in CALIB_CRITICAL_PREFIXES else "cal")
+    return {"struct": typename, "size": st[3], "fields": out}
+
+
+def emit_calib_hexpat(types):
+    st = types.get("FL_Calibration")
+    em = HexEmitter()
+    em.struct("FL_Calibration", st)
+    return ("#pragma description UV-K5/K1 calibration block (SPI flash 0xB000)\n"
+            "// Generated from App/driver/spi_flash_layout.h by tools/gen_flash_layout.py.\n"
+            "// Load against a 512-byte calib.dat (uvflash dump-calib), NOT the full image.\n\n"
+            + "\n\n".join(em.decls)
+            + "\n\nFL_Calibration cal @ 0x00;\n")
+
+
+def emit_calib_json(flat):
+    return json.dumps(flat, indent=1) + "\n"
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--check", action="store_true")
@@ -366,10 +435,13 @@ def main():
 
     hexpat = emit_hexpat(types, enums, regions)
     memfmt = emit_chirp(types, regions)
+    calib_hexpat = emit_calib_hexpat(types)
+    calib_json = emit_calib_json(flatten_calib(types))
 
     if args.check:
         ok = True
-        for path, new in ((HEXPAT_OUT, hexpat), (MEMFMT_OUT, memfmt)):
+        for path, new in ((HEXPAT_OUT, hexpat), (MEMFMT_OUT, memfmt),
+                          (CALIB_HEXPAT_OUT, calib_hexpat), (CALIB_JSON_OUT, calib_json)):
             old = open(path).read() if os.path.exists(path) else None
             if old != new:
                 print(f"  OUT OF DATE: {os.path.relpath(path, ROOT)} (run without --check)")
@@ -386,12 +458,11 @@ def main():
             print("    all functional fields match the driver's MEM_FORMAT")
         return 0 if ok else 1
 
-    with open(HEXPAT_OUT, "w") as f:
-        f.write(hexpat)
-    with open(MEMFMT_OUT, "w") as f:
-        f.write(memfmt)
-    print(f"wrote {os.path.relpath(HEXPAT_OUT, ROOT)} ({hexpat.count(chr(10))+1} lines)")
-    print(f"wrote {os.path.relpath(MEMFMT_OUT, ROOT)} ({memfmt.count(chr(10))+1} lines)")
+    for path, new in ((HEXPAT_OUT, hexpat), (MEMFMT_OUT, memfmt),
+                      (CALIB_HEXPAT_OUT, calib_hexpat), (CALIB_JSON_OUT, calib_json)):
+        with open(path, "w") as f:
+            f.write(new)
+        print(f"wrote {os.path.relpath(path, ROOT)} ({new.count(chr(10))+1} lines)")
     return 0
 
 
