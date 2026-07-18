@@ -65,6 +65,7 @@ CATEGORY = {
     "screen": "screen",
     "press_keys": "input", "goto_menu": "input", "transmit": "input",
     "flash_firmware": "flash", "calib_dump": "flash", "calib_restore": "flash",
+    "calib_decode": "flash", "calib_compare": "flash", "calib_edit": "flash",
     "logo_upload": "flash", "logo_download": "flash", "set_ponmsg": "flash",
     "read_symbol": "debug", "read_field": "debug", "read_mem": "debug", "gdb": "debug",
     "open_log_viewer": "log", "log_info": "log", "log_note": "log",
@@ -592,6 +593,55 @@ def calib_dump(path: str) -> str:
 def calib_restore(path: str) -> str:
     """Restore calibration from `path` to the radio (radio running normally)."""
     return _uvflash("restore-calib", path)
+
+
+@mcp.tool()
+def calib_decode(path: str) -> str:
+    """Decode a calibration dump (.dat from calib_dump) into named fields.
+
+    Marks each field's role: * = RF-critical (TX power / crystal / battery), ~ =
+    volatile operator setting (volumeGain/dacGain, changes with use), blank = other
+    per-unit cal (squelch/RSSI/VOX/mic)."""
+    sys.path.insert(0, str(FW / "tools"))
+    import calibtool
+    data, lay = calibtool.read_calib(path)
+    return calibtool.decode_text(data, lay)
+
+
+@mcp.tool()
+def calib_compare(a: str, b: str) -> str:
+    """Field-level diff of two calibration dumps. Flags RF-critical differences (a
+    wrong-unit restore) vs volatile-only differences (same radio, volume moved)."""
+    sys.path.insert(0, str(FW / "tools"))
+    import calibtool
+    da, lay = calibtool.read_calib(a)
+    db, _ = calibtool.read_calib(b)
+    return calibtool.diff_text(da, db, lay)
+
+
+@mcp.tool()
+def calib_edit(path: str, field: str, value: str, out: str = "") -> str:
+    """Set a calibration field and write the result to `out` (default: <path>.edited,
+    never overwriting the source). `value` is space-separated for arrays, e.g.
+    "1444 2007 2158 2187 2306 2600". Range-checked against the field's type.
+
+    This edits a FILE only; applying it to the radio is a separate calib_restore, so
+    nothing changes on hardware until you choose to. Editing RF-critical fields
+    (txp*/xtalFreqLow/batLvl) mis-tunes the radio if wrong — decode/compare first.
+    """
+    sys.path.insert(0, str(FW / "tools"))
+    import calibtool
+    data, lay = calibtool.read_calib(path)
+    vals = [int(v, 0) for v in value.split()]
+    try:
+        new, f = calibtool.set_field(data, field, vals if len(vals) > 1 else vals[0], lay)
+    except (ValueError, KeyError) as e:
+        return f"edit rejected: {e}"
+    dest = out or (path + ".edited")
+    Path(dest).write_bytes(new)
+    role = f["role"]
+    warn = "  [RF-CRITICAL field — verify before restoring]" if role == "critical" else ""
+    return f"set {field} = {calibtool.value_of(new, f)} -> {dest}{warn}"
 
 
 @mcp.tool()

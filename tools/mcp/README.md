@@ -21,7 +21,10 @@ to bash. Thin wrapper over the existing tooling (`sim/uvctl.py`, `tools/k5screen
 | `press_keys(keys, target, long, delay, human)` | inject a key sequence, e.g. `"MENU 1 EXIT"`; `human=True` randomises the gaps like a real operator |
 | `transmit(seconds, target)` | key TX for a bounded time (radio; radiates RF — dummy load / clear freq) |
 | `flash_firmware(bin_path)` | flash firmware (radio in bootloader) |
-| `calib_dump` / `calib_restore` | back up / restore calibration |
+| `calib_dump` / `calib_restore` | back up / restore radio calibration |
+| `calib_decode(path)` | decode a calib .dat into named fields (RF-critical / volatile tagged) |
+| `calib_compare(a, b)` | field-level calib diff; flags cross-unit vs volume-only |
+| `calib_edit(path, field, value, out)` | set a calib field (range-checked, writes a new file) |
 | `logo_upload` / `logo_download` | boot logo |
 | `set_ponmsg(mode)` | power-on message mode |
 | `read_symbol(name, size)` | read a global symbol from the sim (Renode monitor) |
