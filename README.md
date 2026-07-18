@@ -58,8 +58,8 @@ Special thanks to Jean-Cyrille F6IWW (3 times), Fabrice 14RC123, David F4BPP, Ol
 
 ## What this fork adds (develop branch)
 
-The `develop` branch is the active line of this fork, maintained by **N0CALL**
-([@Elwimen](https://github.com/Elwimen)). It builds directly on F4HWN **Fusion**
+The `develop` branch is the active line of this fork, maintained by
+[@Elwimen](https://github.com/Elwimen). It builds directly on F4HWN **Fusion**
 — every F4HWN / Egzumer feature listed further down is still available, and
 **Fusion** remains the reference build — and adds the following:
 
